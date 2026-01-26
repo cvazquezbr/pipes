@@ -7,7 +7,11 @@ import * as pdfjsLib from 'pdfjs-dist';
 import type { ExtractedInvoice } from './types';
 
 // Configurar worker do PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Usar versão do npm package diretamente
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 /**
  * Padrões regex para extração de campos da NFS-e
