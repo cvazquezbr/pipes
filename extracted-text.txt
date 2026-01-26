@@ -1,0 +1,280 @@
+DANFSe v1.0
+Documento Auxiliar da NFS-e
+
+Município de Vitória
+
+Secretaria Municipal de Fazenda
+dte@vitoria.es.gov.br
+
+Chave de Acesso da NFS-e
+
+32053092202434797000160000000000002626013486928968
+
+Número da NFS-e
+
+Competência da NFS-e
+
+Número da DPS
+
+Série da DPS
+
+26
+
+Data e Hora da emissão da NFS-e
+
+21/01/2026
+
+59
+
+EMITENTE DA NFS-e
+Prestador do Serviço
+
+21/01/2026 11:08:45
+
+Data e Hora da emissão da DPS
+
+900
+
+21/01/2026 11:08:45
+
+A autenticidade desta NFS-e pode ser verificada
+pela leitura deste código QR ou pela consulta da
+chave de acesso no portal nacional da NFS-e
+
+CNPJ / CPF / NIF
+
+Inscrição Municipal
+
+Telefone
+
+02.434.797/0001-60
+
+-
+
+Nome / Nome Empresarial
+
+E-mail
+
+Endereço
+
+Município
+
+Simples Nacional na Data de Competência
+
+Regime de Apuração Tributária pelo SN
+
+FATTO CONSULTORIA E SISTEMAS LTDA
+
+ADM@FATTOCS.COM.BR
+
+JERONIMO MONTEIRO, 1000, CENTRO
+
+Vitória - ES
+
+Não optante
+
+TOMADOR DO SERVIÇO
+
+(27) 3026-6304
+
+CEP
+
+29010-004
+
+CNPJ / CPF / NIF
+
+Inscrição Municipal
+
+05.957.363/0001-33
+
+-
+
+Nome / Nome Empresarial
+
+E-mail
+
+Endereço
+
+Município
+
+TRIBUNAL REGIONAL ELEITORAL DO PIAUI
+
+Telefone
+
+-
+
+-
+
+PRCA DES. EDGAR NOGUEIRA CENTRO CIVICO, S/N, PREDIO, CABRAL
+
+Teresina - PI
+
+CEP
+
+64000-830
+
+INTERMEDIÁRIO DO SERVIÇO NÃO IDENTIFICADO NA NFS-e
+SERVIÇO PRESTADO
+Código de Tributação Nacional
+
+01.01.01 - Análise e desenvolvimento
+de sistemas.
+
+Código de Tributação Municipal
+
+Local da Prestação
+
+-
+
+Teresina - PI
+
+País da Prestação
+
+-
+
+Descrição do Serviço
+
+CONTRATO: 03/2025 - Pregão Eletrônico nº 90048/2024 - Processo Administrativo Eletrônico SEI nº 0010840-81.2024.6.18.8000
+OBJETO: O objeto do presente instrumento é a contratação de serviços de tecnologia da informação e comunicação na área de desenvolvimento e
+sustentação de sistemas de informação, mediante alocação de mão de obra residente com pagamento vinculado a resultados, com utilização de práticas da
+Metodologia de Desenvolvimento de Sistemas, a fim de atender às demandas do Tribunal Regional Eleitoral do Piauí, nas condições estabelecidas no Termo
+de Referência nº 210/2024, referente ao período de 01/12/2025 a 31/12/2025.
+ORDENS DE SERVIÇO DE FECHAMENTO 11/2025 - VENCIMENTO: Conforme contrato.
+Dados Bancários: Banco do Brasil: 001/ Agência: 0021-3 / Conta Corrente: 22946-6 - Chave...
+TRIBUTAÇÃO MUNICIPAL
+Tributação do ISSQN
+
+País Resultado da Prestação do Serviço
+
+-
+
+Vitória - ES
+
+Nenhum
+
+Tipo de Imunidade
+
+Suspensão da Exigibilidade do ISSQN
+
+Número Processo Suspensão
+
+Benefício Municipal
+
+Valor do Serviço
+
+Desconto Incondicionado
+
+Total Deduções/Reduções
+
+-
+
+-
+
+BC ISSQN
+
+Alíquota Aplicada
+
+Retenção do ISSQN
+
+ISSQN Apurado
+
+IRRF
+
+CP
+
+CSLL
+
+PIS
+
+COFINS
+
+Retenção do PIS/COFINS
+
+TOTAL TRIBUTAÇÃO FEDERAL
+
+Valor do Serviço
+
+Desconto Condicionado
+
+Desconto Incondicionado
+
+ISSQN Retido
+
+IRRF, CP,CSLL - Retidos
+
+PIS/COFINS Retidos
+
+Operação Tributável
+
+-
+
+Não
+
+R$ 88.938,37
+
+-
+
+R$ 88.938,37
+
+5,00%
+
+Município de Incidência do ISSQN
+
+-
+
+Retido pelo Tomador
+
+Regime Especial de Tributação
+
+-
+
+Cálculo do BM
+
+R$ 4.446,92
+
+TRIBUTAÇÃO FEDERAL
+R$ 4.269,04
+
+R$ 3.112,84
+
+R$ 578,10
+
+R$ 2.668,15
+
+R$ 889,38
+Retido
+
+R$ 11517,51
+
+VALOR TOTAL DA NFS-E
+R$ 88.938,37
+
+R$
+
+R$ 8.271,26
+
+R$
+
+R$ 4.446,92
+
+Valor Líquido da NFS-e
+
+R$ 3.246,25
+
+R$ 72.973,94
+
+TOTAIS APROXIMADOS DOS TRIBUTOS
+Federais
+
+11,33 %
+INFORMAÇÕES COMPLEMENTARES
+
+Estaduais
+
+0,00 %
+
+Municipais
+
+2,00 %
+
+
