@@ -198,8 +198,13 @@ function processExtractedText(text: string, filename: string): ExtractedInvoice 
  */
 export async function processPDFInvoice(file: File): Promise<ExtractedInvoice> {
   try {
+    console.log('[PDF Extractor] Processando arquivo:', file.name);
     const text = await extractTextFromPDF(file);
-    return processExtractedText(text, file.name);
+    console.log('[PDF Extractor] Texto extraido, tamanho:', text.length, 'caracteres');
+    console.log('[PDF Extractor] Primeiros 200 caracteres:', text.substring(0, 200));
+    const result = processExtractedText(text, file.name);
+    console.log('[PDF Extractor] Resultado:', result);
+    return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return {
@@ -242,5 +247,8 @@ export async function processPDFInvoice(file: File): Promise<ExtractedInvoice> {
  * Processa múltiplos PDFs em paralelo
  */
 export async function processPDFInvoices(files: File[]): Promise<ExtractedInvoice[]> {
-  return Promise.all(files.map((file) => processPDFInvoice(file)));
+  console.log('[PDF Extractor] Iniciando processamento paralelo de ' + files.length + ' arquivo(s)');
+  const results = await Promise.all(files.map((file) => processPDFInvoice(file)));
+  console.log('[PDF Extractor] Processamento paralelo concluido, resultados:', results);
+  return results;
 }

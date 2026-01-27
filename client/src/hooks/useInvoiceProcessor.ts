@@ -70,7 +70,10 @@ export function useInvoiceProcessor() {
       setIsProcessing(true);
       setProgress(0);
 
+      console.log('[NFe] Iniciando processamento de ' + files.length + ' arquivo(s)');
       const results = await processPDFInvoices(files);
+      console.log('[NFe] Processamento concluido com ' + results.length + ' resultado(s)');
+      console.log('[NFe] Resultados:', results);
       setInvoices(results);
       setProgress(100);
       return results;
