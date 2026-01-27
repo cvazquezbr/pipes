@@ -79,6 +79,8 @@ export function useInvoiceProcessor() {
       return results;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao processar PDFs';
+      console.error('[NFe] ERRO durante processamento:', err);
+      console.error('[NFe] Mensagem:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {

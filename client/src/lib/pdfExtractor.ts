@@ -27,8 +27,8 @@ const EXTRACTION_PATTERNS = {
   issuerCity: /EMITENTE DA NFS-e[\s\S]*?Município[\s\S]+?([^\n-]+?)\s*-\s*[A-Z]{2}/,
   issuerState: /EMITENTE DA NFS-e[\s\S]*?Município[\s\S]+?-\s*([A-Z]{2})/,
   issuerCEP: /EMITENTE DA NFS-e[\s\S]*?CEP[\s\S]+?(\d{5}-\d{3})/,
-  issuerPhone: /EMITENTE DA NFS-e[\s\S]*?Telefone[\s\S]+?([\(\d\)\-\s]+?)(?=\n|CEP)/,
-  issuerEmail: /EMITENTE DA NFS-e[\s\S]*?E-mail[\s\S]+?([^\n]+?)(?=\n|Endereço)/,
+  issuerPhone: /Telefone[\s\S]+?(\([\d\s]+\)[\d\s-]+?)(?=\n|Nome|E-mail|Endereço)/,
+  issuerEmail: /EMITENTE DA NFS-e[\s\S]*?E-mail[\s\S]+?([^\n]+?)(?=\n|Endereco)/,
 
   // Tomador
   takerName: /TOMADOR DO SERVIÇO[\s\S]*?Nome \/ Nome Empresarial[\s\S]+?([^\n]+?)(?=\n|E-mail)/,
@@ -40,7 +40,7 @@ const EXTRACTION_PATTERNS = {
 
   // Serviço
   serviceCode: /Código de Tributação Nacional[\s\S]+?([^\n]+?)(?=\n|Código de Tributação Municipal)/,
-  serviceDescription: /Descrição do Serviço[\s\S]+?([\s\S]+?)(?=\n\s*(?:TRIBUTAÇÃO|VALORES|INFORMAÇÕES|$))/,
+  serviceDescription: /Descrição do Serviço[\s\S]+?([\s\S]+?)(?=TRIBUTAÇÃO MUNICIPAL)/,
 
   // Valores
   serviceValue: /Valor do Serviço[\s\S]+?R\$\s+([\d.,]+)/,

@@ -69,11 +69,15 @@ export function PDFUpload({ onProcessComplete, isProcessing = false, progress = 
 
     try {
       setError(null);
+      console.log('[PDFUpload] Iniciando processamento de ' + selectedFiles.length + ' arquivo(s)');
       const { processPDFInvoices } = await import('@/lib/pdfExtractor');
       const invoices = await processPDFInvoices(selectedFiles);
+      console.log('[PDFUpload] Processamento concluido, chamando onProcessComplete com ' + invoices.length + ' resultado(s)');
       onProcessComplete(invoices);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao processar PDFs';
+      console.error('[PDFUpload] ERRO:', err);
+      console.error('[PDFUpload] Mensagem:', errorMessage);
       setError(errorMessage);
     }
   };
