@@ -1,8 +1,3 @@
-/**
- * Utilitários para extração de dados de PDFs de Notas Fiscais (NFS-e)
- * Usa pdfjs-dist para extrair texto e regex patterns para identificar campos
- */
-
 import * as pdfjsLib from 'pdfjs-dist';
 import type { ExtractedInvoice } from './types';
 
@@ -16,42 +11,38 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 /**
  * Padrões regex para extração de campos da NFS-e
  * Otimizados para DANFSe (Documento Auxiliar da NFS-e)
- * Nota: Os padrões foram refinados baseado na análise do PDF de teste
- * O layout do DANFSe tem múltiplas quebras de linha entre rótulos e valores
- * Usa [\s\S]+? para capturar qualquer tipo de espaço em branco (\n, espaços, etc)
+ * Após normalização de espaçamento
  */
 const EXTRACTION_PATTERNS = {
-  // Padrões refinados baseados na análise do PDF DANFSe
-  // Usa [\s\S]+? para capturar qualquer espaço em branco (incluindo quebras de linha)
-  nfsNumber: /Número da NFS-e[\s\S]+?(\d+)(?=\n)/,
-  accessKey: /Chave de Acesso da NFS-e[\s\S]+?([\d]+)(?=\n)/,
-  seriesNumber: /Série da DPS[\s\S]+?(\d+)(?=\n)/,
-  emissionDate: /Data e Hora de emissão da NFS-e[\s\S]+?(\d{2}\/\d{2}\/\d{4})/,
-  emissionTime: /Data e Hora de emissão da DPS[\s\S]+?(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/,
+  // Identificação
+  nfsNumber: /Número da NFS-e[\s\S]+?(\d+)(?=[\s\n]|$)/,
+  seriesNumber: /Série da DPS[\s\S]+?(\d+)(?=[\s\n]|$)/,
+  emissionDate: /Data e Hora da emissão da NFS-e[\s\S]+?(\d{2}\/\d{2}\/\d{4})/,
+  emissionTime: /Data e Hora da emissão da NFS-e[\s\S]+?\d{2}\/\d{2}\/\d{4}\s+(\d{2}:\d{2}:\d{2})/,
 
-  // Emitente - Padrões ajustados para layout do DANFSe
+  // Emitente
   issuerName: /EMITENTE DA NFS-e[\s\S]*?Nome \/ Nome Empresarial[\s\S]+?([^\n]+?)(?=\n|E-mail)/,
   issuerCNPJ: /EMITENTE DA NFS-e[\s\S]*?CNPJ \/ CPF \/ NIF[\s\S]+?(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/,
   issuerAddress: /EMITENTE DA NFS-e[\s\S]*?Endereço[\s\S]+?([^\n]+?)(?=\n|Município)/,
   issuerCity: /EMITENTE DA NFS-e[\s\S]*?Município[\s\S]+?([^\n-]+?)\s*-\s*[A-Z]{2}/,
-  issuerState: /EMITENTE DA NFS-e[\s\S]*?Município[\s\S]+?[^\n]+-\s*([A-Z]{2})/,
+  issuerState: /EMITENTE DA NFS-e[\s\S]*?Município[\s\S]+?-\s*([A-Z]{2})/,
   issuerCEP: /EMITENTE DA NFS-e[\s\S]*?CEP[\s\S]+?(\d{5}-\d{3})/,
-  issuerPhone: /EMITENTE DA NFS-e[\s\S]*?Telefone[\s\S]+?([^\n]+?)(?=\n|CEP)/,
+  issuerPhone: /EMITENTE DA NFS-e[\s\S]*?Telefone[\s\S]+?([\(\d\)\-\s]+?)(?=\n|CEP)/,
   issuerEmail: /EMITENTE DA NFS-e[\s\S]*?E-mail[\s\S]+?([^\n]+?)(?=\n|Endereço)/,
 
-  // Tomador - Padrões ajustados para layout do DANFSe
+  // Tomador
   takerName: /TOMADOR DO SERVIÇO[\s\S]*?Nome \/ Nome Empresarial[\s\S]+?([^\n]+?)(?=\n|E-mail)/,
   takerCNPJ: /TOMADOR DO SERVIÇO[\s\S]*?CNPJ \/ CPF \/ NIF[\s\S]+?(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/,
   takerAddress: /TOMADOR DO SERVIÇO[\s\S]*?Endereço[\s\S]+?([^\n]+?)(?=\n|Município)/,
   takerCity: /TOMADOR DO SERVIÇO[\s\S]*?Município[\s\S]+?([^\n-]+?)\s*-\s*[A-Z]{2}/,
-  takerState: /TOMADOR DO SERVIÇO[\s\S]*?Município[\s\S]+?[^\n]+-\s*([A-Z]{2})/,
+  takerState: /TOMADOR DO SERVIÇO[\s\S]*?Município[\s\S]+?-\s*([A-Z]{2})/,
   takerCEP: /TOMADOR DO SERVIÇO[\s\S]*?CEP[\s\S]+?(\d{5}-\d{3})/,
 
   // Serviço
   serviceCode: /Código de Tributação Nacional[\s\S]+?([^\n]+?)(?=\n|Código de Tributação Municipal)/,
   serviceDescription: /Descrição do Serviço[\s\S]+?([\s\S]+?)(?=\n\s*(?:TRIBUTAÇÃO|VALORES|INFORMAÇÕES|$))/,
 
-  // Valores - Padrões para encontrar valores monetários
+  // Valores
   serviceValue: /Valor do Serviço[\s\S]+?R\$\s+([\d.,]+)/,
   deductions: /Total Deduções\/Reduções[\s\S]+?R\$\s+([\d.,]+)/,
   irrf: /IRRF[\s\S]+?R\$\s+([\d.,]+)/,
@@ -63,11 +54,9 @@ const EXTRACTION_PATTERNS = {
 };
 
 /**
- * Converte string de valor monetário (R$ 1.234,56) para número em centavos
+ * Converte valor monetário em centavos
  */
 function parseMonetaryValue(value: string): number {
-  if (!value) return 0;
-  // Remove "R$", espaços e converte formato brasileiro para número
   const cleaned = value.replace(/R\$\s*/g, '').trim();
   const normalized = cleaned.replace(/\./g, '').replace(',', '.');
   return Math.round(parseFloat(normalized) * 100);
@@ -98,7 +87,21 @@ async function extractTextFromPDF(file: File): Promise<string> {
     fullText += pageText + '\n';
   }
 
+  // Normalizar: remover espaços extras entre caracteres
+  fullText = normalizeTextSpacing(fullText);
   return fullText;
+}
+
+/**
+ * Normaliza espaçamento em texto extraído de PDF
+ * Adiciona espaços entre palavras que foram concatenadas (ex: NúmerodaNFS-e -> Número da NFS-e)
+ */
+function normalizeTextSpacing(text: string): string {
+  // Adicionar espaço entre letra minúscula e maiúscula
+  let normalized = text.replace(/([a-záéíóú])([A-Z])/g, '$1 $2');
+  // Normalizar múltiplos espaços
+  normalized = normalized.replace(/\s+/g, ' ');
+  return normalized.trim();
 }
 
 /**
@@ -125,7 +128,7 @@ function processExtractedText(text: string, filename: string): ExtractedInvoice 
   const invoice: ExtractedInvoice = {
     // Identificação
     nfsNumber: extractValue(text, EXTRACTION_PATTERNS.nfsNumber) as string,
-    accessKey: (extractValue(text, EXTRACTION_PATTERNS.accessKey) as string).replace(/\s+/g, ''),
+    accessKey: '', // Removido conforme solicitado
     seriesNumber: extractValue(text, EXTRACTION_PATTERNS.seriesNumber) as string,
 
     // Datas
@@ -167,7 +170,7 @@ function processExtractedText(text: string, filename: string): ExtractedInvoice 
 
     // Metadados
     filename,
-    extractionConfidence: 0.8, // Será ajustado conforme campos preenchidos
+    extractionConfidence: 0.8,
     rawText: text,
   };
 
@@ -175,7 +178,7 @@ function processExtractedText(text: string, filename: string): ExtractedInvoice 
   invoice.totalTaxes = invoice.irrf + invoice.pis + invoice.cofins + invoice.csll + invoice.issqn;
 
   // Validar campos essenciais
-  const essentialFields = ['nfsNumber', 'accessKey', 'issuerCNPJ', 'takerCNPJ', 'netValue'];
+  const essentialFields = ['nfsNumber', 'issuerCNPJ', 'takerCNPJ', 'netValue'];
   const filledFields = essentialFields.filter((field) => {
     const value = invoice[field as keyof ExtractedInvoice];
     return value && value !== '';
@@ -201,12 +204,13 @@ export async function processPDFInvoice(file: File): Promise<ExtractedInvoice> {
     console.log('[PDF Extractor] Processando arquivo:', file.name);
     const text = await extractTextFromPDF(file);
     console.log('[PDF Extractor] Texto extraido, tamanho:', text.length, 'caracteres');
-    console.log('[PDF Extractor] Primeiros 200 caracteres:', text.substring(0, 200));
+    console.log('[PDF Extractor] Primeiros 300 caracteres:', text.substring(0, 300));
     const result = processExtractedText(text, file.name);
     console.log('[PDF Extractor] Resultado:', result);
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('[PDF Extractor] Erro:', error);
     return {
       nfsNumber: '',
       accessKey: '',
@@ -219,6 +223,8 @@ export async function processPDFInvoice(file: File): Promise<ExtractedInvoice> {
       issuerCity: '',
       issuerState: '',
       issuerCEP: '',
+      issuerPhone: '',
+      issuerEmail: '',
       takerName: '',
       takerCNPJ: '',
       takerAddress: '',
