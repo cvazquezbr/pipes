@@ -44,7 +44,7 @@ const EXTRACTION_PATTERNS = {
 
   // Valores
   serviceValue: /Valor do Serviço[\s\S]+?R\$\s+([\d.,]+)/,
-  deductions: /Total Deduções\/Reduções[\s\S]+?R\$\s+([\d.,]+)/,
+  deductions: /Total Deduções\/Reduções[\s\S]+?R\$\s+([\d.,]+)(?=\s|\n)/,
   irrf: /IRRF[\s\S]+?R\$\s+([\d.,]+)/,
   pis: /PIS[\s\S]+?R\$\s+([\d.,]+)/,
   cofins: /COFINS[\s\S]+?R\$\s+([\d.,]+)/,
@@ -53,11 +53,11 @@ const EXTRACTION_PATTERNS = {
   // ISSQN - Campos detalhados
   issqnBase: /Base de Cálculo do ISSQN[\s\S]+?R\$\s+([\d.,]+)/,
   issqnApurado: /ISSQN Apurado[\s\S]+?R\$\s+([\d.,]+)/,
-  issqnAliquota: /Alíquota Aplicada[\s\S]+?([\d.,]+%)/,
-  issqnSuspensao: /Suspensão da Exigibilidade do ISSQN[\s\S]+?([^\n]+?)(?=\n|Município)/,
-  issqnMunicipio: /Município de Incidência do ISSQN[\s\S]+?([^\n]+?)(?=\n|Tributação)/,
-  issqnTributacao: /Tributação do ISSQN[\s\S]+?([^\n]+?)(?=\n|CP)/,
-  issqnCP: /CP[\s\S]+?R\$\s+([\d.,]+)/,
+  issqnAliquota: /Alíquota Aplicada[\s\S]+?(\d+[.,]\d{2}%)/,
+  issqnSuspensao: /Suspensão da Exigibilidade do ISSQN[\s\S]+?(Sim|Não)(?=\s|\n)/,
+  issqnMunicipio: /Município de Incidência do ISSQN[\s\S]+?([^\n-]+?)\s*-\s*([A-Z]{2})(?=\s|\n)/,
+  issqnTributacao: /Tributação do ISSQN[\s\S]+?(Tributável|Não Tributável|Imune)(?=\s|\n)/,
+  issqnCP: /Retenção do ISSQN[\s\S]+?(?:Retido pelo Tomador)?[\s\S]+?R\$\s+([\d.,]+)/,
   issqnRetido: /ISSQN Retido[\s\S]+?R\$\s+([\d.,]+)/,
   
   netValue: /Valor Líquido da NFS-e[\s\S]+?R\$\s+([\d.,]+)/,
@@ -183,7 +183,13 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     issqnApurado: extractValue(text, EXTRACTION_PATTERNS.issqnApurado, parseMonetaryValue) as number,
     issqnAliquota: (extractValue(text, EXTRACTION_PATTERNS.issqnAliquota) as string) || '',
     issqnSuspensao: (extractValue(text, EXTRACTION_PATTERNS.issqnSuspensao) as string) || '',
-    issqnMunicipio: (extractValue(text, EXTRACTION_PATTERNS.issqnMunicipio) as string) || '',
+    issqnMunicipio: (() => {
+      const match = text.match(EXTRACTION_PATTERNS.issqnMunicipio);
+      if (match && match[1] && match[2]) {
+        return `${match[1].trim()} - ${match[2]}`;
+      }
+      return '';
+    })(),
     issqnTributacao: (extractValue(text, EXTRACTION_PATTERNS.issqnTributacao) as string) || '',
     issqnCP: extractValue(text, EXTRACTION_PATTERNS.issqnCP, parseMonetaryValue) as number,
     issqnRetido: extractValue(text, EXTRACTION_PATTERNS.issqnRetido, parseMonetaryValue) as number,
