@@ -100,6 +100,13 @@ export function useInvoiceProcessor() {
   }, []);
 
   /**
+   * Adiciona novas notas fiscais ao estado
+   */
+  const addInvoices = useCallback((newInvoices: ExtractedInvoice[]) => {
+    setInvoices((prev) => [...prev, ...newInvoices]);
+  }, []);
+
+  /**
    * Remove uma nota fiscal da lista
    */
   const removeInvoice = useCallback((index: number) => {
@@ -150,6 +157,7 @@ export function useInvoiceProcessor() {
     loadExcelReference,
     processPDFs,
     processPDFsParallel,
+    addInvoices,
     updateInvoice,
     removeInvoice,
     clearAll,

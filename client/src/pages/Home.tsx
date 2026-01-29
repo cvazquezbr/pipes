@@ -26,6 +26,7 @@ export default function Home() {
     error,
     loadExcelReference,
     processPDFsParallel,
+    addInvoices,
     updateInvoice,
     removeInvoice,
     clearAll,
@@ -41,7 +42,9 @@ export default function Home() {
 
   const handlePDFsProcessed = useCallback(
     async (results: ExtractedInvoice[]) => {
+      console.log('[Home] handlePDFsProcessed chamado com ' + results.length + ' resultado(s)');
       const successCount = results.filter((r) => !r.extractionErrors?.length).length;
+      console.log('[Home] ' + successCount + ' com sucesso, ' + (results.length - successCount) + ' com erros');
       toast.success(`${successCount}/${results.length} notas fiscais processadas com sucesso`);
     },
     []
@@ -102,9 +105,11 @@ export default function Home() {
             <div className="sticky top-6 space-y-6">
               <ExcelUpload onFileLoaded={handleExcelLoaded} isLoading={isProcessing} />
               <PDFUpload
-                onProcessComplete={async (invoices: ExtractedInvoice[]) => {
+                onProcessComplete={async (results: ExtractedInvoice[]) => {
                   try {
-                    handlePDFsProcessed(invoices);
+                    console.log('[Home] Recebido ' + results.length + ' resultado(s) do PDFUpload');
+                    addInvoices(results);
+                    handlePDFsProcessed(results);
                   } catch (err) {
                     const errorMessage = err instanceof Error ? err.message : 'Erro ao processar PDFs';
                     toast.error(errorMessage);
