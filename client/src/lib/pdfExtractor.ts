@@ -80,22 +80,20 @@ function parseMonetaryValue(value: string): number {
 }
 
 /**
- * Normaliza texto do PDF removendo espaços extras e adicionando entre letras
- * Isso resolve o problema onde "NúmerodaNFS-e" vira "Número da NFS-e"
+ * Normaliza texto do PDF removendo caracteres especiais que parecem espaços
+ * Substitui non-breaking spaces, zero-width characters, etc. por espaços normais
  */
 function normalizeText(text: string): string {
-  // Primeiro, adicionar espaços entre letras consecutivas
-  let normalized = text.replace(/([a-záéíóúâêôãõç])([a-záéíóúâêôãõç])/gi, '$1 $2');
+  // Substituir caracteres especiais que parecem espaços por espaço normal
+  let normalized = text
+    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
+    .replace(/[\u200C\u200D\u200E\u200F]/g, '')
+    .replace(/[\u061C\u180E]/g, ' ');
   
-  // Repetir até não haver mais mudanças (para casos de 3+ letras consecutivas)
-  let prev = '';
-  while (prev !== normalized) {
-    prev = normalized;
-    normalized = normalized.replace(/([a-záéíóúâêôãõç])([a-záéíóúâêôãõç])/gi, '$1 $2');
-  }
+  // Limpar espaços múltiplos
+  normalized = normalized.replace(/\s+/g, ' ').trim();
   
-  // Limpar espaços múltiplos e trim
-  return normalized.replace(/\s+/g, ' ').trim();
+  return normalized;
 }
 
 /**
