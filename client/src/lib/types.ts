@@ -89,3 +89,29 @@ export interface ExtractionPattern {
   group: number;
   processor?: (value: string) => string | number;
 }
+
+export interface ZOHOInvoice {
+  'Invoice Date': string;
+  'Invoice Number': string;
+  'Invoice Status': string;
+  'Customer Name': string;
+  'Template Name': string;
+  'Currency Code': string;
+  'Exchange Rate': number;
+  'SKU': string;
+  'Item Desc': string;
+  'Quantity': number;
+  'Item Price': number;
+  'Adjustment': number;
+  'Adjustment Description': string;
+  'Usage unit': number;
+  'Discount': number;
+  'Is Inclusive Tax': string;
+  'Item Tax1': string;
+  'Item Tax1 Type': string;
+  'Item Tax1 %': string;
+  'Project Name': string;
+  'Account': string;
+  'Notes': string;
+  'Terms & Conditions': string;
+}

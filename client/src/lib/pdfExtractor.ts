@@ -203,8 +203,9 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     rawText: text,
   };
 
-  // Calcular total de impostos: serviceValue - netValue
-  invoice.totalTaxes = invoice.serviceValue - invoice.netValue;
+  // Calcular deduções e total de impostos: serviceValue - netValue
+  invoice.deductions = invoice.serviceValue - invoice.netValue;
+  invoice.totalTaxes = invoice.irrf + invoice.pis + invoice.cofins + invoice.csll + invoice.issqnApurado + invoice.issqnRetido;
 
   // Validar campos essenciais
   const essentialFields = ['nfsNumber', 'issuerCNPJ', 'takerCNPJ', 'netValue'];
