@@ -44,7 +44,17 @@ export interface ExtractedInvoice {
   pis: number;
   cofins: number;
   csll: number;
-  issqn: number;
+  
+  // ISSQN - Campos detalhados
+  issqnBase: number; // Base de Cálculo do ISSQN
+  issqnApurado: number; // ISSQN Apurado
+  issqnAliquota: string; // Alíquota Aplicada (ex: "5,00%")
+  issqnSuspensao: string; // Suspensão da Exigibilidade
+  issqnMunicipio: string; // Município de Incidência
+  issqnTributacao: string; // Tributação do ISSQN
+  issqnCP: number; // CP
+  issqnRetido: number; // ISSQN Retido
+  
   totalTaxes: number;
   netValue: number;
 

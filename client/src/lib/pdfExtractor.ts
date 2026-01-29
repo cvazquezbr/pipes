@@ -49,7 +49,17 @@ const EXTRACTION_PATTERNS = {
   pis: /PIS[\s\S]+?R\$\s+([\d.,]+)/,
   cofins: /COFINS[\s\S]+?R\$\s+([\d.,]+)/,
   csll: /CSLL[\s\S]+?R\$\s+([\d.,]+)/,
-  issqn: /ISSQN[\s\S]+?R\$\s+([\d.,]+)/,
+  
+  // ISSQN - Campos detalhados
+  issqnBase: /Base de Cálculo do ISSQN[\s\S]+?R\$\s+([\d.,]+)/,
+  issqnApurado: /ISSQN Apurado[\s\S]+?R\$\s+([\d.,]+)/,
+  issqnAliquota: /Alíquota Aplicada[\s\S]+?([\d.,]+%)/,
+  issqnSuspensao: /Suspensão da Exigibilidade do ISSQN[\s\S]+?([^\n]+?)(?=\n|Município)/,
+  issqnMunicipio: /Município de Incidência do ISSQN[\s\S]+?([^\n]+?)(?=\n|Tributação)/,
+  issqnTributacao: /Tributação do ISSQN[\s\S]+?([^\n]+?)(?=\n|CP)/,
+  issqnCP: /CP[\s\S]+?R\$\s+([\d.,]+)/,
+  issqnRetido: /ISSQN Retido[\s\S]+?R\$\s+([\d.,]+)/,
+  
   netValue: /Valor Líquido da NFS-e[\s\S]+?R\$\s+([\d.,]+)/,
 };
 
@@ -58,104 +68,100 @@ const EXTRACTION_PATTERNS = {
  */
 function parseMonetaryValue(value: string): number {
   const cleaned = value.replace(/R\$\s*/g, '').trim();
-  const normalized = cleaned.replace(/\./g, '').replace(',', '.');
-  return Math.round(parseFloat(normalized) * 100);
+  const parts = cleaned.split(',');
+  
+  if (parts.length === 1) {
+    return Math.round(parseFloat(parts[0]) * 100);
+  }
+  
+  const reais = parts[0].replace(/\./g, '');
+  const centavos = parts[1].padEnd(2, '0').substring(0, 2);
+  return parseInt(reais + centavos, 10);
 }
 
 /**
- * Limpa e normaliza strings extraídas
+ * Normaliza texto do PDF removendo espaços extras
  */
-function cleanString(value: string): string {
-  return value.trim().replace(/\s+/g, ' ');
+function normalizeText(text: string): string {
+  return text
+    .replace(/([a-záéíóúâêôãõç])([a-záéíóúâêôãõç])/gi, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
- * Extrai texto de um PDF usando pdfjs-dist
+ * Extrai valor usando padrão regex
  */
-async function extractTextFromPDF(file: File): Promise<string> {
+function extractValue(
+  text: string,
+  pattern: RegExp,
+  processor?: (value: string) => string | number
+): string | number | null {
+  const match = text.match(pattern);
+  if (!match || !match[1]) {
+    return null;
+  }
+  
+  const value = match[1].trim();
+  return processor ? processor(value) : value;
+}
+
+/**
+ * Processa um arquivo PDF e extrai dados da NFS-e
+ */
+async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
+  
   let fullText = '';
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
+  
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
     const pageText = textContent.items
       .map((item: any) => item.str)
       .join(' ');
     fullText += pageText + '\n';
   }
-
-  // Normalizar: remover espaços extras entre caracteres
-  fullText = normalizeTextSpacing(fullText);
-  return fullText;
-}
-
-/**
- * Normaliza espaçamento em texto extraído de PDF
- * Adiciona espaços entre palavras que foram concatenadas (ex: NúmerodaNFS-e -> Número da NFS-e)
- */
-function normalizeTextSpacing(text: string): string {
-  // Adicionar espaço entre letra minúscula e maiúscula
-  let normalized = text.replace(/([a-záéíóú])([A-Z])/g, '$1 $2');
-  // Normalizar múltiplos espaços
-  normalized = normalized.replace(/\s+/g, ' ');
-  return normalized.trim();
-}
-
-/**
- * Extrai valor usando padrão regex e aplica processador opcional
- */
-function extractValue(
-  text: string,
-  pattern: RegExp,
-  processor?: (value: string) => string | number
-): string | number {
-  const match = text.match(pattern);
-  if (!match || !match[1]) return '';
-
-  const value = cleanString(match[1]);
-  return processor ? processor(value) : value;
-}
-
-/**
- * Processa texto extraído e retorna dados estruturados
- */
-function processExtractedText(text: string, filename: string): ExtractedInvoice {
-  const errors: string[] = [];
-
+  
+  // Normalizar texto
+  const text = normalizeText(fullText);
+  
+  console.log('[PDF Extractor] Processando arquivo:', file.name);
+  console.log('[PDF Extractor] Texto extraido, tamanho:', text.length, 'caracteres');
+  console.log('[PDF Extractor] Primeiros 200 caracteres:', text.substring(0, 200));
+  
   const invoice: ExtractedInvoice = {
     // Identificação
-    nfsNumber: extractValue(text, EXTRACTION_PATTERNS.nfsNumber) as string,
-    accessKey: '', // Removido conforme solicitado
-    seriesNumber: extractValue(text, EXTRACTION_PATTERNS.seriesNumber) as string,
+    nfsNumber: (extractValue(text, EXTRACTION_PATTERNS.nfsNumber) as string) || '',
+    accessKey: '',
+    seriesNumber: (extractValue(text, EXTRACTION_PATTERNS.seriesNumber) as string) || '',
 
     // Datas
-    emissionDate: extractValue(text, EXTRACTION_PATTERNS.emissionDate) as string,
-    emissionTime: extractValue(text, EXTRACTION_PATTERNS.emissionTime) as string,
+    emissionDate: (extractValue(text, EXTRACTION_PATTERNS.emissionDate) as string) || '',
+    emissionTime: (extractValue(text, EXTRACTION_PATTERNS.emissionTime) as string) || '',
 
     // Emitente
-    issuerName: extractValue(text, EXTRACTION_PATTERNS.issuerName) as string,
-    issuerCNPJ: extractValue(text, EXTRACTION_PATTERNS.issuerCNPJ) as string,
-    issuerAddress: extractValue(text, EXTRACTION_PATTERNS.issuerAddress) as string,
-    issuerCity: extractValue(text, EXTRACTION_PATTERNS.issuerCity) as string,
-    issuerState: extractValue(text, EXTRACTION_PATTERNS.issuerState) as string,
-    issuerCEP: extractValue(text, EXTRACTION_PATTERNS.issuerCEP) as string,
-    issuerPhone: extractValue(text, EXTRACTION_PATTERNS.issuerPhone) as string,
-    issuerEmail: extractValue(text, EXTRACTION_PATTERNS.issuerEmail) as string,
+    issuerName: (extractValue(text, EXTRACTION_PATTERNS.issuerName) as string) || '',
+    issuerCNPJ: (extractValue(text, EXTRACTION_PATTERNS.issuerCNPJ) as string) || '',
+    issuerAddress: (extractValue(text, EXTRACTION_PATTERNS.issuerAddress) as string) || '',
+    issuerCity: (extractValue(text, EXTRACTION_PATTERNS.issuerCity) as string) || '',
+    issuerState: (extractValue(text, EXTRACTION_PATTERNS.issuerState) as string) || '',
+    issuerCEP: (extractValue(text, EXTRACTION_PATTERNS.issuerCEP) as string) || '',
+    issuerPhone: (extractValue(text, EXTRACTION_PATTERNS.issuerPhone) as string) || '',
+    issuerEmail: (extractValue(text, EXTRACTION_PATTERNS.issuerEmail) as string) || '',
 
     // Tomador
-    takerName: extractValue(text, EXTRACTION_PATTERNS.takerName) as string,
-    takerCNPJ: extractValue(text, EXTRACTION_PATTERNS.takerCNPJ) as string,
-    takerAddress: extractValue(text, EXTRACTION_PATTERNS.takerAddress) as string,
-    takerCity: extractValue(text, EXTRACTION_PATTERNS.takerCity) as string,
-    takerState: extractValue(text, EXTRACTION_PATTERNS.takerState) as string,
-    takerCEP: extractValue(text, EXTRACTION_PATTERNS.takerCEP) as string,
+    takerName: (extractValue(text, EXTRACTION_PATTERNS.takerName) as string) || '',
+    takerCNPJ: (extractValue(text, EXTRACTION_PATTERNS.takerCNPJ) as string) || '',
+    takerAddress: (extractValue(text, EXTRACTION_PATTERNS.takerAddress) as string) || '',
+    takerCity: (extractValue(text, EXTRACTION_PATTERNS.takerCity) as string) || '',
+    takerState: (extractValue(text, EXTRACTION_PATTERNS.takerState) as string) || '',
+    takerCEP: (extractValue(text, EXTRACTION_PATTERNS.takerCEP) as string) || '',
 
     // Serviço
-    serviceCode: extractValue(text, EXTRACTION_PATTERNS.serviceCode) as string,
-    serviceDescription: extractValue(text, EXTRACTION_PATTERNS.serviceDescription) as string,
+    serviceCode: (extractValue(text, EXTRACTION_PATTERNS.serviceCode) as string) || '',
+    serviceDescription: (extractValue(text, EXTRACTION_PATTERNS.serviceDescription) as string) || '',
 
     // Valores
     serviceValue: extractValue(text, EXTRACTION_PATTERNS.serviceValue, parseMonetaryValue) as number,
@@ -164,97 +170,112 @@ function processExtractedText(text: string, filename: string): ExtractedInvoice 
     pis: extractValue(text, EXTRACTION_PATTERNS.pis, parseMonetaryValue) as number,
     cofins: extractValue(text, EXTRACTION_PATTERNS.cofins, parseMonetaryValue) as number,
     csll: extractValue(text, EXTRACTION_PATTERNS.csll, parseMonetaryValue) as number,
-    issqn: extractValue(text, EXTRACTION_PATTERNS.issqn, parseMonetaryValue) as number,
+    
+    // ISSQN - Campos detalhados
+    issqnBase: extractValue(text, EXTRACTION_PATTERNS.issqnBase, parseMonetaryValue) as number,
+    issqnApurado: extractValue(text, EXTRACTION_PATTERNS.issqnApurado, parseMonetaryValue) as number,
+    issqnAliquota: (extractValue(text, EXTRACTION_PATTERNS.issqnAliquota) as string) || '',
+    issqnSuspensao: (extractValue(text, EXTRACTION_PATTERNS.issqnSuspensao) as string) || '',
+    issqnMunicipio: (extractValue(text, EXTRACTION_PATTERNS.issqnMunicipio) as string) || '',
+    issqnTributacao: (extractValue(text, EXTRACTION_PATTERNS.issqnTributacao) as string) || '',
+    issqnCP: extractValue(text, EXTRACTION_PATTERNS.issqnCP, parseMonetaryValue) as number,
+    issqnRetido: extractValue(text, EXTRACTION_PATTERNS.issqnRetido, parseMonetaryValue) as number,
+    
     totalTaxes: 0, // Calculado abaixo
     netValue: extractValue(text, EXTRACTION_PATTERNS.netValue, parseMonetaryValue) as number,
 
     // Metadados
-    filename,
+    filename: file.name,
     extractionConfidence: 0.8,
     rawText: text,
   };
 
-  // Calcular total de impostos
-  invoice.totalTaxes = invoice.irrf + invoice.pis + invoice.cofins + invoice.csll + invoice.issqn;
+  // Calcular total de impostos: serviceValue - netValue
+  invoice.totalTaxes = invoice.serviceValue - invoice.netValue;
 
   // Validar campos essenciais
   const essentialFields = ['nfsNumber', 'issuerCNPJ', 'takerCNPJ', 'netValue'];
-  const filledFields = essentialFields.filter((field) => {
+  const errors: string[] = [];
+  
+  for (const field of essentialFields) {
     const value = invoice[field as keyof ExtractedInvoice];
-    return value && value !== '';
-  });
-
-  invoice.extractionConfidence = filledFields.length / essentialFields.length;
-
-  if (filledFields.length < essentialFields.length) {
-    const missingFields = essentialFields.filter((field) => !filledFields.includes(field));
-    errors.push(`Campos essenciais não encontrados: ${missingFields.join(', ')}`);
+    if (!value || (typeof value === 'number' && value === 0)) {
+      errors.push(`Campo essencial "${field}" não foi extraído`);
+    }
   }
 
-  invoice.extractionErrors = errors;
+  if (errors.length > 0) {
+    invoice.extractionErrors = errors;
+    invoice.extractionConfidence = Math.max(0.3, invoice.extractionConfidence - 0.2);
+  }
+
+  console.log('[PDF Extractor] Resultado:', {
+    nfsNumber: invoice.nfsNumber,
+    issuerCNPJ: invoice.issuerCNPJ,
+    takerCNPJ: invoice.takerCNPJ,
+    netValue: invoice.netValue,
+    issqnApurado: invoice.issqnApurado,
+    issqnAliquota: invoice.issqnAliquota,
+  });
 
   return invoice;
 }
 
 /**
- * Processa um arquivo PDF e extrai dados da nota fiscal
- */
-export async function processPDFInvoice(file: File): Promise<ExtractedInvoice> {
-  try {
-    console.log('[PDF Extractor] Processando arquivo:', file.name);
-    const text = await extractTextFromPDF(file);
-    console.log('[PDF Extractor] Texto extraido, tamanho:', text.length, 'caracteres');
-    console.log('[PDF Extractor] Primeiros 300 caracteres:', text.substring(0, 300));
-    const result = processExtractedText(text, file.name);
-    console.log('[PDF Extractor] Resultado:', result);
-    return result;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('[PDF Extractor] Erro:', error);
-    return {
-      nfsNumber: '',
-      accessKey: '',
-      seriesNumber: '',
-      emissionDate: '',
-      emissionTime: '',
-      issuerName: '',
-      issuerCNPJ: '',
-      issuerAddress: '',
-      issuerCity: '',
-      issuerState: '',
-      issuerCEP: '',
-      issuerPhone: '',
-      issuerEmail: '',
-      takerName: '',
-      takerCNPJ: '',
-      takerAddress: '',
-      takerCity: '',
-      takerState: '',
-      takerCEP: '',
-      serviceCode: '',
-      serviceDescription: '',
-      serviceValue: 0,
-      deductions: 0,
-      irrf: 0,
-      pis: 0,
-      cofins: 0,
-      csll: 0,
-      issqn: 0,
-      totalTaxes: 0,
-      netValue: 0,
-      filename: file.name,
-      extractionConfidence: 0,
-      extractionErrors: [`Erro ao processar PDF: ${errorMessage}`],
-    };
-  }
-}
-
-/**
- * Processa múltiplos PDFs em paralelo
+ * Processa múltiplos PDFs (sequencial)
  */
 export async function processPDFInvoices(files: File[]): Promise<ExtractedInvoice[]> {
-  console.log('[PDF Extractor] Iniciando processamento paralelo de ' + files.length + ' arquivo(s)');
-  const results = await Promise.all(files.map((file) => processPDFInvoice(file)));
-  console.log('[PDF Extractor] Processamento paralelo concluido, resultados:', results);
+  const results: ExtractedInvoice[] = [];
+
+  for (const file of files) {
+    try {
+      console.log('[NFe] Processando:', file.name);
+      const invoice = await extractFromPDF(file);
+      results.push(invoice);
+    } catch (error) {
+      console.error('[NFe] Erro ao processar', file.name, ':', error);
+      results.push({
+        filename: file.name,
+        nfsNumber: '',
+        accessKey: '',
+        seriesNumber: '',
+        emissionDate: '',
+        emissionTime: '',
+        issuerName: '',
+        issuerCNPJ: '',
+        issuerAddress: '',
+        issuerCity: '',
+        issuerState: '',
+        issuerCEP: '',
+        takerName: '',
+        takerCNPJ: '',
+        takerAddress: '',
+        takerCity: '',
+        takerState: '',
+        takerCEP: '',
+        serviceCode: '',
+        serviceDescription: '',
+        serviceValue: 0,
+        deductions: 0,
+        irrf: 0,
+        pis: 0,
+        cofins: 0,
+        csll: 0,
+        issqnBase: 0,
+        issqnApurado: 0,
+        issqnAliquota: '',
+        issqnSuspensao: '',
+        issqnMunicipio: '',
+        issqnTributacao: '',
+        issqnCP: 0,
+        issqnRetido: 0,
+        totalTaxes: 0,
+        netValue: 0,
+        extractionConfidence: 0,
+        extractionErrors: [error instanceof Error ? error.message : 'Erro desconhecido ao processar PDF'],
+      });
+    }
+  }
+
   return results;
 }

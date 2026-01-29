@@ -182,7 +182,7 @@ interface InvoiceDetailDialogProps {
 function InvoiceDetailDialog({ invoice, onClose }: InvoiceDetailDialogProps) {
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalhes da Nota Fiscal</DialogTitle>
           <DialogDescription>{invoice.filename}</DialogDescription>
@@ -205,7 +205,7 @@ function InvoiceDetailDialog({ invoice, onClose }: InvoiceDetailDialogProps) {
             </Alert>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <DetailField label="Número NFS-e" value={invoice.nfsNumber} />
             <DetailField label="Série" value={invoice.seriesNumber} />
             <DetailField label="Data Emissão" value={invoice.emissionDate} />
@@ -214,19 +214,21 @@ function InvoiceDetailDialog({ invoice, onClose }: InvoiceDetailDialogProps) {
 
           <div className="space-y-2">
             <h3 className="font-semibold text-sm">Emitente (Prestador)</h3>
-            <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-muted">
+            <div className="grid grid-cols-3 gap-4 pl-4 border-l-2 border-muted">
               <DetailField label="Nome" value={invoice.issuerName} />
               <DetailField label="CNPJ" value={invoice.issuerCNPJ} />
+              <DetailField label="Telefone" value={invoice.issuerPhone} />
               <DetailField label="Endereço" value={invoice.issuerAddress} />
               <DetailField label="Cidade" value={invoice.issuerCity} />
               <DetailField label="Estado" value={invoice.issuerState} />
               <DetailField label="CEP" value={invoice.issuerCEP} />
+              <DetailField label="E-mail" value={invoice.issuerEmail} />
             </div>
           </div>
 
           <div className="space-y-2">
             <h3 className="font-semibold text-sm">Tomador (Cliente)</h3>
-            <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-muted">
+            <div className="grid grid-cols-3 gap-4 pl-4 border-l-2 border-muted">
               <DetailField label="Nome" value={invoice.takerName} />
               <DetailField label="CNPJ" value={invoice.takerCNPJ} />
               <DetailField label="Endereço" value={invoice.takerAddress} />
@@ -238,28 +240,41 @@ function InvoiceDetailDialog({ invoice, onClose }: InvoiceDetailDialogProps) {
 
           <div className="space-y-2">
             <h3 className="font-semibold text-sm">Serviço</h3>
-            <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-muted">
+            <div className="grid grid-cols-3 gap-4 pl-4 border-l-2 border-muted">
               <DetailField label="Código" value={invoice.serviceCode} />
-              <DetailField label="Descrição" value={invoice.serviceDescription} />
+              <DetailField label="Descrição" value={invoice.serviceDescription} className="col-span-2" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-semibold text-sm">Valores</h3>
-            <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-muted">
+            <h3 className="font-semibold text-sm">Valores e Impostos</h3>
+            <div className="grid grid-cols-3 gap-4 pl-4 border-l-2 border-muted">
               <DetailField label="Valor Serviço" value={formatCurrency(invoice.serviceValue)} />
               <DetailField label="Deduções" value={formatCurrency(invoice.deductions)} />
               <DetailField label="IRRF" value={formatCurrency(invoice.irrf)} />
               <DetailField label="PIS" value={formatCurrency(invoice.pis)} />
               <DetailField label="COFINS" value={formatCurrency(invoice.cofins)} />
               <DetailField label="CSLL" value={formatCurrency(invoice.csll)} />
-              <DetailField label="ISSQN" value={formatCurrency(invoice.issqn)} />
-              <DetailField label="Total Impostos" value={formatCurrency(invoice.totalTaxes)} />
+              <DetailField label="Total Impostos" value={formatCurrency(invoice.totalTaxes)} className="font-semibold" />
               <DetailField
                 label="Valor Líquido"
                 value={formatCurrency(invoice.netValue)}
-                className="font-semibold"
+                className="font-semibold col-span-2"
               />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="font-semibold text-sm">ISSQN - Detalhes</h3>
+            <div className="grid grid-cols-3 gap-4 pl-4 border-l-2 border-blue-500 bg-blue-50 p-4 rounded">
+              <DetailField label="Base de Cálculo" value={formatCurrency(invoice.issqnBase)} />
+              <DetailField label="ISSQN Apurado" value={formatCurrency(invoice.issqnApurado)} className="font-semibold" />
+              <DetailField label="Alíquota Aplicada" value={invoice.issqnAliquota} />
+              <DetailField label="Suspensão da Exigibilidade" value={invoice.issqnSuspensao} />
+              <DetailField label="Município de Incidência" value={invoice.issqnMunicipio} />
+              <DetailField label="Tributação do ISSQN" value={invoice.issqnTributacao} />
+              <DetailField label="CP" value={formatCurrency(invoice.issqnCP)} />
+              <DetailField label="ISSQN Retido" value={formatCurrency(invoice.issqnRetido)} />
             </div>
           </div>
         </div>
@@ -278,7 +293,7 @@ function DetailField({ label, value, className = '' }: DetailFieldProps) {
   return (
     <div className={className}>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value || '-'}</p>
+      <p className="text-sm font-medium break-words">{value || '-'}</p>
     </div>
   );
 }
