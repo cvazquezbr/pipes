@@ -71,14 +71,14 @@ export default function Home() {
           if (report.invalidInvoices > 0) {
             toast.warning(`${report.invalidInvoices} nota(s) com problemas`);
           }
-          exportToZOHOExcel(invoices, referenceData);
+          exportToZOHOExcel(invoices, referenceData, allSheets);
           toast.success(`ZOHO: ${report.validInvoices}/${report.totalInvoices} válidas`);
         } else if (format === 'zoho-csv') {
           const report = generateZOHOValidationReport(invoices);
           if (report.invalidInvoices > 0) {
             toast.warning(`${report.invalidInvoices} nota(s) com problemas`);
           }
-          const csv = exportToZOHOCSV(invoices, referenceData);
+          const csv = exportToZOHOCSV(invoices, referenceData, allSheets);
           downloadFile(csv, `ZOHO-Carga-Faturas-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
           toast.success(`ZOHO CSV: ${report.validInvoices}/${report.totalInvoices} válidas`);
         }

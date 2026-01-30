@@ -90,12 +90,13 @@ export function extractAllocationData(data: ExcelReferenceData[]): AllocationDat
 
 /**
  * Calcula o percentual total de retenção
- * Baseado em: (IRRF + CSLL + COFINS + PIS + ISS) * 100 / Valor Serviço
+ * Baseado em: (Valor Serviço - Valor Líquido) * 100 / Valor Serviço
+ * Que é equivalente à dedução percentual
  */
 function calculateTotalRetentionPercentage(invoice: ExtractedInvoice): number {
   if (invoice.serviceValue === 0) return 0;
-  const totalRetained = invoice.irrf + invoice.pis + invoice.cofins + invoice.csll + invoice.issqnRetido;
-  return (totalRetained * 100) / invoice.serviceValue;
+  const deduction = invoice.serviceValue - invoice.netValue;
+  return (deduction * 100) / invoice.serviceValue;
 }
 
 /**
@@ -137,7 +138,13 @@ function findClientMapping(
   clientMappings: ClientMapping[]
 ): ClientMapping | null {
   const normalized = originalName.trim().toUpperCase();
-  return clientMappings.find((m) => m.de === normalized) || null;
+  console.log('[ZOHO] Buscando cliente:', { originalName, normalized, totalMappings: clientMappings.length });
+  if (clientMappings.length > 0) {
+    console.log('[ZOHO] Primeiros 3 mapeamentos:', clientMappings.slice(0, 3).map(m => ({ de: m.de, para: m.para })));
+  }
+  const result = clientMappings.find((m) => m.de === normalized);
+  console.log('[ZOHO] Resultado do match:', result ? result.para : 'NAO ENCONTRADO');
+  return result || null;
 }
 
 /**
@@ -182,13 +189,12 @@ export function convertToZOHO(
     }
   }
 
-  // Calcular total retido (soma de todos os impostos)
-  const totalRetido =
-    invoice.irrf + invoice.pis + invoice.cofins + invoice.csll + invoice.issqnRetido;
+  // Calcular deducao (Valor Servico - Valor Liquido)
+  const deduction = invoice.serviceValue - invoice.netValue;
 
   // Converter centavos para reais
   const itemPrice = invoice.serviceValue / 100;
-  const adjustment = -(totalRetido / 100);
+  const adjustment = -(deduction / 100);
 
   return {
     'Invoice Date': formatDate(invoice.emissionDate),
@@ -243,15 +249,26 @@ function formatDate(dateStr: string): string {
  */
 export function exportToZOHOExcel(
   invoices: ExtractedInvoice[],
-  referenceData: Record<string, unknown>[] | null = null
+  referenceData: Record<string, unknown>[] | null = null,
+  allSheets: Record<string, Record<string, unknown>[]> | null = null
 ): void {
-  // Extrair dados de referência se disponível
+  // Extrair dados de referencia se disponivel
   let taxMappings: TaxMapping[] = [];
   let clientMappings: ClientMapping[] = [];
   let allocationData: AllocationData[] = [];
 
-  if (referenceData && referenceData.length > 0) {
-    // Assumir que referenceData contém dados da primeira aba (impostos)
+  if (allSheets) {
+    const sheetNames = Object.keys(allSheets);
+    if (sheetNames.length > 0 && allSheets[sheetNames[0]]) {
+      taxMappings = extractTaxMappings(allSheets[sheetNames[0]]);
+    }
+    if (sheetNames.length > 1 && allSheets[sheetNames[1]]) {
+      clientMappings = extractClientMappings(allSheets[sheetNames[1]]);
+    }
+    if (sheetNames.length > 2 && allSheets[sheetNames[2]]) {
+      allocationData = extractAllocationData(allSheets[sheetNames[2]]);
+    }
+  } else if (referenceData && referenceData.length > 0) {
     taxMappings = extractTaxMappings(referenceData);
   }
 
@@ -277,14 +294,26 @@ export function exportToZOHOExcel(
  */
 export function exportToZOHOCSV(
   invoices: ExtractedInvoice[],
-  referenceData: Record<string, unknown>[] | null = null
+  referenceData: Record<string, unknown>[] | null = null,
+  allSheets: Record<string, Record<string, unknown>[]> | null = null
 ): string {
-  // Extrair dados de referência se disponível
+  // Extrair dados de referencia se disponivel
   let taxMappings: TaxMapping[] = [];
   let clientMappings: ClientMapping[] = [];
   let allocationData: AllocationData[] = [];
 
-  if (referenceData && referenceData.length > 0) {
+  if (allSheets) {
+    const sheetNames = Object.keys(allSheets);
+    if (sheetNames.length > 0 && allSheets[sheetNames[0]]) {
+      taxMappings = extractTaxMappings(allSheets[sheetNames[0]]);
+    }
+    if (sheetNames.length > 1 && allSheets[sheetNames[1]]) {
+      clientMappings = extractClientMappings(allSheets[sheetNames[1]]);
+    }
+    if (sheetNames.length > 2 && allSheets[sheetNames[2]]) {
+      allocationData = extractAllocationData(allSheets[sheetNames[2]]);
+    }
+  } else if (referenceData && referenceData.length > 0) {
     taxMappings = extractTaxMappings(referenceData);
   }
 
