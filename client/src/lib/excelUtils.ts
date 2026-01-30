@@ -226,3 +226,38 @@ export function downloadFile(content: string, filename: string, mimeType: string
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Lê todas as abas do arquivo Excel
+ */
+export async function readExcelFileAllSheets(
+  file: File
+): Promise<Record<string, Record<string, unknown>[]>> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
+        const data = event.target?.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const result: Record<string, Record<string, unknown>[]> = {};
+
+        workbook.SheetNames.forEach((sheetName) => {
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+          result[sheetName] = jsonData;
+        });
+
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Erro ao ler arquivo Excel'));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}

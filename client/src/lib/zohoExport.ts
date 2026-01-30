@@ -1,14 +1,18 @@
 /**
  * Utilitários para exportação de dados em formato ZOHO
  * Implementa o esquema de contabilização conforme "Preparar Notas Fiscais para Carga"
+ * 
+ * Matching:
+ * 1. Impostos: Percentual total de retenção = (IRRF + CSLL + COFINS + PIS + ISS) / Valor Serviço
+ * 2. Cliente: Nome do tomador (DE) → Nome normalizado (PARA)
+ * 3. Alocação: Cliente (PARA) → Equipe e Projeto
  */
 
 import * as XLSX from 'xlsx';
-import type { ExtractedInvoice, ZOHOInvoice } from './types';
+import type { ExtractedInvoice, ZOHOInvoice, ExcelReferenceData } from './types';
 
 /**
- * Tabela de mapeamento de impostos retidos
- * Baseada em "Impostos Retidos.xlsx" do script R
+ * Interface para dados de impostos retidos
  */
 interface TaxMapping {
   percentual: number;
@@ -16,68 +20,167 @@ interface TaxMapping {
   itemTax1Type: string;
   isInclusiveTax: string;
   itemTax1Percent: string;
+  irpj: number;
+  csll: number;
+  cofins: number;
+  pis: number;
+  iss: number;
 }
 
 /**
- * Mapeamento de alíquotas para configurações de imposto
+ * Interface para dados de cliente (de-para)
  */
-const TAX_MAPPINGS: Record<string, TaxMapping> = {
-  '0': {
-    percentual: 0,
-    itemTax1: 'ISS',
-    itemTax1Type: 'Tax',
-    isInclusiveTax: 'false',
-    itemTax1Percent: '0.00%',
-  },
-  '2': {
-    percentual: 2,
-    itemTax1: 'ISS',
-    itemTax1Type: 'Tax',
-    isInclusiveTax: 'false',
-    itemTax1Percent: '2.00%',
-  },
-  '3': {
-    percentual: 3,
-    itemTax1: 'ISS',
-    itemTax1Type: 'Tax',
-    isInclusiveTax: 'false',
-    itemTax1Percent: '3.00%',
-  },
-  '5': {
-    percentual: 5,
-    itemTax1: 'ISS',
-    itemTax1Type: 'Tax',
-    isInclusiveTax: 'false',
-    itemTax1Percent: '5.00%',
-  },
-};
+interface ClientMapping {
+  de: string; // Nome original do cliente
+  para: string; // Nome normalizado
+  account: string; // Conta contábil
+}
 
 /**
- * Calcula a alíquota efetiva de impostos
- * Baseado em: (Valor Bruto - Valor Líquido) * 100 / Valor Bruto
+ * Interface para dados de alocação
  */
-function calculateEffectiveTaxRate(invoice: ExtractedInvoice): number {
+interface AllocationData {
+  cliente: string; // Nome normalizado
+  equipe: string;
+  projeto: string;
+}
+
+/**
+ * Extrai dados de impostos da primeira aba do Excel
+ */
+export function extractTaxMappings(data: ExcelReferenceData[]): TaxMapping[] {
+  return data.map((row) => {
+    const percentual = parseFloat(String(row['Item Tax1 %'] || 0));
+    return {
+      percentual,
+      itemTax1: String(row['Item Tax1'] || ''),
+      itemTax1Type: String(row['Item Tax1 Type'] || 'Tax'),
+      isInclusiveTax: String(row['Is Inclusive Tax'] || 'false'),
+      itemTax1Percent: String(row['Item Tax1 %2'] || '0%'),
+      irpj: parseFloat(String(row['IRPJ'] || 0)),
+      csll: parseFloat(String(row['CSLL'] || 0)),
+      cofins: parseFloat(String(row['COFINS'] || 0)),
+      pis: parseFloat(String(row['PIS'] || 0)),
+      iss: parseFloat(String(row['ISS'] || 0)),
+    };
+  });
+}
+
+/**
+ * Extrai dados de cliente (de-para) da segunda aba do Excel
+ */
+export function extractClientMappings(data: ExcelReferenceData[]): ClientMapping[] {
+  return data.map((row) => ({
+    de: String(row['DE'] || '').trim().toUpperCase(),
+    para: String(row['PARA'] || '').trim(),
+    account: String(row['Account'] || 'Vendas'),
+  }));
+}
+
+/**
+ * Extrai dados de alocação da terceira aba do Excel
+ */
+export function extractAllocationData(data: ExcelReferenceData[]): AllocationData[] {
+  return data.map((row) => ({
+    cliente: String(row['Cliente'] || '').trim(),
+    equipe: String(row['Equipe'] || ''),
+    projeto: String(row['Projeto'] || ''),
+  }));
+}
+
+/**
+ * Calcula o percentual total de retenção
+ * Baseado em: (IRRF + CSLL + COFINS + PIS + ISS) * 100 / Valor Serviço
+ */
+function calculateTotalRetentionPercentage(invoice: ExtractedInvoice): number {
   if (invoice.serviceValue === 0) return 0;
-  return ((invoice.serviceValue - invoice.netValue) * 100) / invoice.serviceValue;
+  const totalRetained = invoice.irrf + invoice.pis + invoice.cofins + invoice.csll + invoice.issqnRetido;
+  return (totalRetained * 100) / invoice.serviceValue;
 }
 
 /**
- * Encontra o mapeamento de imposto mais próximo
+ * Encontra o mapeamento de imposto mais próximo pelo percentual
  */
-function findTaxMapping(effectiveRate: number): TaxMapping {
-  const rates = Object.keys(TAX_MAPPINGS).map(Number);
-  const closest = rates.reduce((prev, curr) =>
-    Math.abs(curr - effectiveRate) < Math.abs(prev - effectiveRate) ? curr : prev
+function findTaxMapping(
+  retentionPercentage: number,
+  taxMappings: TaxMapping[]
+): TaxMapping {
+  if (taxMappings.length === 0) {
+    return {
+      percentual: 0,
+      itemTax1: 'ISS',
+      itemTax1Type: 'Tax',
+      isInclusiveTax: 'false',
+      itemTax1Percent: '0.00%',
+      irpj: 0,
+      csll: 0,
+      cofins: 0,
+      pis: 0,
+      iss: 0,
+    };
+  }
+
+  // Encontra o mapeamento com percentual mais próximo
+  return taxMappings.reduce((prev, curr) =>
+    Math.abs(curr.percentual - retentionPercentage) <
+    Math.abs(prev.percentual - retentionPercentage)
+      ? curr
+      : prev
   );
-  return TAX_MAPPINGS[closest.toString()] || TAX_MAPPINGS['0'];
 }
 
 /**
- * Converte ExtractedInvoice para formato ZOHO
+ * Encontra o cliente normalizado pelo nome original
  */
-export function convertToZOHO(invoice: ExtractedInvoice): ZOHOInvoice {
-  const effectiveTaxRate = calculateEffectiveTaxRate(invoice);
-  const taxMapping = findTaxMapping(effectiveTaxRate);
+function findClientMapping(
+  originalName: string,
+  clientMappings: ClientMapping[]
+): ClientMapping | null {
+  const normalized = originalName.trim().toUpperCase();
+  return clientMappings.find((m) => m.de === normalized) || null;
+}
+
+/**
+ * Encontra dados de alocação pelo cliente normalizado
+ */
+function findAllocationData(
+  clientName: string,
+  allocationData: AllocationData[]
+): AllocationData | null {
+  return allocationData.find((a) => a.cliente === clientName) || null;
+}
+
+/**
+ * Converte ExtractedInvoice para formato ZOHO com matching
+ */
+export function convertToZOHO(
+  invoice: ExtractedInvoice,
+  taxMappings: TaxMapping[] = [],
+  clientMappings: ClientMapping[] = [],
+  allocationData: AllocationData[] = []
+): ZOHOInvoice {
+  // Calcular percentual de retenção
+  const retentionPercentage = calculateTotalRetentionPercentage(invoice);
+  const taxMapping = findTaxMapping(retentionPercentage, taxMappings);
+
+  // Encontrar cliente normalizado
+  let normalizedClientName = invoice.takerName;
+  let account = 'Vendas';
+  let equipe = '';
+  let projeto = '';
+
+  const clientMatch = findClientMapping(invoice.takerName, clientMappings);
+  if (clientMatch) {
+    normalizedClientName = clientMatch.para;
+    account = clientMatch.account || 'Vendas';
+
+    // Encontrar dados de alocação
+    const allocation = findAllocationData(normalizedClientName, allocationData);
+    if (allocation) {
+      equipe = allocation.equipe;
+      projeto = allocation.projeto;
+    }
+  }
 
   // Calcular total retido (soma de todos os impostos)
   const totalRetido =
@@ -91,7 +194,7 @@ export function convertToZOHO(invoice: ExtractedInvoice): ZOHOInvoice {
     'Invoice Date': formatDate(invoice.emissionDate),
     'Invoice Number': invoice.nfsNumber,
     'Invoice Status': 'draft',
-    'Customer Name': invoice.takerName,
+    'Customer Name': normalizedClientName,
     'Template Name': 'Classic',
     'Currency Code': 'BRL',
     'Exchange Rate': 1,
@@ -107,9 +210,9 @@ export function convertToZOHO(invoice: ExtractedInvoice): ZOHOInvoice {
     'Item Tax1': taxMapping.itemTax1,
     'Item Tax1 Type': taxMapping.itemTax1Type,
     'Item Tax1 %': taxMapping.itemTax1Percent,
-    'Project Name': '',
-    'Account': 'Vendas',
-    'Notes': `NFS-e ${invoice.nfsNumber} - Emitente: ${invoice.issuerName} (${invoice.issuerCNPJ})`,
+    'Project Name': projeto,
+    'Account': account,
+    'Notes': `NFS-e ${invoice.nfsNumber} - Equipe: ${equipe} - Emitente: ${invoice.issuerName}`,
     'Terms & Conditions': '',
   };
 }
@@ -136,10 +239,25 @@ function formatDate(dateStr: string): string {
 }
 
 /**
- * Exporta invoices para formato ZOHO em Excel
+ * Exporta invoices para formato ZOHO em Excel com matching
  */
-export function exportToZOHOExcel(invoices: ExtractedInvoice[]): void {
-  const zohoData = invoices.map((invoice) => convertToZOHO(invoice));
+export function exportToZOHOExcel(
+  invoices: ExtractedInvoice[],
+  referenceData: Record<string, unknown>[] | null = null
+): void {
+  // Extrair dados de referência se disponível
+  let taxMappings: TaxMapping[] = [];
+  let clientMappings: ClientMapping[] = [];
+  let allocationData: AllocationData[] = [];
+
+  if (referenceData && referenceData.length > 0) {
+    // Assumir que referenceData contém dados da primeira aba (impostos)
+    taxMappings = extractTaxMappings(referenceData);
+  }
+
+  const zohoData = invoices.map((invoice) =>
+    convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
+  );
 
   const worksheet = XLSX.utils.json_to_sheet(zohoData);
   const workbook = XLSX.utils.book_new();
@@ -155,10 +273,24 @@ export function exportToZOHOExcel(invoices: ExtractedInvoice[]): void {
 }
 
 /**
- * Exporta invoices para formato ZOHO em CSV
+ * Exporta invoices para formato ZOHO em CSV com matching
  */
-export function exportToZOHOCSV(invoices: ExtractedInvoice[]): string {
-  const zohoData = invoices.map((invoice) => convertToZOHO(invoice));
+export function exportToZOHOCSV(
+  invoices: ExtractedInvoice[],
+  referenceData: Record<string, unknown>[] | null = null
+): string {
+  // Extrair dados de referência se disponível
+  let taxMappings: TaxMapping[] = [];
+  let clientMappings: ClientMapping[] = [];
+  let allocationData: AllocationData[] = [];
+
+  if (referenceData && referenceData.length > 0) {
+    taxMappings = extractTaxMappings(referenceData);
+  }
+
+  const zohoData = invoices.map((invoice) =>
+    convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
+  );
 
   if (zohoData.length === 0) {
     return '';

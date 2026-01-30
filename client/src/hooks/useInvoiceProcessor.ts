@@ -5,25 +5,30 @@
 
 import { useCallback, useState } from 'react';
 import { processPDFInvoices } from '@/lib/pdfExtractor';
-import { readExcelFile } from '@/lib/excelUtils';
+import { readExcelFile, readExcelFileAllSheets } from '@/lib/excelUtils';
 import type { ExtractedInvoice, ExcelReferenceData, ProcessingResult } from '@/lib/types';
 
 export function useInvoiceProcessor() {
   const [invoices, setInvoices] = useState<ExtractedInvoice[]>([]);
   const [referenceData, setReferenceData] = useState<ExcelReferenceData[] | null>(null);
+  const [allSheets, setAllSheets] = useState<Record<string, Record<string, unknown>[]> | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Carrega arquivo Excel de referência
+   * Carrega arquivo Excel de referência (todas as abas)
    */
   const loadExcelReference = useCallback(async (file: File) => {
     try {
       setError(null);
-      const data = await readExcelFile(file);
-      setReferenceData(data);
-      return data;
+      const allData = await readExcelFileAllSheets(file);
+      setAllSheets(allData);
+      // Manter compatibilidade: primeira aba como referenceData
+      const firstSheetName = Object.keys(allData)[0];
+      const firstSheetData = allData[firstSheetName] || [];
+      setReferenceData(firstSheetData);
+      return firstSheetData;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar Excel';
       setError(errorMessage);
@@ -119,6 +124,7 @@ export function useInvoiceProcessor() {
   const clearAll = useCallback(() => {
     setInvoices([]);
     setReferenceData(null);
+    setAllSheets(null);
     setError(null);
     setProgress(0);
   }, []);
@@ -149,6 +155,7 @@ export function useInvoiceProcessor() {
     // Estado
     invoices,
     referenceData,
+    allSheets,
     isProcessing,
     progress,
     error,
