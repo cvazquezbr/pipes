@@ -111,22 +111,28 @@ export function extractTaxMappings(data: ExcelReferenceData[]): TaxMapping[] {
  * Extrai dados de cliente (de-para) da segunda aba do Excel
  */
 export function extractClientMappings(data: ExcelReferenceData[]): ClientMapping[] {
-  return data.map((row) => ({
-    de: String(row['DE'] || '').trim().toUpperCase(),
-    para: String(row['PARA'] || '').trim(),
-    account: String(row['Account'] || 'Vendas'),
-  }));
+  return data.map((row) => {
+    const keys = Object.keys(row);
+    return {
+      de: String(row['DE'] || row[keys[0]] || '').trim().toUpperCase(),
+      para: String(row['PARA'] || row[keys[1]] || '').trim(),
+      account: String(row['Account'] || row[keys[2]] || 'Vendas'),
+    };
+  });
 }
 
 /**
  * Extrai dados de alocação da terceira aba do Excel
  */
 export function extractAllocationData(data: ExcelReferenceData[]): AllocationData[] {
-  return data.map((row) => ({
-    cliente: String(row['Cliente'] || '').trim(),
-    equipe: String(row['Equipe'] || ''),
-    projeto: String(row['Projeto'] || ''),
-  }));
+  return data.map((row) => {
+    const keys = Object.keys(row);
+    return {
+      cliente: String(row['Cliente'] || row['Customer Name'] || row[keys[0]] || '').trim(),
+      equipe: String(row['Equipe'] || row[keys[1]] || ''),
+      projeto: String(row['Projeto'] || row['Project Name'] || row[keys[2]] || ''),
+    };
+  });
 }
 
 /**
@@ -280,6 +286,7 @@ export function convertToZOHO(
     'Item Tax1 Type': hasTax ? taxMapping.itemTax1Type : '',
     'Item Tax1 %': hasTax ? taxMapping.itemTax1Percent : '',
     'Project Name': projeto,
+    'Equipe': equipe,
     'Account': account,
     'Notes': `NFS-e ${invoice.nfsNumber} - Equipe: ${equipe} - Emitente: ${invoice.issuerName}`,
     'Terms & Conditions': '',
