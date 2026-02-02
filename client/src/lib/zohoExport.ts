@@ -257,6 +257,8 @@ export function convertToZOHO(
   const itemPrice = invoice.serviceValue / 100;
   const adjustment = -(deduction / 100);
 
+  const hasTax = taxMapping.percentual > 0;
+
   return {
     'Invoice Date': formatDate(invoice.emissionDate),
     'Invoice Number': invoice.nfsNumber,
@@ -273,10 +275,10 @@ export function convertToZOHO(
     'Adjustment Description': 'Impostos',
     'Usage unit': 1,
     'Discount': 0,
-    'Is Inclusive Tax': taxMapping.isInclusiveTax,
-    'Item Tax1': taxMapping.itemTax1,
-    'Item Tax1 Type': taxMapping.itemTax1Type,
-    'Item Tax1 %': taxMapping.itemTax1Percent,
+    'Is Inclusive Tax': hasTax ? taxMapping.isInclusiveTax : 'false',
+    'Item Tax1': hasTax ? taxMapping.itemTax1 : '',
+    'Item Tax1 Type': hasTax ? taxMapping.itemTax1Type : '',
+    'Item Tax1 %': hasTax ? taxMapping.itemTax1Percent : '',
     'Project Name': projeto,
     'Account': account,
     'Notes': `NFS-e ${invoice.nfsNumber} - Equipe: ${equipe} - Emitente: ${invoice.issuerName}`,
