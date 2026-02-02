@@ -35,9 +35,9 @@ async function testExtraction() {
       accessKey: /Chave de Acesso da NFS-e\s+([\d\s]+)/i,
       emissionDate: /Data e Hora de emissão da NFS-e\s+(\d{2}\/\d{2}\/\d{4})/i,
       issuerName: /EMITENTE DA NFS-e[\s\S]*?Nome \/ Nome Empresarial\s+([^\n]+?)(?=\n|Endereço)/i,
-      issuerCNPJ: /EMITENTE DA NFS-e[\s\S]*?CNPJ \/ CPF \/ NIF\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/i,
+      issuerCNPJ: /EMITENTE DA NFS-e[\s\S]*?CNPJ \/ CPF \/ NIF\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/i,
       takerName: /TOMADOR DO SERVIÇO[\s\S]*?Nome \/ Nome Empresarial\s+([^\n]+?)(?=\n|Endereço)/i,
-      takerCNPJ: /TOMADOR DO SERVIÇO[\s\S]*?CNPJ \/ CPF \/ NIF\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/i,
+      takerCNPJ: /TOMADOR DO SERVIÇO[\s\S]*?CNPJ \/ CPF \/ NIF\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/i,
       serviceValue: /Valor do Serviço\s+R\$\s+([\d.,]+)/i,
       netValue: /Valor Líquido da NFS-e\s+R\$\s+([\d.,]+)/i,
     };

@@ -21,9 +21,9 @@ const patterns = {
   emissionDate: /Data e Hora de emissão da NFS-e\s+\n\s+(\d{2}\/\d{2}\/\d{4})/i,
   emissionTime: /Data e Hora de emissão da DPS\s+\n\s+(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i,
   issuerName: /EMITENTE DA NFS-e[\s\S]*?Nome \/ Nome Empresarial\s+\n\s+([^\n]+)/i,
-  issuerCNPJ: /EMITENTE DA NFS-e[\s\S]*?CNPJ \/ CPF \/ NIF\s+\n\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/i,
+  issuerCNPJ: /EMITENTE DA NFS-e[\s\S]*?CNPJ \/ CPF \/ NIF\s+\n\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/i,
   takerName: /TOMADOR DO SERVIÇO[\s\S]*?Nome \/ Nome Empresarial\s+\n\s+([^\n]+)/i,
-  takerCNPJ: /TOMADOR DO SERVIÇO[\s\S]*?CNPJ \/ CPF \/ NIF\s+\n\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/i,
+  takerCNPJ: /TOMADOR DO SERVIÇO[\s\S]*?CNPJ \/ CPF \/ NIF\s+\n\s+(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/i,
   netValue: /Valor Líquido da NFS-e\s+\n\s+R\$\s+([\d.,]+)/i,
 };
 
