@@ -74,20 +74,29 @@ function parseReferenceValue(value: unknown): number {
  */
 export function extractTaxMappings(data: ExcelReferenceData[]): TaxMapping[] {
   return data.map((row) => {
-    // Prioriza 'Item Tax1 %2' para o valor numérico se disponível, pois costuma ter o formato decimal correto
+    // Prioriza 'Item Tax1 %_1' (padrão xlsx para duplicados) ou 'Item Tax1 %2'
     const rawPercent =
-      row['Item Tax1 %2'] !== undefined && row['Item Tax1 %2'] !== ''
-        ? row['Item Tax1 %2']
-        : row['Item Tax1 %'];
+      row['Item Tax1 %_1'] !== undefined && row['Item Tax1 %_1'] !== ''
+        ? row['Item Tax1 %_1']
+        : row['Item Tax1 %2'] !== undefined && row['Item Tax1 %2'] !== ''
+          ? row['Item Tax1 %2']
+          : row['Item Tax1 %'];
 
     const percentual = parseReferenceValue(rawPercent);
+
+    let itemTax1Percent = String(row['Item Tax1 %_1'] || row['Item Tax1 %2'] || row['Item Tax1 %'] || '0.00%');
+
+    // Se for apenas um número sem o símbolo %, formata como percentual
+    if (itemTax1Percent && !itemTax1Percent.includes('%') && !isNaN(Number(itemTax1Percent.replace(',', '.')))) {
+      itemTax1Percent = parseFloat(itemTax1Percent.replace(',', '.')).toFixed(2) + '%';
+    }
 
     return {
       percentual,
       itemTax1: String(row['Item Tax1'] || ''),
       itemTax1Type: String(row['Item Tax1 Type'] || 'Tax'),
       isInclusiveTax: String(row['Is Inclusive Tax'] || 'false'),
-      itemTax1Percent: String(row['Item Tax1 %2'] || row['Item Tax1 %'] || '0%'),
+      itemTax1Percent,
       irpj: parseReferenceValue(row['IRPJ']),
       csll: parseReferenceValue(row['CSLL']),
       cofins: parseReferenceValue(row['COFINS']),

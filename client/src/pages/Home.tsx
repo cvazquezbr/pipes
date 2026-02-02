@@ -35,8 +35,8 @@ export default function Home() {
   } = useInvoiceProcessor();
 
   const handleExcelLoaded = useCallback(
-    async (data: Record<string, unknown>[]) => {
-      await loadExcelReference(new File([JSON.stringify(data)], 'reference.json'));
+    async (data: Record<string, unknown>[], file: File) => {
+      await loadExcelReference(file);
       toast.success(`Planilha carregada com ${data.length} registros`);
     },
     [loadExcelReference]

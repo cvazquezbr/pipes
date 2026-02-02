@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { ExcelReferenceData } from '@/lib/types';
 
 interface ExcelUploadProps {
-  onFileLoaded: (data: ExcelReferenceData[]) => void;
+  onFileLoaded: (data: ExcelReferenceData[], file: File) => void;
   isLoading?: boolean;
 }
 
@@ -46,7 +46,7 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
         const { readExcelFile } = await import('@/lib/excelUtils');
         const data = await readExcelFile(file);
         setPreview(data.slice(0, 5)); // Preview das primeiras 5 linhas
-        onFileLoaded(data);
+        onFileLoaded(data, file);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao processar arquivo';
         setError(errorMessage);
