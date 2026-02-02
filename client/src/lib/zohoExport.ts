@@ -137,7 +137,14 @@ export function extractAllocationData(data: ExcelReferenceData[]): AllocationDat
 function calculateTotalRetentionPercentage(invoice: ExtractedInvoice): number {
   if (invoice.serviceValue === 0) return 0;
   const deduction = invoice.serviceValue - invoice.netValue;
-  return (deduction * 100) / invoice.serviceValue;
+  const percentage = (deduction * 100) / invoice.serviceValue;
+  console.log(`[ZOHO] Calculando retenção para NF ${invoice.nfsNumber}:`, {
+    valorServico: invoice.serviceValue / 100,
+    valorLiquido: invoice.netValue / 100,
+    deducao: deduction / 100,
+    percentual: percentage.toFixed(4) + '%'
+  });
+  return percentage;
 }
 
 /**
@@ -147,6 +154,8 @@ function findTaxMapping(
   retentionPercentage: number,
   taxMappings: TaxMapping[]
 ): TaxMapping {
+  console.log(`[ZOHO] Buscando esquema de tributação para ${retentionPercentage.toFixed(2)}%...`);
+
   if (taxMappings.length === 0) {
     return {
       percentual: 0,
@@ -164,12 +173,22 @@ function findTaxMapping(
   }
 
   // Encontra o mapeamento com percentual mais próximo
-  return taxMappings.reduce((prev, curr) =>
+  const match = taxMappings.reduce((prev, curr) =>
     Math.abs(curr.percentual - retentionPercentage) <
     Math.abs(prev.percentual - retentionPercentage)
       ? curr
       : prev
   );
+
+  console.log(`[ZOHO] Esquema selecionado:`, {
+    percentualEsperado: retentionPercentage.toFixed(2) + '%',
+    percentualEncontrado: match.percentual.toFixed(2) + '%',
+    taxName: match.itemTax1,
+    taxPercent: match.itemTax1Percent,
+    diferenca: Math.abs(match.percentual - retentionPercentage).toFixed(4)
+  });
+
+  return match;
 }
 
 /**
