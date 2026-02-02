@@ -225,6 +225,23 @@ function findAllocationData(
 }
 
 /**
+ * Determina a conta contábil baseada em palavras-chave na descrição do item
+ */
+function determineAccountFromDescription(description: string): string | null {
+  const desc = (description || '').toUpperCase();
+
+  if (desc.includes('VGPF')) return 'VGPF-EAD';
+  if (desc.includes('CAPF')) return 'CAPF EAD';
+  if (desc.includes('PCOSMIC-EAD')) return 'COSMIC-EAD';
+  if (desc.includes('CFPS')) return 'PCFPS-EAD';
+  if (desc.includes('SNAP')) return 'SNAP-EAD';
+  if (desc.includes('EREQ')) return 'EREQ EAD';
+  if (desc.includes('ETSW')) return 'ESTIMATIVAS EAD';
+
+  return null;
+}
+
+/**
  * Converte ExtractedInvoice para formato ZOHO com matching
  */
 export function convertToZOHO(
@@ -254,6 +271,13 @@ export function convertToZOHO(
       equipe = allocation.equipe;
       projeto = allocation.projeto;
     }
+  }
+
+  // Ajustar conta baseado na descrição (sobrescreve se houver match)
+  const specialAccount = determineAccountFromDescription(invoice.serviceDescription);
+  if (specialAccount) {
+    console.log(`[ZOHO] Conta ajustada por descrição: ${account} -> ${specialAccount}`);
+    account = specialAccount;
   }
 
   // Calcular deducao (Valor Servico - Valor Liquido)
