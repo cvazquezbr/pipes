@@ -25,6 +25,7 @@ interface TaxMapping {
   cofins: number;
   pis: number;
   iss: number;
+  outros: number;
 }
 
 /**
@@ -46,22 +47,53 @@ interface AllocationData {
 }
 
 /**
+ * Converte valor da planilha de referência para número, lidando com formatos brasileiros
+ */
+function parseReferenceValue(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (value === undefined || value === null || value === '') return 0;
+
+  const str = String(value).trim();
+  // Remove % e espaços, troca vírgula por ponto se necessário
+  const cleaned = str.replace('%', '').replace(/\s/g, '');
+
+  // Se contém vírgula, assume formato brasileiro
+  if (cleaned.includes(',')) {
+    // Se também contém ponto, o ponto é separador de milhar
+    if (cleaned.includes('.')) {
+      return parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    return parseFloat(cleaned.replace(',', '.')) || 0;
+  }
+
+  return parseFloat(cleaned) || 0;
+}
+
+/**
  * Extrai dados de impostos da primeira aba do Excel
  */
 export function extractTaxMappings(data: ExcelReferenceData[]): TaxMapping[] {
   return data.map((row) => {
-    const percentual = parseFloat(String(row['Item Tax1 %'] || 0));
+    // Prioriza 'Item Tax1 %2' para o valor numérico se disponível, pois costuma ter o formato decimal correto
+    const rawPercent =
+      row['Item Tax1 %2'] !== undefined && row['Item Tax1 %2'] !== ''
+        ? row['Item Tax1 %2']
+        : row['Item Tax1 %'];
+
+    const percentual = parseReferenceValue(rawPercent);
+
     return {
       percentual,
       itemTax1: String(row['Item Tax1'] || ''),
       itemTax1Type: String(row['Item Tax1 Type'] || 'Tax'),
       isInclusiveTax: String(row['Is Inclusive Tax'] || 'false'),
-      itemTax1Percent: String(row['Item Tax1 %2'] || '0%'),
-      irpj: parseFloat(String(row['IRPJ'] || 0)),
-      csll: parseFloat(String(row['CSLL'] || 0)),
-      cofins: parseFloat(String(row['COFINS'] || 0)),
-      pis: parseFloat(String(row['PIS'] || 0)),
-      iss: parseFloat(String(row['ISS'] || 0)),
+      itemTax1Percent: String(row['Item Tax1 %2'] || row['Item Tax1 %'] || '0%'),
+      irpj: parseReferenceValue(row['IRPJ']),
+      csll: parseReferenceValue(row['CSLL']),
+      cofins: parseReferenceValue(row['COFINS']),
+      pis: parseReferenceValue(row['PIS']),
+      iss: parseReferenceValue(row['ISS']),
+      outros: parseReferenceValue(row['Outros']),
     };
   });
 }
@@ -118,6 +150,7 @@ function findTaxMapping(
       cofins: 0,
       pis: 0,
       iss: 0,
+      outros: 0,
     };
   }
 
