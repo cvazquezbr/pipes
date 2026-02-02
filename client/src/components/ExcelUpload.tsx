@@ -7,7 +7,7 @@ import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, FileSpreadsheet, Upload, X } from 'lucide-react';
+import { AlertCircle, FileSpreadsheet, Loader2, Upload, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { ExcelReferenceData } from '@/lib/types';
 
@@ -95,9 +95,17 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
             className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors ${dragActiveClass} ${disabledClass}`}
           >
             <input {...getInputProps()} />
-            <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+            {isLoading ? (
+              <Loader2 className="mx-auto h-8 w-8 text-primary animate-spin mb-2" />
+            ) : (
+              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+            )}
             <p className="text-sm font-medium">
-              {isDragActive ? 'Solte o arquivo aqui' : 'Arraste um arquivo Excel aqui ou clique para selecionar'}
+              {isLoading
+                ? 'Processando planilha...'
+                : isDragActive
+                ? 'Solte o arquivo aqui'
+                : 'Arraste um arquivo Excel aqui ou clique para selecionar'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">Formatos suportados: .xlsx, .xls, .csv</p>
           </div>

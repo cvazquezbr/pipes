@@ -30,6 +30,7 @@ interface ResultsTableProps {
   onInvoiceUpdate?: (index: number, invoice: ExtractedInvoice) => void;
   onInvoiceDelete?: (index: number) => void;
   onExport?: (format: 'csv' | 'json' | 'xlsx' | 'zoho-excel' | 'zoho-csv') => void;
+  isLoading?: boolean;
 }
 
 function formatCurrency(cents: number): string {
@@ -45,6 +46,7 @@ export function ResultsTable({
   onInvoiceUpdate,
   onInvoiceDelete,
   onExport,
+  isLoading = false,
 }: ResultsTableProps) {
   const [selectedInvoice, setSelectedInvoice] = useState<number | null>(null);
 
@@ -74,11 +76,12 @@ export function ResultsTable({
                 {successCount} sucesso • {errorCount} com erros
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onExport?.('csv')}
+                disabled={isLoading}
               >
                 <Download className="mr-2 h-4 w-4" />
                 CSV
@@ -87,6 +90,7 @@ export function ResultsTable({
                 variant="outline"
                 size="sm"
                 onClick={() => onExport?.('xlsx')}
+                disabled={isLoading}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Excel
@@ -95,6 +99,7 @@ export function ResultsTable({
                 variant="outline"
                 size="sm"
                 onClick={() => onExport?.('json')}
+                disabled={isLoading}
               >
                 <Download className="mr-2 h-4 w-4" />
                 JSON
@@ -104,6 +109,7 @@ export function ResultsTable({
                 size="sm"
                 onClick={() => onExport?.('zoho-excel')}
                 className="bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading}
               >
                 <Download className="mr-2 h-4 w-4" />
                 ZOHO Excel
@@ -112,6 +118,7 @@ export function ResultsTable({
                 variant="outline"
                 size="sm"
                 onClick={() => onExport?.('zoho-csv')}
+                disabled={isLoading}
               >
                 <Download className="mr-2 h-4 w-4" />
                 ZOHO CSV
@@ -121,17 +128,18 @@ export function ResultsTable({
         </CardHeader>
       </Card>
 
-      <div className="rounded-lg border overflow-x-auto">
+      <div className="rounded-lg border bg-white shadow-sm overflow-hidden flex flex-col max-h-[65vh]">
+        <div className="overflow-auto flex-1">
         <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-32">Arquivo</TableHead>
+          <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">
+            <TableRow className="hover:bg-transparent border-b">
+              <TableHead className="w-32 bg-slate-50">Arquivo</TableHead>
               <TableHead className="w-24">NFS-e</TableHead>
               <TableHead className="w-40">Emitente</TableHead>
               <TableHead className="w-40">Tomador</TableHead>
               <TableHead className="w-28">Valor Líquido</TableHead>
               <TableHead className="w-20">Confiança</TableHead>
-              <TableHead className="w-24 text-right">Ações</TableHead>
+              <TableHead className="w-24 text-right bg-slate-50">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -163,6 +171,7 @@ export function ResultsTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedInvoice(idx)}
+                      disabled={isLoading}
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -170,6 +179,7 @@ export function ResultsTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onInvoiceDelete?.(idx)}
+                      disabled={isLoading}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -179,6 +189,7 @@ export function ResultsTable({
             ))}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {selectedInvoice !== null && (
