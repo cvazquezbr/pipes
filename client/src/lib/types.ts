@@ -111,6 +111,7 @@ export interface ZOHOInvoice {
   'Item Tax1 Type': string;
   'Item Tax1 %': string;
   'Project Name': string;
+  'Equipe': string;
   'Account': string;
   'Notes': string;
   'Terms & Conditions': string;
