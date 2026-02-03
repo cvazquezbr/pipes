@@ -47,7 +47,6 @@ export const EXTRACTION_PATTERNS = {
   issqnSuspensao: /Suspensão da Exigibilidade do ISSQN[\s\S]+?(Sim|Não)(?=\s|\n)/,
   issqnMunicipio: /Município de Incidência do ISSQN[\s\S]+?([^\n-]+?)\s*-\s*([A-Z]{2})(?=\s|\n)/,
   issqnTributacao: /Tributação do ISSQN[\s\S]+?(Tributável|Não Tributável|Imune)(?=\s|\n)/,
-  issqnCP: /Retenção do ISSQN[\s\S]+?(?:Retido pelo Tomador)?[\s\S]+?R\$\s+([\d.,]+)/,
   issqnRetido: /ISSQN Retido[\s\S]+?R\$\s+([\d.,]+)/,
 
   netValue: /Valor Líquido da NFS-e[\s\S]+?R\$\s+([\d.,]+)/,
