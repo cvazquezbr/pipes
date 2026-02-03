@@ -143,7 +143,7 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     
     totalTaxes: 0, // Calculado abaixo
     netValue: extractValue(text, EXTRACTION_PATTERNS.netValue, parseMonetaryValue) as number,
-    isCancelled: !!extractValue(text, EXTRACTION_PATTERNS.cancellation),
+    isCancelled: file.name.toUpperCase().includes('CANCELADA'),
 
     // Metadados
     filename: file.name,
