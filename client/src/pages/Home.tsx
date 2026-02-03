@@ -41,12 +41,12 @@ export default function Home() {
   } = useInvoiceProcessor();
 
   const handleExcelLoaded = useCallback(
-    async (data: Record<string, unknown>[], file: File) => {
+    async (sheets: Record<string, Record<string, unknown>[]>, file: File) => {
       try {
         await loadExcelReference(file);
-        toast.success(`Planilha carregada com ${data.length} registros`);
-        // Opcionalmente avançar para o próximo passo após carregar
-        // setCurrentStep(2);
+        const firstSheetName = Object.keys(sheets)[0];
+        const recordCount = sheets[firstSheetName]?.length || 0;
+        toast.success(`Planilha carregada com ${recordCount} registros`);
       } catch (err) {
         // Erro já é tratado no hook e exibido no UI
       }

@@ -138,6 +138,7 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
       return '';
     })(),
     issqnTributacao: (extractValue(text, EXTRACTION_PATTERNS.issqnTributacao) as string) || '',
+    issqnCP: extractValue(text, /CP[\s\S]+?R\$\s+([\d.,]+)/, parseMonetaryValue) as number || 0,
     issqnRetido: extractValue(text, EXTRACTION_PATTERNS.issqnRetido, parseMonetaryValue) as number,
     
     totalTaxes: 0, // Calculado abaixo
@@ -145,8 +146,9 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     isCancelled: (() => {
       const cancelledMatch = extractValue(text, EXTRACTION_PATTERNS.cancellation);
       const nfsNumber = (extractValue(text, EXTRACTION_PATTERNS.nfsNumber) as string) || '???';
-      console.log(`[PDF Extractor] NF ${nfsNumber}: isCancelled? ${!!cancelledMatch}`, cancelledMatch ? `(${cancelledMatch})` : '');
-      return !!cancelledMatch;
+      const isCancelled = !!cancelledMatch || file.name.toUpperCase().includes('CANCELADA');
+      console.log(`[PDF Extractor] NF ${nfsNumber}: isCancelled? ${isCancelled}`, cancelledMatch ? `(match: ${cancelledMatch})` : '(filename)');
+      return isCancelled;
     })(),
 
     // Metadados
@@ -233,6 +235,7 @@ export async function processPDFInvoices(files: File[]): Promise<ExtractedInvoic
         issqnSuspensao: '',
         issqnMunicipio: '',
         issqnTributacao: '',
+        issqnCP: 0,
         issqnRetido: 0,
         totalTaxes: 0,
         netValue: 0,

@@ -128,10 +128,13 @@ export function extractClientMappings(data: ExcelReferenceData[]): ClientMapping
 export function extractAllocationData(data: ExcelReferenceData[]): AllocationData[] {
   return data.map((row) => {
     const keys = Object.keys(row);
-    // Verifica se a 4ª coluna existe (por nome ou posição)
-    const hasDueDateCol = row['Due Date Days'] !== undefined || keys.length >= 4;
-    const dueDateDays = hasDueDateCol
-      ? parseReferenceValue(row['Due Date Days'] || row[keys[3]])
+
+    // Extrai o valor da 4ª coluna (por nome ou posição)
+    const rawDays = row['Due Date Days'] !== undefined ? row['Due Date Days'] : row[keys[3]];
+
+    // Se o valor estiver ausente ou for uma string vazia, deixamos como undefined
+    const dueDateDays = (rawDays !== undefined && rawDays !== null && rawDays !== '')
+      ? parseReferenceValue(rawDays)
       : undefined;
 
     return {

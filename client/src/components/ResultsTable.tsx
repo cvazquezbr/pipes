@@ -135,6 +135,7 @@ export function ResultsTable({
             <TableRow className="hover:bg-transparent border-b">
               <TableHead className="w-32 bg-slate-50">Arquivo</TableHead>
               <TableHead className="w-24">NFS-e</TableHead>
+              <TableHead className="w-24">Status</TableHead>
               <TableHead className="w-40">Emitente</TableHead>
               <TableHead className="w-40">Tomador</TableHead>
               <TableHead className="w-28">Valor Líquido</TableHead>
@@ -147,6 +148,17 @@ export function ResultsTable({
               <TableRow key={idx} className={invoice.extractionErrors?.length ? 'bg-destructive/5' : ''}>
                 <TableCell className="text-xs truncate">{invoice.filename}</TableCell>
                 <TableCell className="font-mono text-sm">{invoice.nfsNumber || '-'}</TableCell>
+                <TableCell className="text-xs">
+                  {invoice.isCancelled ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                      Void
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
+                      Draft
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="text-xs truncate">{invoice.issuerName || '-'}</TableCell>
                 <TableCell className="text-xs truncate">{invoice.takerName || '-'}</TableCell>
                 <TableCell className="font-mono text-sm">

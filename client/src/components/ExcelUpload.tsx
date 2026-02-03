@@ -13,15 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { ExcelReferenceData } from '@/lib/types';
 
 interface ExcelUploadProps {
-  onFileLoaded: (data: ExcelReferenceData[], file: File) => void;
+  onFileLoaded: (data: Record<string, Record<string, unknown>[]>, file: File) => void;
   isLoading?: boolean;
 }
 
 export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [allSheets, setAllSheets] = useState<Record<string, ExcelReferenceData[]> | null>(null);
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [allSheetsPreview, setAllSheetsPreview] = useState<Record<string, ExcelReferenceData[]> | null>(null);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -46,20 +45,23 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
       try {
         setFileName(file.name);
         const { readExcelFileAllSheets } = await import('@/lib/excelUtils');
-        const data = await readExcelFileAllSheets(file) as Record<string, ExcelReferenceData[]>;
-        setAllSheets(data);
+        const sheetsData = await readExcelFileAllSheets(file);
 
-        const sheetNames = Object.keys(data);
-        if (sheetNames.length > 0) {
-          setActiveTab(sheetNames[0]);
-          onFileLoaded(data[sheetNames[0]], file);
-        }
+        // Criar preview de cada aba (primeiras 5 linhas)
+        const previewData: Record<string, ExcelReferenceData[]> = {};
+        Object.keys(sheetsData).forEach(sheetName => {
+          previewData[sheetName] = (sheetsData[sheetName] as ExcelReferenceData[]).slice(0, 5);
+        });
+
+        setAllSheetsPreview(previewData);
+
+        // Enviar todas as abas para o hook processar
+        onFileLoaded(sheetsData, file);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao processar arquivo';
         setError(errorMessage);
         setFileName(null);
-        setAllSheets(null);
-        setActiveTab(null);
+        setAllSheetsPreview(null);
       }
     },
     [onFileLoaded]
@@ -78,8 +80,7 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
 
   const handleClear = () => {
     setFileName(null);
-    setAllSheets(null);
-    setActiveTab(null);
+    setAllSheetsPreview(null);
     setError(null);
   };
 
@@ -135,42 +136,43 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
               </Button>
             </div>
 
-            {allSheets && Object.keys(allSheets).length > 0 && activeTab && (
+            {allSheetsPreview && Object.keys(allSheetsPreview).length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Abas detectadas:</p>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="flex flex-wrap h-auto p-1 bg-muted/50">
-                    {Object.keys(allSheets).map((sheetName) => (
+                <p className="text-xs font-medium text-muted-foreground">Preview dos dados:</p>
+
+                <Tabs defaultValue={Object.keys(allSheetsPreview)[0]} className="w-full">
+                  <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 bg-muted/50">
+                    {Object.keys(allSheetsPreview).map((sheetName) => (
                       <TabsTrigger
                         key={sheetName}
                         value={sheetName}
-                        className="text-[10px] px-2 py-1 h-7"
+                        className="text-xs py-1 px-3"
                       >
                         {sheetName}
                       </TabsTrigger>
                     ))}
                   </TabsList>
 
-                  {Object.entries(allSheets).map(([sheetName, rows]) => (
-                    <TabsContent key={sheetName} value={sheetName} className="mt-2 outline-none">
-                      <div className="max-h-48 overflow-auto rounded-lg border bg-muted/30">
-                        {rows.length > 0 ? (
-                          <table className="w-full text-[10px] border-collapse">
-                            <thead className="sticky top-0 bg-muted-foreground/5 backdrop-blur-sm">
+                  {Object.entries(allSheetsPreview).map(([sheetName, preview]) => (
+                    <TabsContent key={sheetName} value={sheetName} className="mt-2">
+                      <div className="max-h-48 overflow-x-auto rounded-lg border bg-muted/50 p-2">
+                        {preview.length > 0 ? (
+                          <table className="w-full text-xs">
+                            <thead>
                               <tr className="border-b">
-                                {Object.keys(rows[0] || {}).map((key) => (
-                                  <th key={key} className="px-2 py-1.5 text-left font-bold text-slate-700">
+                                {Object.keys(preview[0] || {}).map((key) => (
+                                  <th key={key} className="px-2 py-1 text-left font-medium">
                                     {key}
                                   </th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody>
-                              {rows.slice(0, 5).map((row, idx) => (
-                                <tr key={idx} className="border-b last:border-0 bg-white/50 hover:bg-white/80 transition-colors">
+                              {preview.map((row, idx) => (
+                                <tr key={idx} className="border-b last:border-0">
                                   {Object.values(row).map((value, cellIdx) => (
-                                    <td key={cellIdx} className="px-2 py-1.5 truncate max-w-[150px] text-slate-600">
-                                      {String(value !== undefined && value !== null ? value : '')}
+                                    <td key={cellIdx} className="px-2 py-1 truncate max-w-[200px]">
+                                      {String(value)}
                                     </td>
                                   ))}
                                 </tr>
@@ -178,16 +180,9 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
                             </tbody>
                           </table>
                         ) : (
-                          <div className="p-4 text-center text-muted-foreground italic">
-                            Aba vazia
-                          </div>
+                          <p className="text-center py-4 text-muted-foreground italic">Aba vazia</p>
                         )}
                       </div>
-                      {rows.length > 5 && (
-                        <p className="text-[9px] text-muted-foreground text-right mt-1 font-medium">
-                          Mostrando apenas as primeiras 5 de {rows.length} linhas
-                        </p>
-                      )}
                     </TabsContent>
                   ))}
                 </Tabs>

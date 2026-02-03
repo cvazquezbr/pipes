@@ -52,5 +52,5 @@ export const EXTRACTION_PATTERNS = {
   netValue: /Valor Líquido da NFS-e[\s\S]+?R\$\s+([\d.,]+)/,
 
   // Cancelamento
-  cancellation: /Regime\s+Especial[\s\S]+?(CANCELADA)[\s\S]+?Suspensão/i,
+  cancellation: /Regime\s*Especial\s*de\s*Tributação[\s\S]+?(CANCELADA)[\s\S]+?Suspensão\s*da\s*Exigibilidade/i,
 };

@@ -52,6 +52,7 @@ export interface ExtractedInvoice {
   issqnSuspensao: string; // Suspensão da Exigibilidade
   issqnMunicipio: string; // Município de Incidência
   issqnTributacao: string; // Tributação do ISSQN
+  issqnCP: number; // CP
   issqnRetido: number; // ISSQN Retido
   
   totalTaxes: number;

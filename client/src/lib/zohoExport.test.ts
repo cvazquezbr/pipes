@@ -35,7 +35,6 @@ describe('zohoExport account determination', () => {
     issqnSuspensao: 'Não',
     issqnMunicipio: 'City',
     issqnTributacao: 'Normal',
-    issqnCP: 0,
     issqnRetido: 0,
     totalTaxes: 0,
     netValue: 10000,
@@ -114,7 +113,6 @@ describe('zohoExport new requirements', () => {
     issqnSuspensao: 'Não',
     issqnMunicipio: 'City',
     issqnTributacao: 'Normal',
-    issqnCP: 0,
     issqnRetido: 0,
     totalTaxes: 0,
     netValue: 10000,
@@ -172,6 +170,22 @@ describe('zohoExport new requirements', () => {
   it('should set dueDateDays as undefined if 4th column is missing', () => {
     const rawData = [
       { 'Col1': 'Cliente A', 'Col2': 'Equipe A', 'Col3': 'Projeto A' }
+    ];
+    const extracted = extractAllocationData(rawData);
+    expect(extracted[0].dueDateDays).toBeUndefined();
+  });
+
+  it('should set dueDateDays as undefined if 4th column is null', () => {
+    const rawData = [
+      { 'Col1': 'Cliente A', 'Col2': 'Equipe A', 'Col3': 'Projeto A', 'Col4': null }
+    ];
+    const extracted = extractAllocationData(rawData);
+    expect(extracted[0].dueDateDays).toBeUndefined();
+  });
+
+  it('should set dueDateDays as undefined if 4th column is an empty string', () => {
+    const rawData = [
+      { 'Col1': 'Cliente A', 'Col2': 'Equipe A', 'Col3': 'Projeto A', 'Col4': '' }
     ];
     const extracted = extractAllocationData(rawData);
     expect(extracted[0].dueDateDays).toBeUndefined();
