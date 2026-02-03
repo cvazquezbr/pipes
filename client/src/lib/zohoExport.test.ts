@@ -137,6 +137,17 @@ describe('zohoExport new requirements', () => {
     expect(result['Due Date']).toBe('2024-05-25');
   });
 
+  it('should fill Project Name from allocation data', () => {
+    const allocationData = [
+      { cliente: 'TAKER', equipe: 'E1', projeto: 'PROJECT_X', dueDateDays: 15 }
+    ];
+    const clientMappings = [
+      { de: 'TAKER', para: 'TAKER', account: 'Vendas' }
+    ];
+    const result = convertToZOHO(baseInvoice, [], clientMappings, allocationData);
+    expect(result['Project Name']).toBe('PROJECT_X');
+  });
+
   it('should calculate Due Date as empty if days is undefined (missing column)', () => {
     const result = convertToZOHO(baseInvoice);
     expect(result['Due Date']).toBe('');
@@ -165,6 +176,30 @@ describe('zohoExport new requirements', () => {
     ];
     const extracted = extractAllocationData(rawData);
     expect(extracted[0].dueDateDays).toBe(30);
+  });
+
+  it('should extract dueDateDays from "Vencimento" header', () => {
+    const rawData = [
+      { 'Cliente': 'Cliente A', 'Equipe': 'Equipe A', 'Projeto': 'Projeto A', 'Vencimento': 45 }
+    ];
+    const extracted = extractAllocationData(rawData);
+    expect(extracted[0].dueDateDays).toBe(45);
+  });
+
+  it('should extract Projeto from "Projeto" header', () => {
+    const rawData = [
+      { 'Cliente': 'C1', 'Equipe': 'E1', 'Projeto': 'P1', 'Vencimento': 30 }
+    ];
+    const extracted = extractAllocationData(rawData);
+    expect(extracted[0].projeto).toBe('P1');
+  });
+
+  it('should extract Projeto from 3rd column if header is missing', () => {
+    const rawData = [
+      { 'C1': 'Cliente A', 'C2': 'Equipe A', 'C3': 'Projeto A', 'C4': 30 }
+    ];
+    const extracted = extractAllocationData(rawData);
+    expect(extracted[0].projeto).toBe('Projeto A');
   });
 
   it('should set dueDateDays as undefined if 4th column is missing', () => {

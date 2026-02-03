@@ -130,7 +130,11 @@ export function extractAllocationData(data: ExcelReferenceData[]): AllocationDat
     const keys = Object.keys(row);
 
     // Extrai o valor da 4ª coluna (por nome ou posição)
-    const rawDays = row['Due Date Days'] !== undefined ? row['Due Date Days'] : row[keys[3]];
+    const rawDays = (row['Vencimento'] !== undefined && row['Vencimento'] !== '')
+      ? row['Vencimento']
+      : (row['Due Date Days'] !== undefined && row['Due Date Days'] !== '')
+        ? row['Due Date Days']
+        : row[keys[3]];
 
     // Se o valor estiver ausente ou for uma string vazia, deixamos como undefined
     const dueDateDays = (rawDays !== undefined && rawDays !== null && rawDays !== '')
