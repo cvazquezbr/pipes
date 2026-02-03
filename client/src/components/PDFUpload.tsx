@@ -14,11 +14,17 @@ import type { ExtractedInvoice } from '@/lib/types';
 
 interface PDFUploadProps {
   onProcessComplete: (invoices: ExtractedInvoice[]) => void;
+  onProcess?: (files: File[]) => Promise<ExtractedInvoice[]>;
   isProcessing?: boolean;
   progress?: number;
 }
 
-export function PDFUpload({ onProcessComplete, isProcessing = false, progress = 0 }: PDFUploadProps) {
+export function PDFUpload({
+  onProcessComplete,
+  onProcess,
+  isProcessing = false,
+  progress = 0
+}: PDFUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
@@ -69,11 +75,20 @@ export function PDFUpload({ onProcessComplete, isProcessing = false, progress = 
 
     try {
       setError(null);
-      console.log('[PDFUpload] Iniciando processamento de ' + selectedFiles.length + ' arquivo(s)');
-      const { processPDFInvoices } = await import('@/lib/pdfExtractor');
-      const invoices = await processPDFInvoices(selectedFiles);
-      console.log('[PDFUpload] Processamento concluido, chamando onProcessComplete com ' + invoices.length + ' resultado(s)');
-      onProcessComplete(invoices);
+
+      let results: ExtractedInvoice[];
+
+      if (onProcess) {
+        // Se o pai proveu uma função de processamento, usa ela (para gerenciar estado global)
+        results = await onProcess(selectedFiles);
+      } else {
+        // Fallback para processamento local
+        console.log('[PDFUpload] Iniciando processamento local de ' + selectedFiles.length + ' arquivo(s)');
+        const { processPDFInvoices } = await import('@/lib/pdfExtractor');
+        results = await processPDFInvoices(selectedFiles);
+        console.log('[PDFUpload] Processamento local concluido');
+        onProcessComplete(results);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao processar PDFs';
       console.error('[PDFUpload] ERRO:', err);
