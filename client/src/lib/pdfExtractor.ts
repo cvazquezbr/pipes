@@ -138,7 +138,6 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
       return '';
     })(),
     issqnTributacao: (extractValue(text, EXTRACTION_PATTERNS.issqnTributacao) as string) || '',
-    issqnCP: extractValue(text, /CP[\s\S]+?R\$\s+([\d.,]+)/, parseMonetaryValue) as number || 0,
     issqnRetido: extractValue(text, EXTRACTION_PATTERNS.issqnRetido, parseMonetaryValue) as number,
     
     totalTaxes: 0, // Calculado abaixo
@@ -235,7 +234,6 @@ export async function processPDFInvoices(files: File[]): Promise<ExtractedInvoic
         issqnSuspensao: '',
         issqnMunicipio: '',
         issqnTributacao: '',
-        issqnCP: 0,
         issqnRetido: 0,
         totalTaxes: 0,
         netValue: 0,

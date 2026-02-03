@@ -55,8 +55,9 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
 
         setAllSheetsPreview(previewData);
 
-        // Enviar todas as abas para o hook processar
-        onFileLoaded(sheetsData, file);
+        // Enviar a primeira aba para manter compatibilidade com o hook atual
+        const firstSheetName = Object.keys(sheetsData)[0];
+        onFileLoaded(sheetsData[firstSheetName] as ExcelReferenceData[], file);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao processar arquivo';
         setError(errorMessage);
