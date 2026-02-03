@@ -301,7 +301,6 @@ function InvoiceDetailDialog({ invoice, onClose }: InvoiceDetailDialogProps) {
               <DetailField label="Suspensão da Exigibilidade" value={invoice.issqnSuspensao} />
               <DetailField label="Município de Incidência" value={invoice.issqnMunicipio} />
               <DetailField label="Tributação do ISSQN" value={invoice.issqnTributacao} />
-              <DetailField label="CP" value={formatCurrency(invoice.issqnCP)} />
               <DetailField label="ISSQN Retido" value={formatCurrency(invoice.issqnRetido)} />
             </div>
           </div>

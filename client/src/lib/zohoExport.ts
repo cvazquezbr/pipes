@@ -441,9 +441,11 @@ export function exportToZOHOExcel(
     taxMappings = extractTaxMappings(referenceData);
   }
 
-  const zohoData = invoices.map((invoice) =>
-    convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
-  );
+  const zohoData = invoices
+    .filter((invoice) => !!invoice.nfsNumber)
+    .map((invoice) =>
+      convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
+    );
 
   const worksheet = XLSX.utils.json_to_sheet(zohoData, { header: ZOHO_HEADERS });
   const workbook = XLSX.utils.book_new();
@@ -487,9 +489,11 @@ export function exportToZOHOCSV(
     taxMappings = extractTaxMappings(referenceData);
   }
 
-  const zohoData = invoices.map((invoice) =>
-    convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
-  );
+  const zohoData = invoices
+    .filter((invoice) => !!invoice.nfsNumber)
+    .map((invoice) =>
+      convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
+    );
 
   if (zohoData.length === 0) {
     return '';
