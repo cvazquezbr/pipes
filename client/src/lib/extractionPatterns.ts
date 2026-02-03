@@ -18,7 +18,7 @@ export const EXTRACTION_PATTERNS = {
   issuerState: /EMITENTE DA NFS-e[\s\S]*?Município[\s\S]+?-\s*([A-Z]{2})/,
   issuerCEP: /EMITENTE DA NFS-e[\s\S]*?CEP[\s\S]+?(\d{5}-\d{3})/,
   issuerPhone: /Telefone[\s\S]+?(\([\d\s]+\)[\d\s-]+?)(?=\n|Nome|E-mail|Endereço)/,
-  issuerEmail: /EMITENTE DA NFS-e[\s\S]*?E-mail[\s\S]+?([^\n]+?)(?=\n|Endereco)/,
+  issuerEmail: /EMITENTE DA NFS-e[\s\S]*?E-mail[\s\S]+?([^\n]+?)(?=\n|Endereço)/,
 
   // Tomador
   takerName: /TOMADOR DO SERVIÇO[\s\S]*?Nome \/ Nome Empresarial[\s\S]+?([^\n]+?)(?=\n|E-mail)/,
@@ -41,7 +41,7 @@ export const EXTRACTION_PATTERNS = {
   csll: /CSLL[\s\S]+?R\$\s+([\d.,]+)/,
 
   // ISSQN - Campos detalhados
-  issqnBase: /Base de Cálculo do ISSQN[\s\S]+?R\$\s+([\d.,]+)/,
+  issqnBase: /BC ISSQN[\s\S]+?R\$\s+([\d.,]+)/,
   issqnApurado: /ISSQN Apurado[\s\S]+?R\$\s+([\d.,]+)/,
   issqnAliquota: /Alíquota Aplicada[\s\S]+?(\d+[.,]\d{2}%)/,
   issqnSuspensao: /Suspensão da Exigibilidade do ISSQN[\s\S]+?(Sim|Não)(?=\s|\n)/,
