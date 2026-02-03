@@ -57,7 +57,7 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
 
         // Enviar a primeira aba para manter compatibilidade com o hook atual
         const firstSheetName = Object.keys(sheetsData)[0];
-        onFileLoaded(sheetsData[firstSheetName] as ExcelReferenceData[], file);
+        onFileLoaded(sheetsData, file);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao processar arquivo';
         setError(errorMessage);
@@ -154,38 +154,46 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
                     ))}
                   </TabsList>
 
-                  {Object.entries(allSheetsPreview).map(([sheetName, preview]) => (
-                    <TabsContent key={sheetName} value={sheetName} className="mt-2">
-                      <div className="max-h-48 overflow-x-auto rounded-lg border bg-muted/50 p-2">
-                        {preview.length > 0 ? (
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b">
-                                {Object.keys(preview[0] || {}).map((key) => (
-                                  <th key={key} className="px-2 py-1 text-left font-medium">
-                                    {key}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {preview.map((row, idx) => (
-                                <tr key={idx} className="border-b last:border-0">
-                                  {Object.values(row).map((value, cellIdx) => (
-                                    <td key={cellIdx} className="px-2 py-1 truncate max-w-[200px]">
-                                      {String(value)}
-                                    </td>
+                  {Object.entries(allSheetsPreview).map(([sheetName, preview]) => {
+                    const headers = new Set<string>();
+                    preview.forEach((row) => Object.keys(row).forEach((k) => headers.add(k)));
+                    const headerList = Array.from(headers);
+
+                    return (
+                      <TabsContent key={sheetName} value={sheetName} className="mt-2" anchor-id={sheetName}>
+                        <div className="max-h-48 overflow-x-auto rounded-lg border bg-muted/50 p-2">
+                          {preview.length > 0 ? (
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b">
+                                  {headerList.map((key) => (
+                                    <th key={key} className="px-2 py-1 text-left font-medium">
+                                      {key}
+                                    </th>
                                   ))}
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        ) : (
-                          <p className="text-center py-4 text-muted-foreground italic">Aba vazia</p>
-                        )}
-                      </div>
-                    </TabsContent>
-                  ))}
+                              </thead>
+                              <tbody>
+                                {preview.map((row, idx) => (
+                                  <tr key={idx} className="border-b last:border-0">
+                                    {headerList.map((key) => (
+                                      <td key={key} className="px-2 py-1 truncate max-w-[200px]">
+                                        {String(row[key] !== undefined ? row[key] : '')}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <p className="text-center py-4 text-muted-foreground italic">
+                              Aba vazia
+                            </p>
+                          )}
+                        </div>
+                      </TabsContent>
+                    );
+                  })}
                 </Tabs>
               </div>
             )}

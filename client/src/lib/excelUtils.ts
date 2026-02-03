@@ -19,7 +19,7 @@ export async function readExcelFile(file: File): Promise<Record<string, unknown>
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheet = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheet];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, unknown>[];
         resolve(jsonData);
       } catch (error) {
         reject(error);
@@ -82,7 +82,6 @@ export function exportToCSV(invoices: ExtractedInvoice[]): string {
     'Suspensão ISSQN',
     'Município ISSQN',
     'Tributação ISSQN',
-    'CP',
     'ISSQN Retido',
     'Total Impostos',
     'Valor Líquido',
@@ -242,7 +241,7 @@ export async function readExcelFileAllSheets(
 
         workbook.SheetNames.forEach((sheetName) => {
           const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, unknown>[];
           result[sheetName] = jsonData;
         });
 
