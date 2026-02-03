@@ -42,8 +42,29 @@ describe('pdfExtractor patterns', () => {
       expect(match![1]).toBe('CANCELADA');
     });
 
+    it('should match with minimalist markers', () => {
+      const text = 'Regime Especial CANCELADA Suspensão';
+      const match = text.match(EXTRACTION_PATTERNS.cancellation);
+      expect(match).toBeTruthy();
+      expect(match![1]).toBe('CANCELADA');
+    });
+
     it('should match CANCELADA with multiple spaces/newlines', () => {
       const text = 'Regime Especial de Tributação\n\n  CANCELADA \n\n Suspensão da Exigibilidade';
+      const match = text.match(EXTRACTION_PATTERNS.cancellation);
+      expect(match).toBeTruthy();
+      expect(match![1]).toBe('CANCELADA');
+    });
+
+    it('should match cancelada with lowercase if i flag is used', () => {
+      const text = 'Regime Especial de Tributação cancelada Suspensão da Exigibilidade';
+      const match = text.match(EXTRACTION_PATTERNS.cancellation);
+      expect(match).toBeTruthy();
+      expect(match![1]).toBe('cancelada');
+    });
+
+    it('should match with Suspensão de ISSQN marker', () => {
+      const text = 'Regime Especial de Tributação CANCELADA Suspensão de ISSQN';
       const match = text.match(EXTRACTION_PATTERNS.cancellation);
       expect(match).toBeTruthy();
       expect(match![1]).toBe('CANCELADA');
