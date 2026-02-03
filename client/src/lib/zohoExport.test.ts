@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { convertToZOHO, extractAllocationData } from './zohoExport';
+import { convertToZOHO, extractAllocationData, generateZOHOValidationReport } from './zohoExport';
 import type { ExtractedInvoice } from './types';
 
 describe('zohoExport account determination', () => {
@@ -224,5 +224,88 @@ describe('zohoExport new requirements', () => {
     ];
     const extracted = extractAllocationData(rawData);
     expect(extracted[0].dueDateDays).toBeUndefined();
+  });
+});
+
+describe('zohoExport filtering logic', () => {
+  const baseInvoice: ExtractedInvoice = {
+    nfsNumber: '100',
+    accessKey: 'key',
+    seriesNumber: '1',
+    emissionDate: '10/05/2024',
+    emissionTime: '10:00',
+    issuerName: 'Issuer',
+    issuerCNPJ: '00.000.000/0000-00',
+    issuerAddress: '',
+    issuerCity: '',
+    issuerState: '',
+    issuerCEP: '',
+    takerName: 'Taker',
+    takerCNPJ: '11.111.111/0001-11',
+    takerAddress: '',
+    takerCity: '',
+    takerState: '',
+    takerCEP: '',
+    serviceCode: '1.01',
+    serviceDescription: 'Standard Service',
+    serviceValue: 10000,
+    deductions: 0,
+    irrf: 0,
+    pis: 0,
+    cofins: 0,
+    csll: 0,
+    issqnBase: 10000,
+    issqnApurado: 500,
+    issqnAliquota: '5%',
+    issqnSuspensao: 'Não',
+    issqnMunicipio: 'City',
+    issqnTributacao: 'Normal',
+    issqnRetido: 0,
+    totalTaxes: 0,
+    netValue: 10000,
+    filename: 'test.pdf',
+    extractionConfidence: 1,
+    isCancelled: false,
+  };
+
+  it('should include cancelled invoice even if it is unique', () => {
+    const invoices = [
+      { ...baseInvoice, nfsNumber: '101', isCancelled: true }
+    ];
+    const report = generateZOHOValidationReport(invoices);
+    expect(report.totalInvoices).toBe(1);
+    expect(report.validInvoices).toBe(1);
+  });
+
+  it('should include ONLY the cancelled invoice if there is another (active) invoice with the same number', () => {
+    const invoices = [
+      { ...baseInvoice, nfsNumber: '102', isCancelled: false, filename: 'active.pdf' },
+      { ...baseInvoice, nfsNumber: '102', isCancelled: true, filename: 'cancelled.pdf' }
+    ];
+    const report = generateZOHOValidationReport(invoices);
+    // Should keep only the cancelled one
+    expect(report.totalInvoices).toBe(1);
+    expect(report.validInvoices).toBe(1);
+  });
+
+  it('should include all non-cancelled invoices with nfsNumber', () => {
+    const invoices = [
+      { ...baseInvoice, nfsNumber: '103', isCancelled: false },
+      { ...baseInvoice, nfsNumber: '104', isCancelled: false }
+    ];
+    const report = generateZOHOValidationReport(invoices);
+    expect(report.totalInvoices).toBe(2);
+  });
+
+  it('should include invoices without nfsNumber in total but flag them as issues', () => {
+    const invoices = [
+      { ...baseInvoice, nfsNumber: '', isCancelled: false },
+      { ...baseInvoice, nfsNumber: '105', isCancelled: false }
+    ];
+    const report = generateZOHOValidationReport(invoices);
+    // Should be 2 because we want to report the issue for the one without number
+    expect(report.totalInvoices).toBe(2);
+    expect(report.invalidInvoices).toBe(1);
+    expect(report.issues[0].issue).toBe('Número NFS-e não extraído');
   });
 });

@@ -448,11 +448,30 @@ export function exportToZOHOExcel(
     taxMappings = extractTaxMappings(referenceData);
   }
 
-  const zohoData = invoices
-    .filter((invoice) => !!invoice.nfsNumber)
-    .map((invoice) =>
-      convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
-    );
+  // Agrupa invoices por nfsNumber para aplicar regra de cancelamento/duplicidade
+  const grouped = invoices.reduce((acc, inv) => {
+    if (inv.nfsNumber) {
+      if (!acc[inv.nfsNumber]) acc[inv.nfsNumber] = [];
+      acc[inv.nfsNumber].push(inv);
+    }
+    return acc;
+  }, {} as Record<string, ExtractedInvoice[]>);
+
+  const filteredInvoices = Object.values(grouped).flatMap((group) => {
+    // SE houver mais de um registro com o mesmo número de NF,
+    // apenas o registro cancelado deve ser incluído.
+    if (group.length > 1) {
+      const cancelledInGroup = group.filter((inv) => inv.isCancelled);
+      if (cancelledInGroup.length > 0) {
+        return cancelledInGroup;
+      }
+    }
+    return group;
+  });
+
+  const zohoData = filteredInvoices.map((invoice) =>
+    convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
+  );
 
   const worksheet = XLSX.utils.json_to_sheet(zohoData, { header: ZOHO_HEADERS });
   const workbook = XLSX.utils.book_new();
@@ -468,63 +487,6 @@ export function exportToZOHOExcel(
 }
 
 /**
- * Exporta invoices para formato ZOHO em CSV com matching
- */
-export function exportToZOHOCSV(
-  invoices: ExtractedInvoice[],
-  referenceData: Record<string, unknown>[] | null = null,
-  allSheets: Record<string, Record<string, unknown>[]> | null = null
-): string {
-  // Extrair dados de referencia se disponivel
-  let taxMappings: TaxMapping[] = [];
-  let clientMappings: ClientMapping[] = [];
-  let allocationData: AllocationData[] = [];
-
-  if (allSheets) {
-    const sheetNames = Object.keys(allSheets);
-    if (sheetNames.length > 0 && allSheets[sheetNames[0]]) {
-      taxMappings = extractTaxMappings(allSheets[sheetNames[0]]);
-    }
-    if (sheetNames.length > 1 && allSheets[sheetNames[1]]) {
-      clientMappings = extractClientMappings(allSheets[sheetNames[1]]);
-    }
-    if (sheetNames.length > 2 && allSheets[sheetNames[2]]) {
-      console.log(`[ZOHO] Extraindo dados de alocação da 3ª aba: ${sheetNames[2]}`);
-      allocationData = extractAllocationData(allSheets[sheetNames[2]]);
-    }
-  } else if (referenceData && referenceData.length > 0) {
-    taxMappings = extractTaxMappings(referenceData);
-  }
-
-  const zohoData = invoices
-    .filter((invoice) => !!invoice.nfsNumber)
-    .map((invoice) =>
-      convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
-    );
-
-  if (zohoData.length === 0) {
-    return '';
-  }
-
-  const headers = ZOHO_HEADERS;
-
-  const rows = zohoData.map((row) =>
-    headers.map((header) => {
-      const value = row[header as keyof ZOHOInvoice];
-      const cellStr = String(value !== undefined && value !== null ? value : '');
-      return `"${cellStr.replace(/"/g, '""')}"`;
-    })
-  );
-
-  const csvContent = [
-    headers.map((h) => `"${h}"`).join(','),
-    ...rows.map((row) => row.join(',')),
-  ].join('\n');
-
-  return csvContent;
-}
-
-/**
  * Gera relatório de validação para exportação ZOHO
  */
 export function generateZOHOValidationReport(invoices: ExtractedInvoice[]): {
@@ -533,9 +495,32 @@ export function generateZOHOValidationReport(invoices: ExtractedInvoice[]): {
   invalidInvoices: number;
   issues: Array<{ nfsNumber: string; issue: string }>;
 } {
+  // Agrupa invoices por nfsNumber para aplicar regra de cancelamento/duplicidade
+  const grouped = invoices.reduce((acc, inv) => {
+    // Mantém invoices sem nfsNumber para reportar no issues
+    const key = inv.nfsNumber || 'MISSING';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(inv);
+    return acc;
+  }, {} as Record<string, ExtractedInvoice[]>);
+
+  const filteredInvoices = Object.entries(grouped).flatMap(([key, group]) => {
+    if (key === 'MISSING') return group;
+
+    // SE houver mais de um registro com o mesmo número de NF,
+    // apenas o registro cancelado deve ser incluído.
+    if (group.length > 1) {
+      const cancelledInGroup = group.filter((inv) => inv.isCancelled);
+      if (cancelledInGroup.length > 0) {
+        return cancelledInGroup;
+      }
+    }
+    return group;
+  });
+
   const issues: Array<{ nfsNumber: string; issue: string }> = [];
 
-  invoices.forEach((invoice) => {
+  filteredInvoices.forEach((invoice) => {
     if (!invoice.nfsNumber) {
       issues.push({ nfsNumber: 'N/A', issue: 'Número NFS-e não extraído' });
     }
@@ -554,8 +539,8 @@ export function generateZOHOValidationReport(invoices: ExtractedInvoice[]): {
   });
 
   return {
-    totalInvoices: invoices.length,
-    validInvoices: invoices.length - issues.length,
+    totalInvoices: filteredInvoices.length,
+    validInvoices: filteredInvoices.length - issues.length,
     invalidInvoices: issues.length,
     issues,
   };
