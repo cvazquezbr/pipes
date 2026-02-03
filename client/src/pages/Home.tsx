@@ -14,7 +14,7 @@ import { PDFUpload } from '@/components/PDFUpload';
 import { ResultsTable } from '@/components/ResultsTable';
 import { useInvoiceProcessor } from '@/hooks/useInvoiceProcessor';
 import { exportToCSV, exportToJSON, exportToExcel, downloadFile } from '@/lib/excelUtils';
-import { exportToZOHOExcel, exportToZOHOCSV, generateZOHOValidationReport } from '@/lib/zohoExport';
+import { exportToZOHOExcel, generateZOHOValidationReport } from '@/lib/zohoExport';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -65,7 +65,7 @@ export default function Home() {
   );
 
   const handleExport = useCallback(
-    (format: 'csv' | 'json' | 'xlsx' | 'zoho-excel' | 'zoho-csv') => {
+    (format: 'csv' | 'json' | 'xlsx' | 'zoho-excel') => {
       try {
         if (format === 'csv') {
           const csv = exportToCSV(invoices);
@@ -85,14 +85,6 @@ export default function Home() {
           }
           exportToZOHOExcel(invoices, referenceData, allSheets);
           toast.success(`ZOHO: ${report.validInvoices}/${report.totalInvoices} válidas`);
-        } else if (format === 'zoho-csv') {
-          const report = generateZOHOValidationReport(invoices);
-          if (report.invalidInvoices > 0) {
-            toast.warning(`${report.invalidInvoices} nota(s) com problemas`);
-          }
-          const csv = exportToZOHOCSV(invoices, referenceData, allSheets);
-          downloadFile(csv, `ZOHO-Carga-Faturas-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
-          toast.success(`ZOHO CSV: ${report.validInvoices}/${report.totalInvoices} válidas`);
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao exportar';

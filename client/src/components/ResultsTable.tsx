@@ -29,7 +29,7 @@ interface ResultsTableProps {
   invoices: ExtractedInvoice[];
   onInvoiceUpdate?: (index: number, invoice: ExtractedInvoice) => void;
   onInvoiceDelete?: (index: number) => void;
-  onExport?: (format: 'csv' | 'json' | 'xlsx' | 'zoho-excel' | 'zoho-csv') => void;
+  onExport?: (format: 'csv' | 'json' | 'xlsx' | 'zoho-excel') => void;
   isLoading?: boolean;
 }
 
@@ -113,15 +113,6 @@ export function ResultsTable({
               >
                 <Download className="mr-2 h-4 w-4" />
                 ZOHO Excel
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onExport?.('zoho-csv')}
-                disabled={isLoading}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                ZOHO CSV
               </Button>
             </div>
           </div>
