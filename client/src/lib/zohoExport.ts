@@ -448,28 +448,30 @@ export function exportToZOHOExcel(
     taxMappings = extractTaxMappings(referenceData);
   }
 
-  // Conta ocorrências de cada nfsNumber para aplicar regra de cancelamento
-  const nfsCounts = invoices.reduce((acc, inv) => {
+  // Agrupa invoices por nfsNumber para aplicar regra de cancelamento/duplicidade
+  const grouped = invoices.reduce((acc, inv) => {
     if (inv.nfsNumber) {
-      acc[inv.nfsNumber] = (acc[inv.nfsNumber] || 0) + 1;
+      if (!acc[inv.nfsNumber]) acc[inv.nfsNumber] = [];
+      acc[inv.nfsNumber].push(inv);
     }
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, ExtractedInvoice[]>);
 
-  const zohoData = invoices
-    .filter((invoice) => {
-      if (!invoice.nfsNumber) return false;
-
-      // Se cancelada, só inclui se houver mais de um registro com o mesmo número
-      if (invoice.isCancelled) {
-        return (nfsCounts[invoice.nfsNumber] || 0) > 1;
+  const filteredInvoices = Object.values(grouped).flatMap((group) => {
+    // SE houver mais de um registro com o mesmo número de NF,
+    // apenas o registro cancelado deve ser incluído.
+    if (group.length > 1) {
+      const cancelledInGroup = group.filter((inv) => inv.isCancelled);
+      if (cancelledInGroup.length > 0) {
+        return cancelledInGroup;
       }
+    }
+    return group;
+  });
 
-      return true;
-    })
-    .map((invoice) =>
-      convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
-    );
+  const zohoData = filteredInvoices.map((invoice) =>
+    convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
+  );
 
   const worksheet = XLSX.utils.json_to_sheet(zohoData, { header: ZOHO_HEADERS });
   const workbook = XLSX.utils.book_new();
@@ -493,24 +495,27 @@ export function generateZOHOValidationReport(invoices: ExtractedInvoice[]): {
   invalidInvoices: number;
   issues: Array<{ nfsNumber: string; issue: string }>;
 } {
-  // Conta ocorrências de cada nfsNumber para aplicar regra de cancelamento
-  const nfsCounts = invoices.reduce((acc, inv) => {
-    if (inv.nfsNumber) {
-      acc[inv.nfsNumber] = (acc[inv.nfsNumber] || 0) + 1;
-    }
+  // Agrupa invoices por nfsNumber para aplicar regra de cancelamento/duplicidade
+  const grouped = invoices.reduce((acc, inv) => {
+    // Mantém invoices sem nfsNumber para reportar no issues
+    const key = inv.nfsNumber || 'MISSING';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(inv);
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, ExtractedInvoice[]>);
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    // Mantém se não tiver número (para reportar o erro)
-    if (!invoice.nfsNumber) return true;
+  const filteredInvoices = Object.entries(grouped).flatMap(([key, group]) => {
+    if (key === 'MISSING') return group;
 
-    // Se cancelada, aplica regra de duplicidade
-    if (invoice.isCancelled) {
-      return (nfsCounts[invoice.nfsNumber] || 0) > 1;
+    // SE houver mais de um registro com o mesmo número de NF,
+    // apenas o registro cancelado deve ser incluído.
+    if (group.length > 1) {
+      const cancelledInGroup = group.filter((inv) => inv.isCancelled);
+      if (cancelledInGroup.length > 0) {
+        return cancelledInGroup;
+      }
     }
-
-    return true;
+    return group;
   });
 
   const issues: Array<{ nfsNumber: string; issue: string }> = [];

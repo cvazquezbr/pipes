@@ -268,21 +268,24 @@ describe('zohoExport filtering logic', () => {
     isCancelled: false,
   };
 
-  it('should exclude cancelled invoice if it is unique', () => {
+  it('should include cancelled invoice even if it is unique', () => {
     const invoices = [
       { ...baseInvoice, nfsNumber: '101', isCancelled: true }
     ];
     const report = generateZOHOValidationReport(invoices);
-    expect(report.totalInvoices).toBe(0);
+    expect(report.totalInvoices).toBe(1);
+    expect(report.validInvoices).toBe(1);
   });
 
-  it('should include cancelled invoice if there is another invoice with the same number', () => {
+  it('should include ONLY the cancelled invoice if there is another (active) invoice with the same number', () => {
     const invoices = [
-      { ...baseInvoice, nfsNumber: '102', isCancelled: false },
-      { ...baseInvoice, nfsNumber: '102', isCancelled: true }
+      { ...baseInvoice, nfsNumber: '102', isCancelled: false, filename: 'active.pdf' },
+      { ...baseInvoice, nfsNumber: '102', isCancelled: true, filename: 'cancelled.pdf' }
     ];
     const report = generateZOHOValidationReport(invoices);
-    expect(report.totalInvoices).toBe(2);
+    // Should keep only the cancelled one
+    expect(report.totalInvoices).toBe(1);
+    expect(report.validInvoices).toBe(1);
   });
 
   it('should include all non-cancelled invoices with nfsNumber', () => {
