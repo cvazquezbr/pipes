@@ -44,6 +44,7 @@ interface AllocationData {
   cliente: string; // Nome normalizado
   equipe: string;
   projeto: string;
+  dueDateDays?: number;
 }
 
 /**
@@ -127,10 +128,12 @@ export function extractClientMappings(data: ExcelReferenceData[]): ClientMapping
 export function extractAllocationData(data: ExcelReferenceData[]): AllocationData[] {
   return data.map((row) => {
     const keys = Object.keys(row);
+    const dueDateDays = parseReferenceValue(row['Due Date Days'] || row[keys[3]] || 0);
     return {
       cliente: String(row['Cliente'] || row['Customer Name'] || row[keys[0]] || '').trim(),
       equipe: String(row['Equipe'] || row[keys[1]] || ''),
       projeto: String(row['Projeto'] || row['Project Name'] || row[keys[2]] || ''),
+      dueDateDays,
     };
   });
 }
@@ -259,6 +262,7 @@ export function convertToZOHO(
   let account = 'Vendas';
   let equipe = '';
   let projeto = '';
+  let dueDateDays = 0;
 
   const clientMatch = findClientMapping(invoice.takerName, clientMappings);
   if (clientMatch) {
@@ -270,6 +274,7 @@ export function convertToZOHO(
     if (allocation) {
       equipe = allocation.equipe;
       projeto = allocation.projeto;
+      dueDateDays = allocation.dueDateDays || 0;
     }
   }
 
@@ -288,11 +293,13 @@ export function convertToZOHO(
   const adjustment = -(deduction / 100);
 
   const hasTax = taxMapping.percentual > 0;
+  const formattedInvoiceDate = formatDate(invoice.emissionDate);
 
   return {
-    'Invoice Date': formatDate(invoice.emissionDate),
+    'Invoice Date': formattedInvoiceDate,
+    'Due Date': calculateDueDate(invoice.emissionDate, dueDateDays),
     'Invoice Number': invoice.nfsNumber,
-    'Invoice Status': 'draft',
+    'Invoice Status': invoice.isCancelled ? 'Void' : 'draft',
     'Customer Name': normalizedClientName,
     'Template Name': 'Classic',
     'Currency Code': 'BRL',
@@ -318,24 +325,55 @@ export function convertToZOHO(
 }
 
 /**
- * Formata data de DD/MM/YYYY para DD/MM/YYYY
+ * Formata data de DD/MM/YYYY para YYYY-MM-DD
  */
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
-  // Se já está em DD/MM/YYYY, retorna como está
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-    return dateStr;
+
+  // Se já está em DD/MM/YYYY, converte para YYYY-MM-DD
+  const dmyMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (dmyMatch) {
+    return `${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}`;
   }
+
   // Tenta converter de outros formatos
   try {
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    return `${year}-${month}-${day}`;
   } catch {
     return dateStr;
   }
+}
+
+/**
+ * Calcula a data de vencimento a partir da data de emissão e número de dias
+ */
+function calculateDueDate(invoiceDateStr: string, days: number): string {
+  if (!invoiceDateStr) return '';
+
+  let date: Date;
+  const dmyMatch = invoiceDateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (dmyMatch) {
+    date = new Date(parseInt(dmyMatch[3]), parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]));
+  } else {
+    date = new Date(invoiceDateStr);
+  }
+
+  if (isNaN(date.getTime())) return formatDate(invoiceDateStr);
+
+  if (days > 0) {
+    date.setDate(date.getDate() + days);
+  }
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -360,6 +398,7 @@ export function exportToZOHOExcel(
       clientMappings = extractClientMappings(allSheets[sheetNames[1]]);
     }
     if (sheetNames.length > 2 && allSheets[sheetNames[2]]) {
+      console.log(`[ZOHO] Extraindo dados de alocação da 3ª aba: ${sheetNames[2]}`);
       allocationData = extractAllocationData(allSheets[sheetNames[2]]);
     }
   } else if (referenceData && referenceData.length > 0) {
@@ -405,6 +444,7 @@ export function exportToZOHOCSV(
       clientMappings = extractClientMappings(allSheets[sheetNames[1]]);
     }
     if (sheetNames.length > 2 && allSheets[sheetNames[2]]) {
+      console.log(`[ZOHO] Extraindo dados de alocação da 3ª aba: ${sheetNames[2]}`);
       allocationData = extractAllocationData(allSheets[sheetNames[2]]);
     }
   } else if (referenceData && referenceData.length > 0) {

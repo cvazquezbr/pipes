@@ -143,6 +143,7 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     
     totalTaxes: 0, // Calculado abaixo
     netValue: extractValue(text, EXTRACTION_PATTERNS.netValue, parseMonetaryValue) as number,
+    isCancelled: !!extractValue(text, EXTRACTION_PATTERNS.cancellation),
 
     // Metadados
     filename: file.name,
@@ -232,6 +233,7 @@ export async function processPDFInvoices(files: File[]): Promise<ExtractedInvoic
         issqnRetido: 0,
         totalTaxes: 0,
         netValue: 0,
+        isCancelled: false,
         extractionConfidence: 0,
         extractionErrors: [error instanceof Error ? error.message : 'Erro desconhecido ao processar PDF'],
       });

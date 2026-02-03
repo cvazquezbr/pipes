@@ -57,6 +57,7 @@ export interface ExtractedInvoice {
   
   totalTaxes: number;
   netValue: number;
+  isCancelled?: boolean;
 
   // Metadados
   filename: string;
@@ -92,6 +93,7 @@ export interface ExtractionPattern {
 
 export interface ZOHOInvoice {
   'Invoice Date': string;
+  'Due Date'?: string;
   'Invoice Number': string;
   'Invoice Status': string;
   'Customer Name': string;
