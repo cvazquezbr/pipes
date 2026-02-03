@@ -142,7 +142,13 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     
     totalTaxes: 0, // Calculado abaixo
     netValue: extractValue(text, EXTRACTION_PATTERNS.netValue, parseMonetaryValue) as number,
-    isCancelled: file.name.toUpperCase().includes('CANCELADA'),
+    isCancelled: (() => {
+      const cancelledMatch = extractValue(text, EXTRACTION_PATTERNS.cancellation);
+      const nfsNumber = (extractValue(text, EXTRACTION_PATTERNS.nfsNumber) as string) || '???';
+      const isCancelled = !!cancelledMatch || file.name.toUpperCase().includes('CANCELADA');
+      console.log(`[PDF Extractor] NF ${nfsNumber}: isCancelled? ${isCancelled}`, cancelledMatch ? `(match: ${cancelledMatch})` : '(filename)');
+      return isCancelled;
+    })(),
 
     // Metadados
     filename: file.name,

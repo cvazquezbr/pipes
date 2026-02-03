@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { ExcelReferenceData } from '@/lib/types';
 
 interface ExcelUploadProps {
-  onFileLoaded: (data: ExcelReferenceData[], file: File) => void;
+  onFileLoaded: (data: Record<string, Record<string, unknown>[]>, file: File) => void;
   isLoading?: boolean;
 }
 

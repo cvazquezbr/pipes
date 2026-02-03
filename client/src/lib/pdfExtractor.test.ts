@@ -43,7 +43,7 @@ describe('pdfExtractor patterns', () => {
     });
 
     it('should match with minimalist markers', () => {
-      const text = 'Regime Especial CANCELADA Suspensão';
+      const text = 'Regime Especial de Tributação CANCELADA Suspensão da Exigibilidade';
       const match = text.match(EXTRACTION_PATTERNS.cancellation);
       expect(match).toBeTruthy();
       expect(match![1]).toBe('CANCELADA');
@@ -64,7 +64,22 @@ describe('pdfExtractor patterns', () => {
     });
 
     it('should match with Suspensão de ISSQN marker', () => {
-      const text = 'Regime Especial de Tributação CANCELADA Suspensão de ISSQN';
+      const text = 'Regime Especial de Tributação CANCELADA Suspensão da Exigibilidade de ISSQN';
+      const match = text.match(EXTRACTION_PATTERNS.cancellation);
+      expect(match).toBeTruthy();
+      expect(match![1]).toBe('CANCELADA');
+    });
+
+    it('should match with newlines and other content in between', () => {
+      const text = `
+        OUTRAS INFORMAÇÕES
+        Regime Especial de Tributação
+        Este documento está
+        CANCELADA
+        conforme legislação vigente.
+        Suspensão da Exigibilidade
+        do ISSQN
+      `;
       const match = text.match(EXTRACTION_PATTERNS.cancellation);
       expect(match).toBeTruthy();
       expect(match![1]).toBe('CANCELADA');
