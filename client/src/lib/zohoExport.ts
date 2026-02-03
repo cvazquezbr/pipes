@@ -128,7 +128,12 @@ export function extractClientMappings(data: ExcelReferenceData[]): ClientMapping
 export function extractAllocationData(data: ExcelReferenceData[]): AllocationData[] {
   return data.map((row) => {
     const keys = Object.keys(row);
-    const dueDateDays = parseReferenceValue(row['Due Date Days'] || row[keys[3]] || 0);
+    // Verifica se a 4ª coluna existe (por nome ou posição)
+    const hasDueDateCol = row['Due Date Days'] !== undefined || keys.length >= 4;
+    const dueDateDays = hasDueDateCol
+      ? parseReferenceValue(row['Due Date Days'] || row[keys[3]])
+      : undefined;
+
     return {
       cliente: String(row['Cliente'] || row['Customer Name'] || row[keys[0]] || '').trim(),
       equipe: String(row['Equipe'] || row[keys[1]] || ''),
@@ -245,6 +250,37 @@ function determineAccountFromDescription(description: string): string | null {
 }
 
 /**
+ * Headers fixos para exportação ZOHO garantindo ordem e presença de colunas
+ */
+const ZOHO_HEADERS = [
+  'Invoice Date',
+  'Due Date',
+  'Invoice Number',
+  'Invoice Status',
+  'Customer Name',
+  'Template Name',
+  'Currency Code',
+  'Exchange Rate',
+  'SKU',
+  'Item Desc',
+  'Quantity',
+  'Item Price',
+  'Adjustment',
+  'Adjustment Description',
+  'Usage unit',
+  'Discount',
+  'Is Inclusive Tax',
+  'Item Tax1',
+  'Item Tax1 Type',
+  'Item Tax1 %',
+  'Project Name',
+  'Equipe',
+  'Account',
+  'Notes',
+  'Terms & Conditions',
+];
+
+/**
  * Converte ExtractedInvoice para formato ZOHO com matching
  */
 export function convertToZOHO(
@@ -262,7 +298,7 @@ export function convertToZOHO(
   let account = 'Vendas';
   let equipe = '';
   let projeto = '';
-  let dueDateDays = 0;
+  let dueDateDays: number | undefined = undefined;
 
   const clientMatch = findClientMapping(invoice.takerName, clientMappings);
   if (clientMatch) {
@@ -352,8 +388,8 @@ function formatDate(dateStr: string): string {
 /**
  * Calcula a data de vencimento a partir da data de emissão e número de dias
  */
-function calculateDueDate(invoiceDateStr: string, days: number): string {
-  if (!invoiceDateStr) return '';
+function calculateDueDate(invoiceDateStr: string, days: number | undefined): string {
+  if (!invoiceDateStr || days === undefined) return '';
 
   let date: Date;
   const dmyMatch = invoiceDateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -409,12 +445,12 @@ export function exportToZOHOExcel(
     convertToZOHO(invoice, taxMappings, clientMappings, allocationData)
   );
 
-  const worksheet = XLSX.utils.json_to_sheet(zohoData);
+  const worksheet = XLSX.utils.json_to_sheet(zohoData, { header: ZOHO_HEADERS });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Notas Fiscais');
 
   // Ajustar largura das colunas
-  const colWidths = Object.keys(zohoData[0] || {}).map(() => 25);
+  const colWidths = ZOHO_HEADERS.map(() => 25);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (worksheet as any)['!cols'] = colWidths.map((width) => ({ wch: width }));
 
@@ -459,12 +495,12 @@ export function exportToZOHOCSV(
     return '';
   }
 
-  const headers = Object.keys(zohoData[0]);
+  const headers = ZOHO_HEADERS;
 
   const rows = zohoData.map((row) =>
     headers.map((header) => {
       const value = row[header as keyof ZOHOInvoice];
-      const cellStr = String(value || '');
+      const cellStr = String(value !== undefined && value !== null ? value : '');
       return `"${cellStr.replace(/"/g, '""')}"`;
     })
   );

@@ -139,8 +139,19 @@ describe('zohoExport new requirements', () => {
     expect(result['Due Date']).toBe('2024-05-25');
   });
 
-  it('should calculate Due Date as Invoice Date if days is 0', () => {
+  it('should calculate Due Date as empty if days is undefined (missing column)', () => {
     const result = convertToZOHO(baseInvoice);
+    expect(result['Due Date']).toBe('');
+  });
+
+  it('should calculate Due Date as Invoice Date if days is 0', () => {
+    const allocationData = [
+      { cliente: 'TAKER', equipe: 'E1', projeto: 'P1', dueDateDays: 0 }
+    ];
+    const clientMappings = [
+      { de: 'TAKER', para: 'TAKER', account: 'Vendas' }
+    ];
+    const result = convertToZOHO(baseInvoice, [], clientMappings, allocationData);
     expect(result['Due Date']).toBe('2024-05-10');
   });
 
@@ -156,5 +167,13 @@ describe('zohoExport new requirements', () => {
     ];
     const extracted = extractAllocationData(rawData);
     expect(extracted[0].dueDateDays).toBe(30);
+  });
+
+  it('should set dueDateDays as undefined if 4th column is missing', () => {
+    const rawData = [
+      { 'Col1': 'Cliente A', 'Col2': 'Equipe A', 'Col3': 'Projeto A' }
+    ];
+    const extracted = extractAllocationData(rawData);
+    expect(extracted[0].dueDateDays).toBeUndefined();
   });
 });
