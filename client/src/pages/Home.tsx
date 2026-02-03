@@ -17,11 +17,14 @@ import { exportToCSV, exportToJSON, exportToExcel, downloadFile } from '@/lib/ex
 import { exportToZOHOExcel, exportToZOHOCSV, generateZOHOValidationReport } from '@/lib/zohoExport';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, X } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, Loader2, X } from 'lucide-react';
 import type { ExtractedInvoice } from '@/lib/types';
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isVerResultadosLoading, setIsVerResultadosLoading] = useState(false);
+
   const {
     invoices,
     referenceData,
@@ -30,6 +33,7 @@ export default function Home() {
     progress,
     error,
     loadExcelReference,
+    processPDFsParallel,
     addInvoices,
     updateInvoice,
     removeInvoice,
@@ -112,6 +116,29 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50/50">
+      {/* Loading Overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-in fade-in duration-300">
+          <div className="bg-white p-8 rounded-xl shadow-2xl border border-slate-100 flex flex-col items-center max-w-xs w-full">
+            <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Processando</h3>
+            <p className="text-sm text-slate-500 mb-6 text-center">
+              Extraindo dados das notas fiscais...
+            </p>
+
+            {progress > 0 && (
+              <div className="w-full space-y-2">
+                <Progress value={progress} className="h-2" />
+                <div className="flex justify-between items-center">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Progresso</p>
+                  <p className="text-[10px] font-bold text-primary">{Math.round(progress)}%</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b border-slate-200 bg-white sticky top-0 z-30">
         <div className="container mx-auto px-4 py-4">
@@ -214,17 +241,23 @@ export default function Home() {
           {currentStep === 2 && (
             <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <PDFUpload
-                onProcessComplete={async (results: ExtractedInvoice[]) => {
+                onProcess={async (files) => {
                   try {
-                    addInvoices(results);
+                    const results = await processPDFsParallel(files);
                     handlePDFsProcessed(results);
                     // Opcionalmente avançar para o próximo passo após carregar
-                    setCurrentStep(3);
+                    // Se houver notas com sucesso, vamos para o próximo passo automaticamente
+                    if (results.some(r => !r.extractionErrors?.length)) {
+                      setCurrentStep(3);
+                    }
+                    return results;
                   } catch (err) {
                     const errorMessage = err instanceof Error ? err.message : 'Erro ao processar PDFs';
                     toast.error(errorMessage);
+                    throw err;
                   }
                 }}
+                onProcessComplete={() => {}} // Agora usamos onProcess
                 isProcessing={isProcessing}
                 progress={progress}
               />
@@ -233,7 +266,7 @@ export default function Home() {
                 <Button
                   variant="outline"
                   onClick={() => setCurrentStep(1)}
-                  disabled={isProcessing}
+                  disabled={isProcessing || isVerResultadosLoading}
                   size="lg"
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
@@ -242,13 +275,29 @@ export default function Home() {
 
                 {invoices.length > 0 && (
                   <Button
-                    onClick={() => setCurrentStep(3)}
-                    disabled={isProcessing}
+                    onClick={() => {
+                      setIsVerResultadosLoading(true);
+                      // Simular um breve processamento/transição para feedback visual
+                      setTimeout(() => {
+                        setCurrentStep(3);
+                        setIsVerResultadosLoading(false);
+                      }, 500);
+                    }}
+                    disabled={isProcessing || isVerResultadosLoading}
                     size="lg"
                     className="min-w-[140px]"
                   >
-                    Ver Resultados
-                    <ChevronRight className="ml-2 h-4 w-4" />
+                    {isVerResultadosLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Carregando...
+                      </>
+                    ) : (
+                      <>
+                        Ver Resultados
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
                   </Button>
                 )}
               </div>
