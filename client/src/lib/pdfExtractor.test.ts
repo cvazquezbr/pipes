@@ -33,4 +33,20 @@ describe('pdfExtractor patterns', () => {
       expect(match![1]).toBe('927.877.384-00');
     });
   });
+
+  describe('cancellation', () => {
+    it('should match CANCELADA between Regime Especial and Suspensão de ISSQN', () => {
+      const text = 'Regime Especial de Tributação algum texto CANCELADA outro texto Suspensão da Exigibilidade';
+      const match = text.match(EXTRACTION_PATTERNS.cancellation);
+      expect(match).toBeTruthy();
+      expect(match![1]).toBe('CANCELADA');
+    });
+
+    it('should match CANCELADA with multiple spaces/newlines', () => {
+      const text = 'Regime Especial de Tributação\n\n  CANCELADA \n\n Suspensão da Exigibilidade';
+      const match = text.match(EXTRACTION_PATTERNS.cancellation);
+      expect(match).toBeTruthy();
+      expect(match![1]).toBe('CANCELADA');
+    });
+  });
 });
