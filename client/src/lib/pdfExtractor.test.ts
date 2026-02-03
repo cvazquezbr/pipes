@@ -43,7 +43,7 @@ describe('pdfExtractor patterns', () => {
     });
 
     it('should match with minimalist markers', () => {
-      const text = 'Regime Especial CANCELADA Suspensão';
+      const text = 'Regime Especial de Tributação CANCELADA Suspensão da Exigibilidade';
       const match = text.match(EXTRACTION_PATTERNS.cancellation);
       expect(match).toBeTruthy();
       expect(match![1]).toBe('CANCELADA');

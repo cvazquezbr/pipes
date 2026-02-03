@@ -310,7 +310,7 @@ export function convertToZOHO(
     if (allocation) {
       equipe = allocation.equipe;
       projeto = allocation.projeto;
-      dueDateDays = allocation.dueDateDays || 0;
+      dueDateDays = allocation.dueDateDays;
     }
   }
 
