@@ -85,11 +85,14 @@ export function extractTaxMappings(data: ExcelReferenceData[]): TaxMapping[] {
 
     const percentual = parseReferenceValue(rawPercent);
 
-    let itemTax1Percent = String(row['Item Tax1 %_1'] || row['Item Tax1 %2'] || row['Item Tax1 %'] || '0.00%');
+    let itemTax1Percent = String(row['Item Tax1 %_1'] || row['Item Tax1 %2'] || row['Item Tax1 %'] || '0.00');
 
-    // Se for apenas um número sem o símbolo %, formata como percentual
-    if (itemTax1Percent && !itemTax1Percent.includes('%') && !isNaN(Number(itemTax1Percent.replace(',', '.')))) {
-      itemTax1Percent = parseFloat(itemTax1Percent.replace(',', '.')).toFixed(2) + '%';
+    // Remove o símbolo % se presente
+    itemTax1Percent = itemTax1Percent.replace('%', '').trim();
+
+    // Se for apenas um número, formata com 2 casas decimais
+    if (itemTax1Percent && !isNaN(Number(itemTax1Percent.replace(',', '.')))) {
+      itemTax1Percent = parseFloat(itemTax1Percent.replace(',', '.')).toFixed(2);
     }
 
     return {
@@ -183,7 +186,7 @@ function findTaxMapping(
       itemTax1: 'ISS',
       itemTax1Type: 'Tax',
       isInclusiveTax: 'false',
-      itemTax1Percent: '0.00%',
+      itemTax1Percent: '0.00',
       irpj: 0,
       csll: 0,
       cofins: 0,
@@ -341,7 +344,7 @@ export function convertToZOHO(
   return {
     'Invoice Date': formattedInvoiceDate,
     'Due Date': calculateDueDate(invoice.emissionDate, dueDateDays),
-    'Invoice Number': invoice.nfsNumber,
+    'Invoice Number': (invoice.nfsNumber || '').padStart(6, '0'),
     'Invoice Status': invoice.isCancelled ? 'Void' : 'draft',
     'Customer Name': normalizedClientName,
     'Template Name': 'Classic',
