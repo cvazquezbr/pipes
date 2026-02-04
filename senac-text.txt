@@ -1,0 +1,5 @@
+📄 Testando extração de PDF...
+
+/bin/sh: 1: pdftotext: not found
+❌ Erro ao processar PDF: Command failed: pdftotext "/app/client/public/test-invoice.pdf" -
+/bin/sh: 1: pdftotext: not found

@@ -6,6 +6,7 @@
 export const EXTRACTION_PATTERNS = {
   // Identificação
   nfsNumber: /Número da NFS-e[\s\S]+?(\d+)(?=[\s\n]|$)/,
+  accessKey: /Chave de Acesso da NFS-e[\s\n]+(\d+)/,
   seriesNumber: /Série da DPS[\s\S]+?(\d+)(?=[\s\n]|$)/,
   emissionDate: /Data e Hora da emissão da NFS-e[\s\S]+?(\d{2}\/\d{2}\/\d{4})/,
   emissionTime: /Data e Hora da emissão da NFS-e[\s\S]+?\d{2}\/\d{2}\/\d{4}\s+(\d{2}:\d{2}:\d{2})/,
@@ -35,10 +36,12 @@ export const EXTRACTION_PATTERNS = {
   // Valores
   serviceValue: /Valor do Serviço[\s\S]+?R\$\s+([\d.,]+)/,
   deductions: /Total Deduções\/Reduções[\s\S]+?R\$\s+([\d.,]+)(?=\s|\n)/,
-  irrf: /IRRF[\s\S]+?R\$\s+([\d.,]+)/,
-  pis: /PIS[\s\S]+?R\$\s+([\d.,]+)/,
-  cofins: /COFINS[\s\S]+?R\$\s+([\d.,]+)/,
-  csll: /CSLL[\s\S]+?R\$\s+([\d.,]+)/,
+  irrf: /TRIBUTAÇÃO FEDERAL[\s\S]+?R\$\s+([\d.,]+)/,
+  cp: /TRIBUTAÇÃO FEDERAL[\s\S]+?R\$\s+[\d.,]+\s+R\$\s+([\d.,]+)/,
+  csll: /TRIBUTAÇÃO FEDERAL[\s\S]+?R\$\s+[\d.,]+\s+R\$\s+[\d.,]+\s+R\$\s+([\d.,]+)/,
+  pis: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:R\$\s+[\d.,]+\s+){3}R\$\s+([\d.,]+)/,
+  cofins: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:R\$\s+[\d.,]+\s+){4}R\$\s+([\d.,]+)/,
+  pisCofinsRetention: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:R\$\s+[\d.,]+\s+){5}(Retido|Não Retido)/,
 
   // ISSQN - Campos detalhados
   issqnBase: /BC ISSQN[\s\S]+?R\$\s+([\d.,]+)/,

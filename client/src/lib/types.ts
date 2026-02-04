@@ -41,10 +41,13 @@ export interface ExtractedInvoice {
   serviceValue: number;
   deductions: number;
   irrf: number;
+  cp: number;
   pis: number;
   cofins: number;
+  pisCofinsRetention: string;
   csll: number;
-  
+  other: number;
+
   // ISSQN - Campos detalhados
   issqnBase: number; // Base de Cálculo do ISSQN
   issqnApurado: number; // ISSQN Apurado
