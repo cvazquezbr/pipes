@@ -34,8 +34,8 @@ export const EXTRACTION_PATTERNS = {
   serviceDescription: /Descrição do Serviço[\s\S]+?([\s\S]+?)(?=TRIBUTAÇÃO MUNICIPAL)/,
 
   // Valores
-  serviceValue: /Valor do Serviço[\s\S]+?R\$\s+([\d.,]+)/,
-  deductions: /Total Deduções\/Reduções[\s\S]+?R\$\s+([\d.,]+)(?=\s|\n)/,
+  serviceValue: /Valor do Serviço[\s\S]{1,50}?(?:R\$\s+)?([\d.,]+|-)/,
+  deductions: /Total Deduções\/Reduções[\s\S]{1,50}?(?:R\$\s+)?([\d.,]+|-)/,
   irrf: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
   cp: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
   csll: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
@@ -44,15 +44,15 @@ export const EXTRACTION_PATTERNS = {
   pisCofinsRetention: /TRIBUTAÇÃO FEDERAL[\s\S]+?(Retido|Não Retido)/,
 
   // ISSQN - Campos detalhados
-  issqnBase: /BC ISSQN[\s\S]+?R\$\s+([\d.,]+)/,
-  issqnApurado: /ISSQN Apurado[\s\S]+?R\$\s+([\d.,]+)/,
+  issqnBase: /BC ISSQN[\s\S]{1,50}?(?:R\$\s+)?([\d.,]+|-)/,
+  issqnApurado: /ISSQN Apurado[\s\S]{1,50}?(?:R\$\s+)?([\d.,]+|-)/,
   issqnAliquota: /Alíquota Aplicada[\s\S]+?(\d+[.,]\d{2}%)/,
   issqnSuspensao: /Suspensão da Exigibilidade do ISSQN[\s\S]+?(Sim|Não)(?=\s|\n)/,
   issqnMunicipio: /Município de Incidência do ISSQN[\s\S]+?([^\n-]+?)\s*-\s*([A-Z]{2})(?=\s|\n)/,
   issqnTributacao: /Tributação do ISSQN[\s\S]+?(Tributável|Não Tributável|Imune)(?=\s|\n)/,
-  issqnRetido: /ISSQN Retido[\s\S]+?R\$\s+([\d.,]+)/,
+  issqnRetido: /ISSQN Retido[\s\S]{1,50}?(?:R\$\s+)?([\d.,]+|-)/,
 
-  netValue: /Valor Líquido da NFS-e[\s\S]+?R\$\s+([\d.,]+)/,
+  netValue: /Valor Líquido da NFS-e[\s\S]{1,50}?(?:R\$\s+)?([\d.,]+|-)/,
 
   // Cancelamento
   cancellation: /Regime\s*Especial\s*de\s*Tributação[\s\S]+?(CANCELADA)[\s\S]+?Suspensão\s*da\s*Exigibilidade/i,
