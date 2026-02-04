@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { convertToZOHO, extractAllocationData, generateZOHOValidationReport } from './zohoExport';
+import { convertToZOHO, extractAllocationData, generateZOHOValidationReport, extractTaxMappings } from './zohoExport';
 import type { ExtractedInvoice } from './types';
 
 describe('zohoExport account determination', () => {
@@ -172,6 +172,43 @@ describe('zohoExport new requirements', () => {
     expect(result['Due Date']).toBe('2024-05-10');
   });
 
+  it('should format Invoice Number with leading zeros (6 digits)', () => {
+    const result = convertToZOHO({ ...baseInvoice, nfsNumber: '123' });
+    expect(result['Invoice Number']).toBe('000123');
+  });
+
+  it('should not truncate Invoice Number if it has more than 6 digits', () => {
+    const result = convertToZOHO({ ...baseInvoice, nfsNumber: '1234567' });
+    expect(result['Invoice Number']).toBe('1234567');
+  });
+
+  it('should format Item Tax1 % without the % symbol', () => {
+    const taxMappings = [
+      {
+        percentual: 5,
+        itemTax1: 'ISS',
+        itemTax1Type: 'Tax',
+        isInclusiveTax: 'false',
+        itemTax1Percent: '5.00',
+        irpj: 0,
+        csll: 0,
+        cofins: 0,
+        pis: 0,
+        iss: 5,
+        outros: 0,
+      }
+    ];
+    // Create an invoice that matches the 5% retention
+    const invoice = {
+      ...baseInvoice,
+      serviceValue: 10000,
+      netValue: 9500, // 5% retention
+    };
+    const result = convertToZOHO(invoice, taxMappings);
+    expect(result['Item Tax1 %']).toBe('5.00');
+    expect(result['Item Tax1 %']).not.toContain('%');
+  });
+
   it('should set Invoice Status to Void if cancelled', () => {
     const cancelledInvoice = { ...baseInvoice, isCancelled: true };
     const result = convertToZOHO(cancelledInvoice);
@@ -232,6 +269,24 @@ describe('zohoExport new requirements', () => {
     ];
     const extracted = extractAllocationData(rawData);
     expect(extracted[0].dueDateDays).toBeUndefined();
+  });
+});
+
+describe('zohoExport tax extraction', () => {
+  it('should remove % from Item Tax1 % during extraction', () => {
+    const rawData = [
+      { 'Item Tax1': 'ISS', 'Item Tax1 %': '5.00%' }
+    ];
+    const extracted = extractTaxMappings(rawData);
+    expect(extracted[0].itemTax1Percent).toBe('5.00');
+  });
+
+  it('should add .00 if % is removed from a whole number', () => {
+    const rawData = [
+      { 'Item Tax1': 'ISS', 'Item Tax1 %': '5%' }
+    ];
+    const extracted = extractTaxMappings(rawData);
+    expect(extracted[0].itemTax1Percent).toBe('5.00');
   });
 });
 
