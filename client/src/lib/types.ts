@@ -43,7 +43,11 @@ export interface ExtractedInvoice {
   irrf: number;
   cp: number;
   pis: number;
+  pisRetido: number;
+  pisPendente: number;
   cofins: number;
+  cofinsRetido: number;
+  cofinsPendente: number;
   pisCofinsRetention: string;
   csll: number;
   other: number;

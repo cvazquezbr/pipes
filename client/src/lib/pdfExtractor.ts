@@ -126,7 +126,11 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     irrf: extractValue(text, EXTRACTION_PATTERNS.irrf, parseMonetaryValue) as number,
     cp: extractValue(text, EXTRACTION_PATTERNS.cp, parseMonetaryValue) as number,
     pis: extractValue(text, EXTRACTION_PATTERNS.pis, parseMonetaryValue) as number,
+    pisRetido: 0, // Calculado abaixo
+    pisPendente: 0, // Calculado abaixo
     cofins: extractValue(text, EXTRACTION_PATTERNS.cofins, parseMonetaryValue) as number,
+    cofinsRetido: 0, // Calculado abaixo
+    cofinsPendente: 0, // Calculado abaixo
     pisCofinsRetention: (extractValue(text, EXTRACTION_PATTERNS.pisCofinsRetention) as string) || '',
     csll: extractValue(text, EXTRACTION_PATTERNS.csll, parseMonetaryValue) as number,
     other: 0, // Calculado abaixo
@@ -165,12 +169,19 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
   // Calcular deduções e total de impostos: serviceValue - netValue
   invoice.deductions = invoice.serviceValue - invoice.netValue;
 
+  // Calcular PIS/COFINS Retido e Pendente
+  const isPisCofinsRetido = invoice.pisCofinsRetention === 'Retido';
+  invoice.pisRetido = isPisCofinsRetido ? invoice.pis : 0;
+  invoice.cofinsRetido = isPisCofinsRetido ? invoice.cofins : 0;
+  invoice.pisPendente = invoice.pis - invoice.pisRetido;
+  invoice.cofinsPendente = invoice.cofins - invoice.cofinsRetido;
+
   // Calcular campo 'other' conforme regra:
   // deductions - (issqnRetido + cofins e pis (se retido) + irrf + csll + CP)
-  const isPisCofinsRetido = invoice.pisCofinsRetention === 'Retido';
   const taxSumForOther =
     invoice.issqnRetido +
-    (isPisCofinsRetido ? (invoice.pis + invoice.cofins) : 0) +
+    invoice.pisRetido +
+    invoice.cofinsRetido +
     invoice.irrf +
     invoice.csll +
     invoice.cp;
@@ -250,7 +261,11 @@ export async function processPDFInvoices(
         irrf: 0,
         cp: 0,
         pis: 0,
+        pisRetido: 0,
+        pisPendente: 0,
         cofins: 0,
+        cofinsRetido: 0,
+        cofinsPendente: 0,
         pisCofinsRetention: '',
         csll: 0,
         other: 0,
