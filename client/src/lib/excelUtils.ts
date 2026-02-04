@@ -40,8 +40,8 @@ export async function readExcelFile(file: File): Promise<Record<string, unknown>
 function formatCurrency(cents: number): string {
   const reais = cents / 100;
   return reais.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
@@ -49,110 +49,18 @@ function formatCurrency(cents: number): string {
  * Exporta dados extraídos para CSV
  */
 export function exportToCSV(invoices: ExtractedInvoice[]): string {
-  const headers = [
-    'Arquivo',
-    'Número NFS-e',
-    'Status',
-    'Chave de Acesso',
-    'Série DPS',
-    'Data Emissão',
-    'Hora Emissão',
-    'Emitente',
-    'CNPJ Emitente',
-    'Telefone Emitente',
-    'Endereço Emitente',
-    'Cidade Emitente',
-    'Estado Emitente',
-    'CEP Emitente',
-    'Tomador',
-    'CNPJ Tomador',
-    'Endereço Tomador',
-    'Cidade Tomador',
-    'Estado Tomador',
-    'CEP Tomador',
-    'Código Serviço',
-    'Descrição Serviço',
-    'Valor Serviço',
-    'Deduções',
-    'IRRF',
-    'CP',
-    'CSLL',
-    'PIS Devido',
-    'PIS Retido',
-    'PIS Pendente',
-    'COFINS Devido',
-    'COFINS Retido',
-    'COFINS Pendente',
-    'Retenção do PIS/COFINS',
-    'Outros',
-    'Base ISSQN',
-    'ISSQN Apurado',
-    'Alíquota ISSQN',
-    'Suspensão ISSQN',
-    'Município ISSQN',
-    'Tributação ISSQN',
-    'ISSQN Retido',
-    'Total Impostos',
-    'Valor Líquido',
-    'Confiança Extração',
-    'Erros',
-  ];
+  if (invoices.length === 0) return '';
 
-  const rows = invoices.map((invoice) => [
-    invoice.filename,
-    invoice.nfsNumber,
-    invoice.isCancelled ? 'CANCELADA' : 'ATIVA',
-    invoice.accessKey,
-    invoice.seriesNumber,
-    invoice.emissionDate,
-    invoice.emissionTime,
-    invoice.issuerName,
-    invoice.issuerCNPJ,
-    invoice.issuerPhone,
-    invoice.issuerAddress,
-    invoice.issuerCity,
-    invoice.issuerState,
-    invoice.issuerCEP,
-    invoice.takerName,
-    invoice.takerCNPJ,
-    invoice.takerAddress,
-    invoice.takerCity,
-    invoice.takerState,
-    invoice.takerCEP,
-    invoice.serviceCode,
-    invoice.serviceDescription,
-    formatCurrency(invoice.serviceValue),
-    formatCurrency(invoice.deductions),
-    formatCurrency(invoice.irrf),
-    formatCurrency(invoice.cp),
-    formatCurrency(invoice.csll),
-    formatCurrency(invoice.pis),
-    formatCurrency(invoice.pisRetido),
-    formatCurrency(invoice.pisPendente),
-    formatCurrency(invoice.cofins),
-    formatCurrency(invoice.cofinsRetido),
-    formatCurrency(invoice.cofinsPendente),
-    invoice.pisCofinsRetention,
-    formatCurrency(invoice.other),
-    formatCurrency(invoice.issqnBase),
-    formatCurrency(invoice.issqnApurado),
-    invoice.issqnAliquota,
-    invoice.issqnSuspensao,
-    invoice.issqnMunicipio,
-    invoice.issqnTributacao,
-    formatCurrency(invoice.issqnRetido),
-    formatCurrency(invoice.totalTaxes),
-    formatCurrency(invoice.netValue),
-    (invoice.extractionConfidence * 100).toFixed(1) + '%',
-    (invoice.extractionErrors || []).join('; '),
-  ]);
+  const reportData = invoices.map(mapInvoiceToReport);
+  const headers = Object.keys(reportData[0]);
 
   // Escapar valores com vírgulas
   const csvContent = [
     headers.map((h) => `"${h}"`).join(','),
-    ...rows.map((row) =>
-      row
-        .map((cell) => {
+    ...reportData.map((row) =>
+      headers
+        .map((header) => {
+          const cell = (row as any)[header];
           const cellStr = String(cell || '');
           return `"${cellStr.replace(/"/g, '""')}"`;
         })
@@ -164,20 +72,20 @@ export function exportToCSV(invoices: ExtractedInvoice[]): string {
 }
 
 /**
- * Exporta dados para Excel com formatação
+ * Mapeia invoice para formato de relatório de conferência
  */
-export function exportToExcel(invoices: ExtractedInvoice[]): void {
-  const data = invoices.map((invoice) => ({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [Symbol.iterator]: undefined as any,
+function mapInvoiceToReport(invoice: ExtractedInvoice) {
+  return {
     'Arquivo': invoice.filename,
     'Número NFS-e': invoice.nfsNumber,
     'Status': invoice.isCancelled ? 'CANCELADA' : 'ATIVA',
     'Chave de Acesso': invoice.accessKey,
+    'Série DPS': invoice.seriesNumber,
     'Data Emissão': invoice.emissionDate,
     'Hora Emissão': invoice.emissionTime,
     'Emitente': invoice.issuerName,
     'CNPJ Emitente': invoice.issuerCNPJ,
+    'Telefone Emitente': invoice.issuerPhone || '',
     'Endereço Emitente': invoice.issuerAddress,
     'Cidade Emitente': invoice.issuerCity,
     'Estado Emitente': invoice.issuerState,
@@ -203,8 +111,8 @@ export function exportToExcel(invoices: ExtractedInvoice[]): void {
     'COFINS Pendente': formatCurrency(invoice.cofinsPendente),
     'Retenção do PIS/COFINS': invoice.pisCofinsRetention,
     'Outros': formatCurrency(invoice.other),
-    'ISSQN Apurado': formatCurrency(invoice.issqnApurado),
     'ISSQN Base': formatCurrency(invoice.issqnBase),
+    'ISSQN Apurado': formatCurrency(invoice.issqnApurado),
     'ISSQN Alíquota': invoice.issqnAliquota,
     'ISSQN Suspensão': invoice.issqnSuspensao,
     'ISSQN Município': invoice.issqnMunicipio,
@@ -214,6 +122,17 @@ export function exportToExcel(invoices: ExtractedInvoice[]): void {
     'Valor Líquido': formatCurrency(invoice.netValue),
     'Confiança Extração': (invoice.extractionConfidence * 100).toFixed(1) + '%',
     'Erros': (invoice.extractionErrors || []).join('; '),
+  };
+}
+
+/**
+ * Exporta dados para Excel com formatação
+ */
+export function exportToExcel(invoices: ExtractedInvoice[]): void {
+  const data = invoices.map((invoice) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [Symbol.iterator]: undefined as any,
+    ...mapInvoiceToReport(invoice)
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);
@@ -232,7 +151,7 @@ export function exportToExcel(invoices: ExtractedInvoice[]): void {
  * Exporta dados para JSON
  */
 export function exportToJSON(invoices: ExtractedInvoice[]): string {
-  return JSON.stringify(invoices, null, 2);
+  return JSON.stringify(invoices.map(mapInvoiceToReport), null, 2);
 }
 
 /**
