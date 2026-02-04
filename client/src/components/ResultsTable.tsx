@@ -238,6 +238,7 @@ function InvoiceDetailDialog({ invoice, onClose }: InvoiceDetailDialogProps) {
 
           <div className="grid grid-cols-4 gap-4">
             <DetailField label="Número NFS-e" value={invoice.nfsNumber} />
+            <DetailField label="Chave de Acesso" value={invoice.accessKey} className="col-span-2" />
             <DetailField label="Série" value={invoice.seriesNumber} />
             <DetailField label="Data Emissão" value={invoice.emissionDate} />
             <DetailField label="Hora Emissão" value={invoice.emissionTime} />
@@ -283,14 +284,17 @@ function InvoiceDetailDialog({ invoice, onClose }: InvoiceDetailDialogProps) {
               <DetailField label="Valor Serviço" value={formatCurrency(invoice.serviceValue)} />
               <DetailField label="Deduções" value={formatCurrency(invoice.deductions)} />
               <DetailField label="IRRF" value={formatCurrency(invoice.irrf)} />
+              <DetailField label="CP" value={formatCurrency(invoice.cp)} />
+              <DetailField label="CSLL" value={formatCurrency(invoice.csll)} />
               <DetailField label="PIS" value={formatCurrency(invoice.pis)} />
               <DetailField label="COFINS" value={formatCurrency(invoice.cofins)} />
-              <DetailField label="CSLL" value={formatCurrency(invoice.csll)} />
+              <DetailField label="Retenção do PIS/COFINS" value={invoice.pisCofinsRetention} />
+              <DetailField label="Outros" value={formatCurrency(invoice.other)} />
               <DetailField label="Total Impostos" value={formatCurrency(invoice.totalTaxes)} className="font-semibold" />
               <DetailField
                 label="Valor Líquido"
                 value={formatCurrency(invoice.netValue)}
-                className="font-semibold col-span-2"
+                className="font-semibold"
               />
             </div>
           </div>

@@ -88,7 +88,7 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
   const invoice: ExtractedInvoice = {
     // Identificação
     nfsNumber: (extractValue(text, EXTRACTION_PATTERNS.nfsNumber) as string) || '',
-    accessKey: '',
+    accessKey: (extractValue(text, EXTRACTION_PATTERNS.accessKey) as string) || '',
     seriesNumber: (extractValue(text, EXTRACTION_PATTERNS.seriesNumber) as string) || '',
 
     // Datas
@@ -121,10 +121,13 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     serviceValue: extractValue(text, EXTRACTION_PATTERNS.serviceValue, parseMonetaryValue) as number,
     deductions: extractValue(text, EXTRACTION_PATTERNS.deductions, parseMonetaryValue) as number,
     irrf: extractValue(text, EXTRACTION_PATTERNS.irrf, parseMonetaryValue) as number,
+    cp: extractValue(text, EXTRACTION_PATTERNS.cp, parseMonetaryValue) as number,
     pis: extractValue(text, EXTRACTION_PATTERNS.pis, parseMonetaryValue) as number,
     cofins: extractValue(text, EXTRACTION_PATTERNS.cofins, parseMonetaryValue) as number,
+    pisCofinsRetention: (extractValue(text, EXTRACTION_PATTERNS.pisCofinsRetention) as string) || '',
     csll: extractValue(text, EXTRACTION_PATTERNS.csll, parseMonetaryValue) as number,
-    
+    other: 0, // Calculado abaixo
+
     // ISSQN - Campos detalhados
     issqnBase: extractValue(text, EXTRACTION_PATTERNS.issqnBase, parseMonetaryValue) as number,
     issqnApurado: extractValue(text, EXTRACTION_PATTERNS.issqnApurado, parseMonetaryValue) as number,
@@ -158,7 +161,20 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
 
   // Calcular deduções e total de impostos: serviceValue - netValue
   invoice.deductions = invoice.serviceValue - invoice.netValue;
-  invoice.totalTaxes = invoice.irrf + invoice.pis + invoice.cofins + invoice.csll + invoice.issqnApurado + invoice.issqnRetido;
+
+  // Calcular campo 'other' conforme regra:
+  // deductions - (issqnRetido + cofins e pis (se retido) + irrf + csll + CP)
+  const isPisCofinsRetido = invoice.pisCofinsRetention === 'Retido';
+  const taxSumForOther =
+    invoice.issqnRetido +
+    (isPisCofinsRetido ? (invoice.pis + invoice.cofins) : 0) +
+    invoice.irrf +
+    invoice.csll +
+    invoice.cp;
+
+  invoice.other = invoice.deductions - taxSumForOther;
+
+  invoice.totalTaxes = invoice.irrf + invoice.cp + invoice.pis + invoice.cofins + invoice.csll + invoice.issqnApurado + invoice.issqnRetido;
 
   // Validar campos essenciais
   const essentialFields = ['nfsNumber', 'issuerCNPJ', 'takerCNPJ', 'netValue'];
@@ -225,9 +241,12 @@ export async function processPDFInvoices(files: File[]): Promise<ExtractedInvoic
         serviceValue: 0,
         deductions: 0,
         irrf: 0,
+        cp: 0,
         pis: 0,
         cofins: 0,
+        pisCofinsRetention: '',
         csll: 0,
+        other: 0,
         issqnBase: 0,
         issqnApurado: 0,
         issqnAliquota: '',
