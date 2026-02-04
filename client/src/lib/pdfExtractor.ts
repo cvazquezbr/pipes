@@ -210,10 +210,14 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
 /**
  * Processa múltiplos PDFs (sequencial)
  */
-export async function processPDFInvoices(files: File[]): Promise<ExtractedInvoice[]> {
+export async function processPDFInvoices(
+  files: File[],
+  onProgress?: (current: number, total: number) => void
+): Promise<ExtractedInvoice[]> {
   const results: ExtractedInvoice[] = [];
 
-  for (const file of files) {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     try {
       console.log('[NFe] Processando:', file.name);
       const invoice = await extractFromPDF(file);
@@ -263,6 +267,10 @@ export async function processPDFInvoices(files: File[]): Promise<ExtractedInvoic
         extractionConfidence: 0,
         extractionErrors: [error instanceof Error ? error.message : 'Erro desconhecido ao processar PDF'],
       });
+    }
+
+    if (onProgress) {
+      onProgress(i + 1, files.length);
     }
   }
 
