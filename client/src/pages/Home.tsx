@@ -110,23 +110,27 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50/50">
       {/* Loading Overlay */}
       {isProcessing && (
-        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-in fade-in duration-300">
-          <div className="bg-white p-8 rounded-xl shadow-2xl border border-slate-100 flex flex-col items-center max-w-xs w-full">
-            <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Processando</h3>
-            <p className="text-sm text-slate-500 mb-6 text-center">
-              Extraindo dados das notas fiscais...
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-50 flex flex-col items-center justify-center animate-in fade-in duration-300">
+          <div className="bg-white p-10 rounded-2xl shadow-2xl border border-slate-100 flex flex-col items-center max-w-sm w-full">
+            <div className="relative mb-6 flex items-center justify-center">
+              <div className="text-5xl font-black text-primary tabular-nums">
+                {Math.round(progress)}%
+              </div>
+              <Loader2 className="absolute -top-6 -right-6 h-8 w-8 text-primary/20 animate-spin" />
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Processando Notas</h3>
+            <p className="text-sm text-slate-500 mb-8 text-center px-4">
+              Extraindo dados dos arquivos PDF de forma inteligente.
             </p>
 
-            {progress > 0 && (
-              <div className="w-full space-y-2">
-                <Progress value={progress} className="h-2" />
-                <div className="flex justify-between items-center">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Progresso</p>
-                  <p className="text-[10px] font-bold text-primary">{Math.round(progress)}%</p>
-                </div>
+            <div className="w-full space-y-3">
+              <Progress value={progress} className="h-3 shadow-inner" />
+              <div className="flex justify-between items-center px-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status do Processamento</p>
+                <p className="text-[10px] font-bold text-primary uppercase">{Math.round(progress)}% Concluído</p>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}

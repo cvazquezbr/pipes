@@ -170,14 +170,18 @@ export function PDFUpload({
             <Button
               onClick={handleProcess}
               disabled={isProcessing || selectedFiles.length === 0}
-              className="w-full"
+              className="w-full relative overflow-hidden"
               size="lg"
             >
               {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processando...
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="font-bold tabular-nums">Processando {Math.round(progress)}%</span>
+                  <div
+                    className="absolute bottom-0 left-0 h-1 bg-white/20 transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
               ) : (
                 <>
                   <Play className="mr-2 h-4 w-4" />

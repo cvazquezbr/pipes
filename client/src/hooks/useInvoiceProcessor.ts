@@ -45,14 +45,9 @@ export function useInvoiceProcessor() {
       setIsProcessing(true);
       setProgress(0);
 
-      const results: ExtractedInvoice[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const processed = await processPDFInvoices([file]);
-        results.push(...processed);
-        setProgress(((i + 1) / files.length) * 100);
-      }
+      const results = await processPDFInvoices(files, (current, total) => {
+        setProgress((current / total) * 100);
+      });
 
       setInvoices(results);
       setProgress(100);
@@ -76,7 +71,9 @@ export function useInvoiceProcessor() {
       setProgress(0);
 
       console.log('[NFe] Iniciando processamento de ' + files.length + ' arquivo(s)');
-      const results = await processPDFInvoices(files);
+      const results = await processPDFInvoices(files, (current, total) => {
+        setProgress((current / total) * 100);
+      });
       console.log('[NFe] Processamento concluido com ' + results.length + ' resultado(s)');
       console.log('[NFe] Resultados:', results);
       setInvoices(results);

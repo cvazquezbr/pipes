@@ -20,7 +20,7 @@ interface ExcelUploadProps {
 export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [allSheetsPreview, setAllSheetsPreview] = useState<Record<string, ExcelReferenceData[]> | null>(null);
+  const [allSheetsData, setAllSheetsData] = useState<Record<string, ExcelReferenceData[]> | null>(null);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -47,13 +47,13 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
         const { readExcelFileAllSheets } = await import('@/lib/excelUtils');
         const sheetsData = await readExcelFileAllSheets(file);
 
-        // Criar preview de cada aba (primeiras 5 linhas)
-        const previewData: Record<string, ExcelReferenceData[]> = {};
+        // Carregar todas as linhas de cada aba para exibição
+        const allData: Record<string, ExcelReferenceData[]> = {};
         Object.keys(sheetsData).forEach(sheetName => {
-          previewData[sheetName] = (sheetsData[sheetName] as ExcelReferenceData[]).slice(0, 5);
+          allData[sheetName] = sheetsData[sheetName] as ExcelReferenceData[];
         });
 
-        setAllSheetsPreview(previewData);
+        setAllSheetsData(allData);
 
         // Enviar a primeira aba para manter compatibilidade com o hook atual
         const firstSheetName = Object.keys(sheetsData)[0];
@@ -62,7 +62,7 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
         const errorMessage = err instanceof Error ? err.message : 'Erro ao processar arquivo';
         setError(errorMessage);
         setFileName(null);
-        setAllSheetsPreview(null);
+        setAllSheetsData(null);
       }
     },
     [onFileLoaded]
@@ -81,7 +81,7 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
 
   const handleClear = () => {
     setFileName(null);
-    setAllSheetsPreview(null);
+    setAllSheetsData(null);
     setError(null);
   };
 
@@ -137,13 +137,13 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
               </Button>
             </div>
 
-            {allSheetsPreview && Object.keys(allSheetsPreview).length > 0 && (
+            {allSheetsData && Object.keys(allSheetsData).length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Preview dos dados:</p>
+                <p className="text-xs font-medium text-muted-foreground">Dados carregados:</p>
 
-                <Tabs defaultValue={Object.keys(allSheetsPreview)[0]} className="w-full">
+                <Tabs defaultValue={Object.keys(allSheetsData)[0]} className="w-full">
                   <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 bg-muted/50">
-                    {Object.keys(allSheetsPreview).map((sheetName) => (
+                    {Object.keys(allSheetsData).map((sheetName) => (
                       <TabsTrigger
                         key={sheetName}
                         value={sheetName}
@@ -154,15 +154,15 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
                     ))}
                   </TabsList>
 
-                  {Object.entries(allSheetsPreview).map(([sheetName, preview]) => {
+                  {Object.entries(allSheetsData).map(([sheetName, rows]) => {
                     const headers = new Set<string>();
-                    preview.forEach((row) => Object.keys(row).forEach((k) => headers.add(k)));
+                    rows.forEach((row) => Object.keys(row).forEach((k) => headers.add(k)));
                     const headerList = Array.from(headers);
 
                     return (
                       <TabsContent key={sheetName} value={sheetName} className="mt-2" anchor-id={sheetName}>
-                        <div className="max-h-48 overflow-x-auto rounded-lg border bg-muted/50 p-2">
-                          {preview.length > 0 ? (
+                        <div className="max-h-96 overflow-auto rounded-lg border bg-muted/50 p-2">
+                          {rows.length > 0 ? (
                             <table className="w-full text-xs">
                               <thead>
                                 <tr className="border-b">
@@ -174,7 +174,7 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
                                 </tr>
                               </thead>
                               <tbody>
-                                {preview.map((row, idx) => (
+                                {rows.map((row, idx) => (
                                   <tr key={idx} className="border-b last:border-0">
                                     {headerList.map((key) => (
                                       <td key={key} className="px-2 py-1 truncate max-w-[200px]">
