@@ -41,7 +41,7 @@ export const EXTRACTION_PATTERNS = {
   csll: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
   pis: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
   cofins: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
-  pisCofinsRetention: /TRIBUTAÇÃO FEDERAL[\s\S]+?(Retido|Não Retido)/,
+  pisCofinsRetention: /TRIBUTAÇÃO FEDERAL[\s\S]+?(Retido|Não Retido|-)(?=\s+(?:(?:R\$\s+)?[\d.,]+|-)?\s*(?:VALOR TOTAL|TOTAL TRIBUTAÇÃO))/,
 
   // ISSQN - Campos detalhados
   issqnBase: /BC ISSQN[\s\S]{1,50}?(?:R\$\s+)?([\d.,]+|-)/,
