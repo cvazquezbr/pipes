@@ -36,12 +36,12 @@ export const EXTRACTION_PATTERNS = {
   // Valores
   serviceValue: /Valor do Serviço[\s\S]+?R\$\s+([\d.,]+)/,
   deductions: /Total Deduções\/Reduções[\s\S]+?R\$\s+([\d.,]+)(?=\s|\n)/,
-  irrf: /TRIBUTAÇÃO FEDERAL[\s\S]+?R\$\s+([\d.,]+)/,
-  cp: /TRIBUTAÇÃO FEDERAL[\s\S]+?R\$\s+[\d.,]+\s+R\$\s+([\d.,]+)/,
-  csll: /TRIBUTAÇÃO FEDERAL[\s\S]+?R\$\s+[\d.,]+\s+R\$\s+[\d.,]+\s+R\$\s+([\d.,]+)/,
-  pis: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:R\$\s+[\d.,]+\s+){3}R\$\s+([\d.,]+)/,
-  cofins: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:R\$\s+[\d.,]+\s+){4}R\$\s+([\d.,]+)/,
-  pisCofinsRetention: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:R\$\s+[\d.,]+\s+){5}(Retido|Não Retido)/,
+  irrf: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
+  cp: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
+  csll: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
+  pis: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
+  cofins: /TRIBUTAÇÃO FEDERAL[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:(?:R\$\s+)?(?:[\d.,]+|-))[\s\S]+?(?:R\$\s+)?([\d.,]+|-)/,
+  pisCofinsRetention: /TRIBUTAÇÃO FEDERAL[\s\S]+?(Retido|Não Retido)/,
 
   // ISSQN - Campos detalhados
   issqnBase: /BC ISSQN[\s\S]+?R\$\s+([\d.,]+)/,

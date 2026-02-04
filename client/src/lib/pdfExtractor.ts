@@ -15,15 +15,18 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
  */
 function parseMonetaryValue(value: string): number {
   const cleaned = value.replace(/R\$\s*/g, '').trim();
+  if (cleaned === '-' || cleaned === '') return 0;
+
   const parts = cleaned.split(',');
-  
+
   if (parts.length === 1) {
-    return Math.round(parseFloat(parts[0]) * 100);
+    const val = parseFloat(parts[0]);
+    return isNaN(val) ? 0 : Math.round(val * 100);
   }
-  
+
   const reais = parts[0].replace(/\./g, '');
   const centavos = parts[1].padEnd(2, '0').substring(0, 2);
-  return parseInt(reais + centavos, 10);
+  return parseInt(reais + centavos, 10) || 0;
 }
 
 /**
