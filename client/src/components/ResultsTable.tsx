@@ -286,8 +286,12 @@ function InvoiceDetailDialog({ invoice, onClose }: InvoiceDetailDialogProps) {
               <DetailField label="IRRF" value={formatCurrency(invoice.irrf)} />
               <DetailField label="CP" value={formatCurrency(invoice.cp)} />
               <DetailField label="CSLL" value={formatCurrency(invoice.csll)} />
-              <DetailField label="PIS" value={formatCurrency(invoice.pis)} />
-              <DetailField label="COFINS" value={formatCurrency(invoice.cofins)} />
+              <DetailField label="PIS Devido" value={formatCurrency(invoice.pis)} />
+              <DetailField label="PIS Retido" value={formatCurrency(invoice.pisRetido)} />
+              <DetailField label="PIS Pendente" value={formatCurrency(invoice.pisPendente)} />
+              <DetailField label="COFINS Devido" value={formatCurrency(invoice.cofins)} />
+              <DetailField label="COFINS Retido" value={formatCurrency(invoice.cofinsRetido)} />
+              <DetailField label="COFINS Pendente" value={formatCurrency(invoice.cofinsPendente)} />
               <DetailField label="Retenção do PIS/COFINS" value={invoice.pisCofinsRetention} />
               <DetailField label="Outros" value={formatCurrency(invoice.other)} />
               <DetailField label="Total Impostos" value={formatCurrency(invoice.totalTaxes)} className="font-semibold" />
