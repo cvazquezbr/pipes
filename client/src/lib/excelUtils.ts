@@ -16,11 +16,27 @@ export async function readExcelFile(file: File): Promise<Record<string, unknown>
     reader.onload = (event) => {
       try {
         const data = event.target?.result;
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const firstSheet = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheet];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, unknown>[];
-        resolve(jsonData);
+
+        // Formata datas para YYYY-MM-DD
+        const formattedData = jsonData.map(row => {
+          const newRow = { ...row };
+          Object.keys(newRow).forEach(key => {
+            if (newRow[key] instanceof Date) {
+              const d = newRow[key] as Date;
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              newRow[key] = `${year}-${month}-${day}`;
+            }
+          });
+          return newRow;
+        });
+
+        resolve(formattedData);
       } catch (error) {
         reject(error);
       }
@@ -181,13 +197,29 @@ export async function readExcelFileAllSheets(
     reader.onload = (event) => {
       try {
         const data = event.target?.result;
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const result: Record<string, Record<string, unknown>[]> = {};
 
         workbook.SheetNames.forEach((sheetName) => {
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, unknown>[];
-          result[sheetName] = jsonData;
+
+          // Formata datas para YYYY-MM-DD
+          const formattedData = jsonData.map(row => {
+            const newRow = { ...row };
+            Object.keys(newRow).forEach(key => {
+              if (newRow[key] instanceof Date) {
+                const d = newRow[key] as Date;
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                newRow[key] = `${year}-${month}-${day}`;
+              }
+            });
+            return newRow;
+          });
+
+          result[sheetName] = formattedData;
         });
 
         resolve(result);
