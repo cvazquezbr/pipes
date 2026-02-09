@@ -62,9 +62,12 @@ export function useInvoiceProcessor() {
       setError(null);
       const data = await readExcelFile(file);
       // Filtro: Apenas registros cujo Bill Number contenha " ISS"
-      const filteredData = data.filter(row =>
-        String(row['Bill Number'] || '').toUpperCase().includes(' ISS')
-      );
+      const filteredData = data.filter(row => {
+        // Busca a chave 'Bill Number' de forma robusta
+        const billNumberKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'bill number') || 'Bill Number';
+        const billNumber = String(row[billNumberKey] || '');
+        return billNumber.toUpperCase().includes(' ISS');
+      });
       setBillSheetData(filteredData);
       return filteredData;
     } catch (err) {

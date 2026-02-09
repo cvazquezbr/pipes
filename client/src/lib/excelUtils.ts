@@ -25,12 +25,26 @@ export async function readExcelFile(file: File): Promise<Record<string, unknown>
         const formattedData = jsonData.map(row => {
           const newRow = { ...row };
           Object.keys(newRow).forEach(key => {
-            if (newRow[key] instanceof Date) {
-              const d = newRow[key] as Date;
-              const year = d.getFullYear();
-              const month = String(d.getMonth() + 1).padStart(2, '0');
-              const day = String(d.getDate()).padStart(2, '0');
+            const value = newRow[key];
+            const lowerKey = key.toLowerCase();
+            const isDateCol = lowerKey.includes('date') || lowerKey.includes('data') || lowerKey.includes('vencimento');
+
+            if (value instanceof Date) {
+              const year = value.getFullYear();
+              const month = String(value.getMonth() + 1).padStart(2, '0');
+              const day = String(value.getDate()).padStart(2, '0');
               newRow[key] = `${year}-${month}-${day}`;
+            } else if (typeof value === 'number' && isDateCol && value > 30000 && value < 60000) {
+              // Fallback para números que parecem ser datas do Excel (serial)
+              try {
+                const date = new Date((value - 25569) * 86400 * 1000);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                newRow[key] = `${year}-${month}-${day}`;
+              } catch (e) {
+                // Mantém original se falhar
+              }
             }
           });
           return newRow;
@@ -208,12 +222,26 @@ export async function readExcelFileAllSheets(
           const formattedData = jsonData.map(row => {
             const newRow = { ...row };
             Object.keys(newRow).forEach(key => {
-              if (newRow[key] instanceof Date) {
-                const d = newRow[key] as Date;
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
+              const value = newRow[key];
+              const lowerKey = key.toLowerCase();
+              const isDateCol = lowerKey.includes('date') || lowerKey.includes('data') || lowerKey.includes('vencimento');
+
+              if (value instanceof Date) {
+                const year = value.getFullYear();
+                const month = String(value.getMonth() + 1).padStart(2, '0');
+                const day = String(value.getDate()).padStart(2, '0');
                 newRow[key] = `${year}-${month}-${day}`;
+              } else if (typeof value === 'number' && isDateCol && value > 30000 && value < 60000) {
+                // Fallback para números que parecem ser datas do Excel (serial)
+                try {
+                  const date = new Date((value - 25569) * 86400 * 1000);
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  newRow[key] = `${year}-${month}-${day}`;
+                } catch (e) {
+                  // Mantém original se falhar
+                }
               }
             });
             return newRow;
