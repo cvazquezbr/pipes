@@ -12,6 +12,8 @@ export function useInvoiceProcessor() {
   const [invoices, setInvoices] = useState<ExtractedInvoice[]>([]);
   const [referenceData, setReferenceData] = useState<ExcelReferenceData[] | null>(null);
   const [allSheets, setAllSheets] = useState<Record<string, Record<string, unknown>[]> | null>(null);
+  const [invoiceSheetData, setInvoiceSheetData] = useState<Record<string, unknown>[]>([]);
+  const [billSheetData, setBillSheetData] = useState<Record<string, unknown>[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +33,42 @@ export function useInvoiceProcessor() {
       return firstSheetData;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar Excel';
+      setError(errorMessage);
+      throw err;
+    }
+  }, []);
+
+  /**
+   * Carrega planilha de faturamento (Invoices)
+   */
+  const loadInvoiceSheet = useCallback(async (file: File) => {
+    try {
+      setError(null);
+      const data = await readExcelFile(file);
+      setInvoiceSheetData(data);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar faturamento';
+      setError(errorMessage);
+      throw err;
+    }
+  }, []);
+
+  /**
+   * Carrega planilha de cobrança (Bills)
+   */
+  const loadBillSheet = useCallback(async (file: File) => {
+    try {
+      setError(null);
+      const data = await readExcelFile(file);
+      // Filtro: Apenas registros cujo Bill Number contenha " ISS"
+      const filteredData = data.filter(row =>
+        String(row['Bill Number'] || '').toUpperCase().includes(' ISS')
+      );
+      setBillSheetData(filteredData);
+      return filteredData;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar cobrança';
       setError(errorMessage);
       throw err;
     }
@@ -122,6 +160,8 @@ export function useInvoiceProcessor() {
     setInvoices([]);
     setReferenceData(null);
     setAllSheets(null);
+    setInvoiceSheetData([]);
+    setBillSheetData([]);
     setError(null);
     setProgress(0);
   }, []);
@@ -153,12 +193,16 @@ export function useInvoiceProcessor() {
     invoices,
     referenceData,
     allSheets,
+    invoiceSheetData,
+    billSheetData,
     isProcessing,
     progress,
     error,
 
     // Ações
     loadExcelReference,
+    loadInvoiceSheet,
+    loadBillSheet,
     processPDFs,
     processPDFsParallel,
     addInvoices,
