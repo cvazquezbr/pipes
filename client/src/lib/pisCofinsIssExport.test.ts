@@ -30,6 +30,7 @@ describe('pisCofinsIssExport', () => {
     const taxMappings = [
       {
         'Item Tax': 'Standard',
+        'Item Tax1 %': '5%',
         'IRPJ': 0.01,
         'CSLL': 0.01,
         'COFINS': 0.01,
@@ -120,7 +121,7 @@ describe('pisCofinsIssExport', () => {
     expect(f2?.['ISS.antecipado']).toBe(20); // 200/300 * 30
   });
 
-  it('should filter out invoices from different periods', () => {
+  it('should NOT filter out invoices from different periods (as per user request)', () => {
      const invoiceData = [
       {
         'Invoice Number': '1',
@@ -129,13 +130,12 @@ describe('pisCofinsIssExport', () => {
       },
       {
         'Invoice Number': '2',
-        'Invoice Date': '2024-01-15', // Wrong period
+        'Invoice Date': '2024-01-15', // Different period
         'Invoice Status': 'Paid'
       }
     ];
 
     const result = processPisCofinsIssData(invoiceData, [], null);
-    expect(result.faturasFinais.length).toBe(1);
-    expect(result.faturasFinais[0].InvoiceNumber).toBe('1');
+    expect(result.faturasFinais.length).toBe(2);
   });
 });

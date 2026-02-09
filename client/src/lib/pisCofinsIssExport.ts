@@ -107,7 +107,60 @@ function calculateDates() {
 }
 
 /**
- * Processa dados de faturamento e cobrança seguindo a lógica do script R
+ * Converte valor da planilha de referência para número (porcentagem)
+ */
+function parseReferenceValue(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (value === undefined || value === null || value === '') return 0;
+
+  const str = String(value).trim();
+  const cleaned = str.replace('%', '').replace(/\s/g, '');
+
+  if (cleaned.includes(',')) {
+    if (cleaned.includes('.')) {
+      return parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    return parseFloat(cleaned.replace(',', '.')) || 0;
+  }
+
+  return parseFloat(cleaned) || 0;
+}
+
+/**
+ * Encontra o mapeamento de imposto mais próximo pelo percentual
+ */
+function findTaxMapping(
+  retentionPercentage: number,
+  taxMappings: any[]
+): any {
+  if (taxMappings.length === 0) return null;
+
+  return taxMappings.reduce((prev, curr) => {
+    // Tenta obter o percentual da linha de mapeamento
+    const rawPercent = curr['Item Tax1 %_1'] !== undefined && curr['Item Tax1 %_1'] !== ''
+      ? curr['Item Tax1 %_1']
+      : curr['Item Tax1 %2'] !== undefined && curr['Item Tax1 %2'] !== ''
+        ? curr['Item Tax1 %2']
+        : curr['Item Tax1 %'];
+
+    const currPercent = parseReferenceValue(rawPercent);
+
+    const prevRawPercent = prev['Item Tax1 %_1'] !== undefined && prev['Item Tax1 %_1'] !== ''
+      ? prev['Item Tax1 %_1']
+      : prev['Item Tax1 %2'] !== undefined && prev['Item Tax1 %2'] !== ''
+        ? prev['Item Tax1 %2']
+        : prev['Item Tax1 %'];
+
+    const prevPercent = parseReferenceValue(prevRawPercent);
+
+    return Math.abs(currPercent - retentionPercentage) < Math.abs(prevPercent - retentionPercentage)
+      ? curr
+      : prev;
+  });
+}
+
+/**
+ * Processa dados de faturamento e cobrança seguindo a lógica do script R e requisitos do usuário
  */
 export function processPisCofinsIssData(
   invoiceData: Record<string, unknown>[],
@@ -144,24 +197,24 @@ export function processPisCofinsIssData(
     };
   });
 
-  // Filtros: Período e Status
+  // Filtros: Apenas Status (Data não filtra mais conforme pedido)
   faturas = faturas.filter(f => {
-    const periodMatch = f.InvoiceDateFormatted.substring(0, 7) === dates.periodD;
     const statusMatch = f.InvoiceStatus !== 'Void' && f.InvoiceStatus !== 'Draft';
-    return periodMatch && statusMatch;
+    return statusMatch;
   });
 
   console.log(`[Process] ${faturas.length} faturas após filtros`);
 
-  // Merge com impostos retidos
+  // Merge com impostos retidos (por percentual)
   const faturasComImpostos = faturas.map(f => {
-    const mapping = taxMappings.find(m => String(getVal(m, 'Item Tax') || '') === f.ItemTax);
+    const retentionPercentage = f.Total !== 0 ? (f.ItemTaxAmount * 100) / f.Total : 0;
+    const mapping = findTaxMapping(retentionPercentage, taxMappings);
 
-    const irpjRet = parseNumber(getVal(mapping || {}, 'IRPJ'));
-    const csllRet = parseNumber(getVal(mapping || {}, 'CSLL'));
-    const cofinsRet = parseNumber(getVal(mapping || {}, 'COFINS'));
-    const pisRet = parseNumber(getVal(mapping || {}, 'PIS'));
-    const issRet = parseNumber(getVal(mapping || {}, 'ISS'));
+    const irpjRet = parseReferenceValue(getVal(mapping || {}, 'IRPJ'));
+    const csllRet = parseReferenceValue(getVal(mapping || {}, 'CSLL'));
+    const cofinsRet = parseReferenceValue(getVal(mapping || {}, 'COFINS'));
+    const pisRet = parseReferenceValue(getVal(mapping || {}, 'PIS'));
+    const issRet = parseReferenceValue(getVal(mapping || {}, 'ISS'));
 
     // Cálculos
     const isItaipuSpecial = f.CustomerName === 'Itaipu Binacional' && f.ItemTax === '11 | IR 1,5% + CSLL';
@@ -212,15 +265,12 @@ export function processPisCofinsIssData(
 
   // 3. ISS Antecipado (Cobranças)
   // billData já vem filtrado por " ISS" do hook useInvoiceProcessor
-  const cobrancasNoPeriodo = billData.filter(b => {
-    const billDate = String(getVal(b, 'Bill Date') || '');
-    return billDate.substring(0, 7) === dates.periodD;
-  });
+  const cobrancas = billData; // Não filtra por data mais
 
   // Mapa de InvoiceNumber -> ISS Antecipado
   const issAntecipadoMap: Record<string, number> = {};
 
-  cobrancasNoPeriodo.forEach(bill => {
+  cobrancas.forEach(bill => {
     const billNumber = String(getVal(bill, 'Bill Number') || '');
     const rate = parseNumber(getVal(bill, 'Rate'));
 
@@ -278,7 +328,24 @@ export function exportPisCofinsIssExcel(
 ): void {
   const { faturasFinais, dates } = processPisCofinsIssData(invoiceData, billData, allSheets);
 
-  // 4. Preparar Carga ZOHO
+  // 4. Preparar Carga ZOHO (Colunas específicas solicitadas)
+  const ZOHO_BILL_HEADERS = [
+    'Bill Date', 'Due Date', 'Bill ID', 'Vendor Name', 'Entity Discount Percent',
+    'Payment Terms', 'Payment Terms Label', 'Bill Number', 'PurchaseOrder',
+    'Currency Code', 'Exchange Rate', 'SubTotal', 'Total', 'Balance',
+    'TotalRetentionAmountFCY', 'TotalRetentionAmountBCY', 'Vendor Notes',
+    'Terms & Conditions', 'Adjustment', 'Adjustment Description', 'Bill Type',
+    'Is Inclusive Tax', 'Submitted By', 'Approved By', 'Submitted Date',
+    'Approved Date', 'Bill Status', 'Created By', 'Product ID', 'Item Name',
+    'Account', 'Account Code', 'Description', 'Quantity', 'Tax Amount',
+    'Item Total', 'Is Billable', 'Rate', 'Discount Type', 'Is Discount Before Tax',
+    'Discount', 'Discount Amount', 'Purchase Order Number', 'Tax ID', 'Tax Name',
+    'Tax Percentage', 'Tax Type', 'Entity Discount Amount', 'Discount Account',
+    'Discount Account Code', 'Item Discount Account', 'Item Discount Account Code',
+    'Is Landed Cost', 'Customer Name', 'Project Name', 'Equipe',
+    'CF.Conta para quitação', 'CF.Link no SVN'
+  ];
+
   const prepareZohoRow = (entrada: any, tipo: 'PIS' | 'COFINS' | 'ISS') => {
     let rate = 0;
     let billDate = '';
@@ -300,29 +367,36 @@ export function exportPisCofinsIssExcel(
 
     if (round2(rate) === 0) return null;
 
-    return {
-      'Currency Code': 'BRL',
-      'Vendor Name': vendorName,
-      'Bill Number': `${tipo} ${dates.periodD}`,
-      'Bill Date': billDate,
-      'Due Date': billDate,
-      'Account': tipo,
-      'Rate': rate,
-      'Quantity': 1,
-      'Description': `NF ${entrada.InvoiceNumber} ${entrada.CustomerName} de ${entrada.InvoiceDateFormatted}`,
-      'Customer Name': entrada.CustomerName,
-      'Project Name': entrada.ProjectName,
-      'Equipe': entrada.Equipe,
-      'Conta para quitação': 'Banco do Brasil',
-      'Bill Type': 'Bill',
-      'Exchange Rate': 1,
-      'Is Inclusive Tax': 'false',
-      'Is Billable': 'false',
-      'Is Landed Cost': 'false',
-      'Is Discount Before Tax': 'true',
-      'Bill Status': 'draft',
-      'Discount Type': 'entity_level'
-    };
+    const row: Record<string, any> = {};
+    ZOHO_BILL_HEADERS.forEach(h => row[h] = '');
+
+    row['Bill Date'] = billDate;
+    row['Due Date'] = billDate;
+    row['Vendor Name'] = vendorName;
+    row['Bill Number'] = `${tipo} ${dates.periodD}`;
+    row['Currency Code'] = 'BRL';
+    row['Exchange Rate'] = 1;
+    row['SubTotal'] = rate;
+    row['Total'] = rate;
+    row['Balance'] = rate;
+    row['Bill Type'] = 'Bill';
+    row['Is Inclusive Tax'] = 'false';
+    row['Bill Status'] = 'draft';
+    row['Account'] = tipo;
+    row['Description'] = `NF ${entrada.InvoiceNumber} ${entrada.CustomerName} de ${entrada.InvoiceDateFormatted}`;
+    row['Quantity'] = 1;
+    row['Rate'] = rate;
+    row['Item Total'] = rate;
+    row['Is Billable'] = 'false';
+    row['Is Discount Before Tax'] = 'true';
+    row['Discount Type'] = 'entity_level';
+    row['Is Landed Cost'] = 'false';
+    row['Customer Name'] = entrada.CustomerName;
+    row['Project Name'] = entrada.ProjectName;
+    row['Equipe'] = entrada.Equipe;
+    row['CF.Conta para quitação'] = 'Banco do Brasil';
+
+    return row;
   };
 
   const zohoRows: any[] = [];
@@ -359,10 +433,10 @@ export function exportPisCofinsIssExcel(
   XLSX.utils.book_append_sheet(workbook, sheetConf, 'Relatório de Conferência');
 
   // Planilha Carga ZOHO
-  const sheetZoho = XLSX.utils.json_to_sheet(zohoRows);
+  const sheetZoho = XLSX.utils.json_to_sheet(zohoRows, { header: ZOHO_BILL_HEADERS });
   XLSX.utils.book_append_sheet(workbook, sheetZoho, 'Carga Zoho ISS, COFINS e PIS');
 
-  const filename = `${dates.periodD}-Carga-Zoho-ISS-COFINS-PIS.xlsx`;
+  const filename = `${dates.periodD}-Carga Zoho ISS, COFINS e PIS.xlsx`;
   XLSX.writeFile(workbook, filename);
 }
 
