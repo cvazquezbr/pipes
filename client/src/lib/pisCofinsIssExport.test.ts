@@ -29,7 +29,7 @@ describe('pisCofinsIssExport', () => {
 
     const taxMappings = [
       {
-        'Item Tax': 'Standard',
+        'Item Tax1': 'Standard',
         'Item Tax1 %': '5%',
         'IRPJ': 0.01,
         'CSLL': 0.01,
@@ -62,7 +62,19 @@ describe('pisCofinsIssExport', () => {
     expect(fatura['COFINS.pendente']).toBe(20);
   });
 
-  it('should handle Itaipu Binacional special case', () => {
+  it('should match tax by name and handle Itaipu Binacional special case', () => {
+    const taxMappings = [
+      {
+        'Item Tax1': '11 | IR 1,5% + CSLL',
+        'Item Tax1 %': '2.5',
+        'IRPJ': 0.015,
+        'CSLL': 0.01,
+        'COFINS': 0,
+        'PIS': 0,
+        'ISS': 0
+      }
+    ];
+
     const invoiceData = [
       {
         'Invoice Number': '2001',
@@ -71,12 +83,15 @@ describe('pisCofinsIssExport', () => {
         'Customer Name': 'Itaipu Binacional',
         'Total': 1000,
         'Item Tax': '11 | IR 1,5% + CSLL',
-        'Item Tax Amount': 0
+        'Item Tax Amount': 25
       }
     ];
 
-    const result = processPisCofinsIssData(invoiceData, [], null);
+    const result = processPisCofinsIssData(invoiceData, [], { 'Impostos': taxMappings });
     const fatura = result.faturasFinais[0];
+
+    // Match check: IRPJ.retido should be 1000 * 0.015 = 15
+    expect(fatura['IRPJ.retido']).toBe(15);
 
     // Special case: COFINS.devido = 0, PIS.devido = 0, ISS.devido = 0
     expect(fatura['COFINS.devido']).toBe(0);

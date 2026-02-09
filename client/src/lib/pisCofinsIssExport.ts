@@ -127,31 +127,44 @@ function parseReferenceValue(value: unknown): number {
 }
 
 /**
- * Encontra o mapeamento de imposto mais próximo pelo percentual
+ * Tenta obter o percentual de uma linha de mapeamento
+ */
+function getMappingPercentage(mapping: any): number {
+  const rawPercent = mapping['Item Tax1 %_1'] !== undefined && mapping['Item Tax1 %_1'] !== ''
+    ? mapping['Item Tax1 %_1']
+    : mapping['Item Tax1 %2'] !== undefined && mapping['Item Tax1 %2'] !== ''
+      ? mapping['Item Tax1 %2']
+      : mapping['Item Tax1 %'];
+
+  return parseReferenceValue(rawPercent);
+}
+
+/**
+ * Encontra o mapeamento de imposto mais próximo
  */
 function findTaxMapping(
   retentionPercentage: number,
-  taxMappings: any[]
+  taxMappings: any[],
+  itemTaxName: string
 ): any {
   if (taxMappings.length === 0) return null;
 
+  // 1. Tenta por nome primeiro
+  const nameMatch = taxMappings.find(m => {
+    const mName = String(getVal(m, 'Item Tax', 'Item Tax1') || '').trim();
+    return mName.toLowerCase() === itemTaxName.trim().toLowerCase();
+  });
+  if (nameMatch) return nameMatch;
+
+  // 2. Fallback para percentual
   return taxMappings.reduce((prev, curr) => {
-    // Tenta obter o percentual da linha de mapeamento
-    const rawPercent = curr['Item Tax1 %_1'] !== undefined && curr['Item Tax1 %_1'] !== ''
-      ? curr['Item Tax1 %_1']
-      : curr['Item Tax1 %2'] !== undefined && curr['Item Tax1 %2'] !== ''
-        ? curr['Item Tax1 %2']
-        : curr['Item Tax1 %'];
+    let currPercent = getMappingPercentage(curr);
+    let prevPercent = getMappingPercentage(prev);
 
-    const currPercent = parseReferenceValue(rawPercent);
-
-    const prevRawPercent = prev['Item Tax1 %_1'] !== undefined && prev['Item Tax1 %_1'] !== ''
-      ? prev['Item Tax1 %_1']
-      : prev['Item Tax1 %2'] !== undefined && prev['Item Tax1 %2'] !== ''
-        ? prev['Item Tax1 %2']
-        : prev['Item Tax1 %'];
-
-    const prevPercent = parseReferenceValue(prevRawPercent);
+    // Normalização básica: se o percentual da planilha for fracionário (ex: 0.0615)
+    // e o calculado for percentual (6.15), ajustamos para comparação
+    if (currPercent < 1 && retentionPercentage > 1) currPercent *= 100;
+    if (prevPercent < 1 && retentionPercentage > 1) prevPercent *= 100;
 
     return Math.abs(currPercent - retentionPercentage) < Math.abs(prevPercent - retentionPercentage)
       ? curr
@@ -205,10 +218,10 @@ export function processPisCofinsIssData(
 
   console.log(`[Process] ${faturas.length} faturas após filtros`);
 
-  // Merge com impostos retidos (por percentual)
+  // Merge com impostos retidos
   const faturasComImpostos = faturas.map(f => {
     const retentionPercentage = f.Total !== 0 ? (f.ItemTaxAmount * 100) / f.Total : 0;
-    const mapping = findTaxMapping(retentionPercentage, taxMappings);
+    const mapping = findTaxMapping(retentionPercentage, taxMappings, f.ItemTax);
 
     const irpjRet = parseReferenceValue(getVal(mapping || {}, 'IRPJ'));
     const csllRet = parseReferenceValue(getVal(mapping || {}, 'CSLL'));
@@ -411,11 +424,9 @@ export function exportPisCofinsIssExcel(
     if (issRow) zohoRows.push(issRow);
   });
 
-  // 5. Geração do Excel
-  const workbook = XLSX.utils.book_new();
+  // 5. Geração dos arquivos Excel (Separados conforme pedido)
 
-  // Planilha de Conferência
-  // Remove campos internos auxiliares antes de exportar
+  // A. Planilha de Conferência
   const conferencialRows = faturasFinais.map(f => {
     const newRow = { ...f };
     delete (newRow as any).InvoiceDateFormatted;
@@ -429,15 +440,16 @@ export function exportPisCofinsIssExcel(
     delete (newRow as any).ItemTaxAmount;
     return newRow;
   });
+  const wbConf = XLSX.utils.book_new();
   const sheetConf = XLSX.utils.json_to_sheet(conferencialRows);
-  XLSX.utils.book_append_sheet(workbook, sheetConf, 'Relatório de Conferência');
+  XLSX.utils.book_append_sheet(wbConf, sheetConf, 'Conferência');
+  XLSX.writeFile(wbConf, `${dates.periodD}-Relatório de Conferência.xlsx`);
 
-  // Planilha Carga ZOHO
+  // B. Planilha Carga Zoho
+  const wbZoho = XLSX.utils.book_new();
   const sheetZoho = XLSX.utils.json_to_sheet(zohoRows, { header: ZOHO_BILL_HEADERS });
-  XLSX.utils.book_append_sheet(workbook, sheetZoho, 'Carga Zoho ISS, COFINS e PIS');
-
-  const filename = `${dates.periodD}-Carga Zoho ISS, COFINS e PIS.xlsx`;
-  XLSX.writeFile(workbook, filename);
+  XLSX.utils.book_append_sheet(wbZoho, sheetZoho, 'Carga Zoho');
+  XLSX.writeFile(wbZoho, `${dates.periodD}-Carga Zoho ISS, COFINS e PIS.xlsx`);
 }
 
 /**
