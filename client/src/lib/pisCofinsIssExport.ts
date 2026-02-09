@@ -383,20 +383,11 @@ export function exportPisCofinsIssExcel(
 
   // 4. Preparar Carga ZOHO (Colunas específicas solicitadas)
   const ZOHO_BILL_HEADERS = [
-    'Bill Date', 'Due Date', 'Bill ID', 'Vendor Name', 'Entity Discount Percent',
-    'Payment Terms', 'Payment Terms Label', 'Bill Number', 'PurchaseOrder',
-    'Currency Code', 'Exchange Rate', 'SubTotal', 'Total', 'Balance',
-    'TotalRetentionAmountFCY', 'TotalRetentionAmountBCY', 'Vendor Notes',
-    'Terms & Conditions', 'Adjustment', 'Adjustment Description', 'Bill Type',
-    'Is Inclusive Tax', 'Submitted By', 'Approved By', 'Submitted Date',
-    'Approved Date', 'Bill Status', 'Created By', 'Product ID', 'Item Name',
-    'Account', 'Account Code', 'Description', 'Quantity', 'Tax Amount',
-    'Item Total', 'Is Billable', 'Rate', 'Discount Type', 'Is Discount Before Tax',
-    'Discount', 'Discount Amount', 'Purchase Order Number', 'Tax ID', 'Tax Name',
-    'Tax Percentage', 'Tax Type', 'Entity Discount Amount', 'Discount Account',
-    'Discount Account Code', 'Item Discount Account', 'Item Discount Account Code',
-    'Is Landed Cost', 'Customer Name', 'Project Name', 'Equipe',
-    'CF.Conta para quitação', 'CF.Link no SVN'
+    'Currency Code', 'Conta para quitação', 'Bill Type', 'Exchange Rate', 'Quantity',
+    'Is Inclusive Tax', 'Is Billable', 'Is Landed Cost', 'Is Discount Before Tax',
+    'Bill Status', 'Discount Type', 'Bill Number', 'Account', 'Description',
+    'Customer Name', 'Project Name', 'Equipe', 'Bill Date', 'Vendor Name',
+    'Rate', 'Due Date'
   ];
 
   const prepareZohoRow = (entrada: any, tipo: 'PIS' | 'COFINS' | 'ISS') => {
@@ -423,31 +414,27 @@ export function exportPisCofinsIssExcel(
     const row: Record<string, any> = {};
     ZOHO_BILL_HEADERS.forEach(h => row[h] = '');
 
-    row['Bill Date'] = billDate;
-    row['Due Date'] = billDate;
-    row['Vendor Name'] = vendorName;
-    row['Bill Number'] = `${tipo} ${dates.periodD}`;
     row['Currency Code'] = 'BRL';
-    row['Exchange Rate'] = 1;
-    row['SubTotal'] = rate;
-    row['Total'] = rate;
-    row['Balance'] = rate;
+    row['Conta para quitação'] = 'Banco do Brasil';
     row['Bill Type'] = 'Bill';
+    row['Exchange Rate'] = 1;
+    row['Quantity'] = 1;
     row['Is Inclusive Tax'] = 'false';
+    row['Is Billable'] = 'false';
+    row['Is Landed Cost'] = 'false';
+    row['Is Discount Before Tax'] = 'true';
     row['Bill Status'] = 'draft';
+    row['Discount Type'] = 'entity_level';
+    row['Bill Number'] = `${tipo} ${dates.periodD}`;
     row['Account'] = tipo;
     row['Description'] = `NF ${entrada.InvoiceNumber} ${entrada.CustomerName} de ${entrada.InvoiceDateFormatted}`;
-    row['Quantity'] = 1;
-    row['Rate'] = rate;
-    row['Item Total'] = rate;
-    row['Is Billable'] = 'false';
-    row['Is Discount Before Tax'] = 'true';
-    row['Discount Type'] = 'entity_level';
-    row['Is Landed Cost'] = 'false';
     row['Customer Name'] = entrada.CustomerName;
     row['Project Name'] = entrada.ProjectName;
     row['Equipe'] = entrada.Equipe;
-    row['CF.Conta para quitação'] = 'Banco do Brasil';
+    row['Bill Date'] = billDate;
+    row['Vendor Name'] = vendorName;
+    row['Rate'] = rate;
+    row['Due Date'] = billDate;
 
     return row;
   };
