@@ -441,17 +441,15 @@ export default function Home() {
                       Voltar
                     </Button>
 
-                    {billSheetData.length > 0 && (
-                      <Button
-                        onClick={() => setCurrentStep(4)}
-                        disabled={isProcessing}
-                        size="lg"
-                        className="min-w-[140px]"
-                      >
-                        Ver Resultados
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => setCurrentStep(4)}
+                      disabled={isProcessing}
+                      size="lg"
+                      className="min-w-[140px]"
+                    >
+                      {billSheetData.length > 0 ? 'Ver Resultados' : 'Ver Resultados / Pular'}
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               )}
