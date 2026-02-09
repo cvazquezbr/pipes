@@ -15,9 +15,16 @@ import type { ExcelReferenceData } from '@/lib/types';
 interface ExcelUploadProps {
   onFileLoaded: (data: Record<string, Record<string, unknown>[]>, file: File) => void;
   isLoading?: boolean;
+  title?: string;
+  description?: string;
 }
 
-export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProps) {
+export function ExcelUpload({
+  onFileLoaded,
+  isLoading = false,
+  title = "Planilha de Referência",
+  description = "Carregue um arquivo Excel com dados de referência (opcional)"
+}: ExcelUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [allSheetsData, setAllSheetsData] = useState<Record<string, ExcelReferenceData[]> | null>(null);
@@ -91,13 +98,13 @@ export function ExcelUpload({ onFileLoaded, isLoading = false }: ExcelUploadProp
   const disabledClass = isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
 
   return (
-    <Card className="w-full">
+    <Card className="w-full border-slate-200">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileSpreadsheet className="h-5 w-5" />
-          Planilha de Referência
+          <FileSpreadsheet className="h-5 w-5 text-primary" />
+          {title}
         </CardTitle>
-        <CardDescription>Carregue um arquivo Excel com dados de referência (opcional)</CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {!fileName ? (

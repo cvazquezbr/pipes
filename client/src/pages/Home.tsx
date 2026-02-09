@@ -15,13 +15,16 @@ import { ResultsTable } from '@/components/ResultsTable';
 import { useInvoiceProcessor } from '@/hooks/useInvoiceProcessor';
 import { exportToCSV, exportToJSON, exportToExcel, downloadFile } from '@/lib/excelUtils';
 import { exportToZOHOExcel, generateZOHOValidationReport } from '@/lib/zohoExport';
+import { exportPisCofinsIssExcel } from '@/lib/pisCofinsIssExport';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, Loader2, X } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, Loader2, X, Receipt, Coins } from 'lucide-react';
 import type { ExtractedInvoice } from '@/lib/types';
 
 export default function Home() {
+  const [workflow, setWorkflow] = useState<'nfse' | 'piscofinsiss' | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isVerResultadosLoading, setIsVerResultadosLoading] = useState(false);
 
@@ -29,10 +32,14 @@ export default function Home() {
     invoices,
     referenceData,
     allSheets,
+    invoiceSheetData,
+    billSheetData,
     isProcessing,
     progress,
     error,
     loadExcelReference,
+    loadInvoiceSheet,
+    loadBillSheet,
     processPDFsParallel,
     addInvoices,
     updateInvoice,
@@ -97,14 +104,22 @@ export default function Home() {
   const handleClearAll = useCallback(() => {
     clearAll();
     setCurrentStep(1);
+    setWorkflow(null);
     toast.success('Todos os dados foram limpos');
   }, [clearAll]);
 
-  const steps = [
-    { id: 1, name: 'Planilha de Referência', icon: FileSpreadsheet },
-    { id: 2, name: 'Arquivos PDF', icon: FileText },
-    { id: 3, name: 'Resultados e Exportação', icon: LayoutList },
-  ];
+  const steps = workflow === 'piscofinsiss'
+    ? [
+        { id: 1, name: 'Planilha de Referência', icon: FileSpreadsheet },
+        { id: 2, name: 'Planilha de Faturas', icon: FileSpreadsheet },
+        { id: 3, name: 'Planilha de Cobranças', icon: FileSpreadsheet },
+        { id: 4, name: 'Resultados e Exportação', icon: LayoutList },
+      ]
+    : [
+        { id: 1, name: 'Planilha de Referência', icon: FileSpreadsheet },
+        { id: 2, name: 'Arquivos PDF', icon: FileText },
+        { id: 3, name: 'Resultados e Exportação', icon: LayoutList },
+      ];
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -150,7 +165,7 @@ export default function Home() {
             </div>
 
             <div className="hidden md:flex items-center gap-2">
-              {invoices.length > 0 && (
+              {(invoices.length > 0 || invoiceSheetData.length > 0 || billSheetData.length > 0) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -168,7 +183,66 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-5xl">
+        {/* Workflow Selection */}
+        {!workflow && !isProcessing && (
+          <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold text-slate-900">Escolha o fluxo de trabalho</h2>
+              <p className="text-slate-500">Selecione uma das opções abaixo para começar o processamento.</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card
+                className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
+                onClick={() => setWorkflow('nfse')}
+              >
+                <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                <CardHeader>
+                  <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <FileText className="text-primary h-6 w-6" />
+                  </div>
+                  <CardTitle>Exportação ZOHO (PDFs)</CardTitle>
+                  <CardDescription>
+                    Processar notas fiscais em PDF e exportar para o formato de carga do ZOHO.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de referência</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Upload de PDFs NFS-e</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Geração de planilha ZOHO</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
+                onClick={() => setWorkflow('piscofinsiss')}
+              >
+                <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                <CardHeader>
+                  <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Coins className="text-primary h-6 w-6" />
+                  </div>
+                  <CardTitle>COFINS/PIS e ISS</CardTitle>
+                  <CardDescription>
+                    Gerar relatório de impostos a partir de planilhas de faturamento e cobrança.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de referência</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de faturas</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de cobranças</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
         {/* Stepper */}
+        {workflow && (
         <nav aria-label="Progress" className="mb-12">
           <ol role="list" className="flex items-center justify-center space-x-4 md:space-x-12">
             {steps.map((step, stepIdx) => (
@@ -212,11 +286,19 @@ export default function Home() {
             ))}
           </ol>
         </nav>
+        )}
 
+        {workflow && (
         <div className="space-y-8">
-          {/* Step 1: Excel Upload */}
+          {/* Step 1: Excel Upload (Reference) */}
           {currentStep === 1 && (
             <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-2 mb-2">
+                <Button variant="ghost" size="sm" onClick={() => setWorkflow(null)} className="-ml-2">
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Trocar fluxo
+                </Button>
+              </div>
               <ExcelUpload onFileLoaded={handleExcelLoaded} isLoading={isProcessing} />
 
               <div className="flex justify-end pt-4">
@@ -233,9 +315,10 @@ export default function Home() {
             </div>
           )}
 
-          {/* Step 2: PDF Upload */}
+          {/* Step 2: NFSe -> PDF Upload / PISCOFINSISS -> Invoice Excel */}
           {currentStep === 2 && (
             <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {workflow === 'nfse' ? (
               <PDFUpload
                 onProcess={async (files) => {
                   try {
@@ -257,6 +340,16 @@ export default function Home() {
                 isProcessing={isProcessing}
                 progress={progress}
               />
+              ) : (
+                <div className="space-y-6">
+                  <ExcelUpload
+                    onFileLoaded={(_, file) => loadInvoiceSheet(file)}
+                    isLoading={isProcessing}
+                    title="Planilha de Faturas"
+                    description="Carregue o arquivo de faturamento (ex: Fatura 01-2026)"
+                  />
+                </div>
+              )}
 
               <div className="flex justify-between pt-4">
                 <Button
@@ -269,11 +362,10 @@ export default function Home() {
                   Voltar
                 </Button>
 
-                {invoices.length > 0 && (
+                {(workflow === 'nfse' ? invoices.length > 0 : invoiceSheetData.length > 0) && (
                   <Button
                     onClick={() => {
                       setIsVerResultadosLoading(true);
-                      // Simular um breve processamento/transição para feedback visual
                       setTimeout(() => {
                         setCurrentStep(3);
                         setIsVerResultadosLoading(false);
@@ -290,7 +382,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        Ver Resultados
+                        {workflow === 'nfse' ? 'Ver Resultados' : 'Próximo Passo'}
                         <ChevronRight className="ml-2 h-4 w-4" />
                       </>
                     )}
@@ -300,60 +392,177 @@ export default function Home() {
             </div>
           )}
 
-          {/* Step 3: Results */}
+          {/* Step 3: NFSe -> Results / PISCOFINSISS -> Bill Excel */}
           {currentStep === 3 && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              {workflow === 'nfse' ? (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentStep(2)}
+                      disabled={isProcessing}
+                    >
+                      <ChevronLeft className="mr-2 h-4 w-4" />
+                      Adicionar mais Notas
+                    </Button>
+                  </div>
+
+                  <ResultsTable
+                    invoices={invoices}
+                    onInvoiceUpdate={updateInvoice}
+                    onInvoiceDelete={removeInvoice}
+                    onExport={handleExport}
+                    isLoading={isProcessing}
+                  />
+                </div>
+              ) : (
+                <div className="max-w-2xl mx-auto space-y-6">
+                  <ExcelUpload
+                    onFileLoaded={(_, file) => loadBillSheet(file)}
+                    isLoading={isProcessing}
+                    title="Planilha de Cobranças"
+                    description="Carregue o arquivo de cobranças (ex: Cobrança 01-2026)"
+                  />
+
+                  <div className="flex justify-between pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentStep(2)}
+                      disabled={isProcessing}
+                      size="lg"
+                    >
+                      <ChevronLeft className="mr-2 h-4 w-4" />
+                      Voltar
+                    </Button>
+
+                    {billSheetData.length > 0 && (
+                      <Button
+                        onClick={() => setCurrentStep(4)}
+                        disabled={isProcessing}
+                        size="lg"
+                        className="min-w-[140px]"
+                      >
+                        Ver Resultados
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 4: PISCOFINSISS -> Final Results & Export */}
+          {currentStep === 4 && workflow === 'piscofinsiss' && (
             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
               <div className="flex items-center justify-between mb-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentStep(2)}
+                  onClick={() => setCurrentStep(3)}
                   disabled={isProcessing}
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
-                  Adicionar mais Notas
+                  Voltar
                 </Button>
 
-                <div className="flex gap-2">
-                   {invoices.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearAll}
-                      disabled={isProcessing}
-                      className="md:hidden text-slate-500"
-                    >
-                      Limpar Tudo
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  onClick={() => exportPisCofinsIssExcel(invoiceSheetData, billSheetData)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Exportar PIS/COFINS e ISS
+                </Button>
               </div>
 
-              <ResultsTable
-                invoices={invoices}
-                onInvoiceUpdate={updateInvoice}
-                onInvoiceDelete={removeInvoice}
-                onExport={handleExport}
-                isLoading={isProcessing}
-              />
-            </div>
-          )}
+              <div className="grid grid-cols-1 gap-8">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Faturas Importadas ({invoiceSheetData.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                     <div className="max-h-60 overflow-auto rounded-md border text-[10px]">
+                      <table className="w-full">
+                        <thead className="bg-muted sticky top-0">
+                          <tr>
+                            <th className="p-1 text-left">Número</th>
+                            <th className="p-1 text-left">Data</th>
+                            <th className="p-1 text-left">Cliente</th>
+                            <th className="p-1 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {invoiceSheetData.slice(0, 50).map((row, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="p-1">{String(row['Invoice Number'] || '')}</td>
+                              <td className="p-1">{String(row['Invoice Date'] || '')}</td>
+                              <td className="p-1 truncate max-w-[150px]">{String(row['Customer Name'] || '')}</td>
+                              <td className="p-1 text-right">{String(row['Total'] || '')}</td>
+                            </tr>
+                          ))}
+                          {invoiceSheetData.length > 50 && (
+                            <tr><td colSpan={4} className="p-2 text-center text-muted-foreground italic">E mais {invoiceSheetData.length - 50} registros...</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
 
-          {/* Error Display */}
-          {error && (
-            <div className="max-w-2xl mx-auto mt-6 rounded-lg bg-destructive/10 border border-destructive/20 p-4 animate-in shake duration-500">
-              <div className="flex items-center gap-3">
-                <div className="bg-destructive text-white p-1 rounded-full">
-                  <X className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-destructive">Ocorreu um erro</p>
-                  <p className="text-sm text-destructive/80 font-medium">{error}</p>
-                </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Cobranças ISS Importadas ({billSheetData.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-60 overflow-auto rounded-md border text-[10px]">
+                      <table className="w-full">
+                        <thead className="bg-muted sticky top-0">
+                          <tr>
+                            <th className="p-1 text-left">Número</th>
+                            <th className="p-1 text-left">Data</th>
+                            <th className="p-1 text-left">Fornecedor</th>
+                            <th className="p-1 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {billSheetData.slice(0, 50).map((row, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="p-1">{String(row['Bill Number'] || '')}</td>
+                              <td className="p-1">{String(row['Bill Date'] || '')}</td>
+                              <td className="p-1 truncate max-w-[150px]">{String(row['Vendor Name'] || '')}</td>
+                              <td className="p-1 text-right">{String(row['Total'] || '')}</td>
+                            </tr>
+                          ))}
+                          {billSheetData.length > 50 && (
+                            <tr><td colSpan={4} className="p-2 text-center text-muted-foreground italic">E mais {billSheetData.length - 50} registros...</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}
         </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="max-w-2xl mx-auto mt-6 rounded-lg bg-destructive/10 border border-destructive/20 p-4 animate-in shake duration-500">
+            <div className="flex items-center gap-3">
+              <div className="bg-destructive text-white p-1 rounded-full">
+                <X className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-destructive">Ocorreu um erro</p>
+                <p className="text-sm text-destructive/80 font-medium">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Footer */}
