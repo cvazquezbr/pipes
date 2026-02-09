@@ -473,7 +473,7 @@ export default function Home() {
                 </Button>
 
                 <Button
-                  onClick={() => exportPisCofinsIssExcel(invoiceSheetData, billSheetData)}
+                  onClick={() => exportPisCofinsIssExcel(invoiceSheetData, billSheetData, allSheets)}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
