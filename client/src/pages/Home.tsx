@@ -15,7 +15,7 @@ import { ResultsTable } from '@/components/ResultsTable';
 import { useInvoiceProcessor } from '@/hooks/useInvoiceProcessor';
 import { exportToCSV, exportToJSON, exportToExcel, downloadFile } from '@/lib/excelUtils';
 import { exportToZOHOExcel, generateZOHOValidationReport } from '@/lib/zohoExport';
-import { exportPisCofinsIssExcel } from '@/lib/pisCofinsIssExport';
+import { exportPisCofinsIssExcel, processPisCofinsIssData } from '@/lib/pisCofinsIssExport';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -107,6 +107,11 @@ export default function Home() {
     setWorkflow(null);
     toast.success('Todos os dados foram limpos');
   }, [clearAll]);
+
+  // Processar dados para visualização no passo 4 do fluxo PIS/COFINS/ISS
+  const processedData = (workflow === 'piscofinsiss' && currentStep === 4)
+    ? processPisCofinsIssData(invoiceSheetData, billSheetData, allSheets).faturasFinais
+    : [];
 
   const steps = workflow === 'piscofinsiss'
     ? [
@@ -482,31 +487,44 @@ export default function Home() {
               <div className="grid grid-cols-1 gap-8">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm font-medium">Faturas Importadas ({invoiceSheetData.length})</CardTitle>
+                    <CardTitle className="text-sm font-medium">Faturas Processadas ({processedData.length})</CardTitle>
                   </CardHeader>
                   <CardContent>
-                     <div className="max-h-60 overflow-auto rounded-md border text-[10px]">
+                     <div className="max-h-[500px] overflow-auto rounded-md border text-[10px]">
                       <table className="w-full">
-                        <thead className="bg-muted sticky top-0">
+                        <thead className="bg-muted sticky top-0 z-10">
                           <tr>
                             <th className="p-1 text-left">Número</th>
                             <th className="p-1 text-left">Data</th>
                             <th className="p-1 text-left">Cliente</th>
+                            <th className="p-1 text-left">Esquema Tributação</th>
                             <th className="p-1 text-right">Total</th>
+                            <th className="p-1 text-right text-blue-600">IRPJ Ret.</th>
+                            <th className="p-1 text-right text-blue-600">CSLL Ret.</th>
+                            <th className="p-1 text-right text-blue-600">COFINS Ret.</th>
+                            <th className="p-1 text-right text-blue-600">PIS Ret.</th>
+                            <th className="p-1 text-right text-blue-600">ISS Ret.</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {invoiceSheetData.slice(0, 50).map((row, i) => (
-                            <tr key={i} className="border-t">
-                              <td className="p-1">{String(row['Invoice Number'] || '')}</td>
-                              <td className="p-1">{String(row['Invoice Date'] || '')}</td>
-                              <td className="p-1 truncate max-w-[150px]">{String(row['Customer Name'] || '')}</td>
-                              <td className="p-1 text-right">{String(row['Total'] || '')}</td>
+                          {processedData.map((f, i) => (
+                            <tr key={i} className="border-t hover:bg-slate-50">
+                              <td className="p-1 font-mono">{String(f.InvoiceNumber || '')}</td>
+                              <td className="p-1 whitespace-nowrap">{String(f.InvoiceDateFormatted || '')}</td>
+                              <td className="p-1 truncate max-w-[120px]" title={String(f.CustomerName || '')}>{String(f.CustomerName || '')}</td>
+                              <td className="p-1 truncate max-w-[150px]" title={String(f.ItemTaxScheme || '')}>
+                                <span className={f.ItemTaxScheme === 'Não encontrado' ? 'text-destructive font-bold' : ''}>
+                                  {f.ItemTaxScheme}
+                                </span>
+                              </td>
+                              <td className="p-1 text-right font-medium">{f.Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-1 text-right text-blue-600">{f['IRPJ.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-1 text-right text-blue-600">{f['CSLL.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-1 text-right text-blue-600">{f['COFINS.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-1 text-right text-blue-600">{f['PIS.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-1 text-right text-blue-600">{f['ISS.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                             </tr>
                           ))}
-                          {invoiceSheetData.length > 50 && (
-                            <tr><td colSpan={4} className="p-2 text-center text-muted-foreground italic">E mais {invoiceSheetData.length - 50} registros...</td></tr>
-                          )}
                         </tbody>
                       </table>
                     </div>

@@ -140,6 +140,17 @@ function getMappingPercentage(mapping: any): number {
 }
 
 /**
+ * Normaliza strings para comparação (remove acentos, espaços extras e caracteres especiais)
+ */
+function normalizeString(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9]/g, ''); // Mantém apenas alfanuméricos
+}
+
+/**
  * Encontra o mapeamento de imposto mais próximo
  */
 function findTaxMapping(
@@ -149,27 +160,49 @@ function findTaxMapping(
 ): any {
   if (taxMappings.length === 0) return null;
 
-  // 1. Tenta por nome primeiro
-  const nameMatch = taxMappings.find(m => {
+  const normalizedItemTaxName = normalizeString(itemTaxName);
+  console.log(`[TaxMapping] Buscando mapping para: "${itemTaxName}" (${retentionPercentage.toFixed(4)}%)`);
+
+  // 1. Tenta por nome primeiro (comparação exata após trim)
+  let match = taxMappings.find(m => {
     const mName = String(getVal(m, 'Item Tax', 'Item Tax1') || '').trim();
     return mName.toLowerCase() === itemTaxName.trim().toLowerCase();
   });
-  if (nameMatch) return nameMatch;
 
-  // 2. Fallback para percentual
-  return taxMappings.reduce((prev, curr) => {
+  if (match) {
+    console.log(`[TaxMapping] Encontrado por nome (exato): "${getVal(match, 'Item Tax', 'Item Tax1')}"`);
+    return match;
+  }
+
+  // 2. Tenta por nome normalizado (mais flexível com espaços e símbolos)
+  match = taxMappings.find(m => {
+    const mName = String(getVal(m, 'Item Tax', 'Item Tax1') || '').trim();
+    return normalizeString(mName) === normalizedItemTaxName && normalizedItemTaxName !== '';
+  });
+
+  if (match) {
+    console.log(`[TaxMapping] Encontrado por nome (normalizado): "${getVal(match, 'Item Tax', 'Item Tax1')}"`);
+    return match;
+  }
+
+  // 3. Fallback para percentual
+  console.log(`[TaxMapping] Fallback para percentual...`);
+  const closest = taxMappings.reduce((prev, curr) => {
     let currPercent = getMappingPercentage(curr);
     let prevPercent = getMappingPercentage(prev);
 
     // Normalização básica: se o percentual da planilha for fracionário (ex: 0.0615)
     // e o calculado for percentual (6.15), ajustamos para comparação
-    if (currPercent < 1 && retentionPercentage > 1) currPercent *= 100;
-    if (prevPercent < 1 && retentionPercentage > 1) prevPercent *= 100;
+    if (currPercent < 1 && retentionPercentage > 1 && currPercent !== 0) currPercent *= 100;
+    if (prevPercent < 1 && retentionPercentage > 1 && prevPercent !== 0) prevPercent *= 100;
 
     return Math.abs(currPercent - retentionPercentage) < Math.abs(prevPercent - retentionPercentage)
       ? curr
       : prev;
   });
+
+  console.log(`[TaxMapping] Selecionado por percentual mais próximo: "${getVal(closest, 'Item Tax', 'Item Tax1')}" (${getMappingPercentage(closest)}%)`);
+  return closest;
 }
 
 /**
@@ -229,6 +262,12 @@ export function processPisCofinsIssData(
     const pisRet = parseReferenceValue(getVal(mapping || {}, 'PIS'));
     const issRet = parseReferenceValue(getVal(mapping || {}, 'ISS'));
 
+    if (mapping) {
+      console.log(`[TaxCalc] NF ${f.InvoiceNumber}: Usando scheme "${getVal(mapping, 'Item Tax', 'Item Tax1')}" -> IRPJ: ${irpjRet}, CSLL: ${csllRet}, COFINS: ${cofinsRet}, PIS: ${pisRet}, ISS: ${issRet}`);
+    } else {
+      console.warn(`[TaxCalc] NF ${f.InvoiceNumber}: NENHUM esquema de tributação encontrado!`);
+    }
+
     // Cálculos
     const isItaipuSpecial = f.CustomerName === 'Itaipu Binacional' && f.ItemTax === '11 | IR 1,5% + CSLL';
 
@@ -258,6 +297,7 @@ export function processPisCofinsIssData(
 
     return {
       ...f,
+      'ItemTaxScheme': mapping ? String(getVal(mapping, 'Item Tax', 'Item Tax1') || '') : 'Não encontrado',
       'IRPJ.devido': irpjDevido,
       'IRPJ.retido': irpjRetido,
       'IRPJ.pendente': irpjPendente,
