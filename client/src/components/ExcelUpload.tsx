@@ -17,13 +17,15 @@ interface ExcelUploadProps {
   isLoading?: boolean;
   title?: string;
   description?: string;
+  rowFilter?: (row: Record<string, unknown>) => boolean;
 }
 
 export function ExcelUpload({
   onFileLoaded,
   isLoading = false,
   title = "Planilha de Referência",
-  description = "Carregue um arquivo Excel com dados de referência (opcional)"
+  description = "Carregue um arquivo Excel com dados de referência (opcional)",
+  rowFilter
 }: ExcelUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -57,7 +59,11 @@ export function ExcelUpload({
         // Carregar todas as linhas de cada aba para exibição
         const allData: Record<string, ExcelReferenceData[]> = {};
         Object.keys(sheetsData).forEach(sheetName => {
-          allData[sheetName] = sheetsData[sheetName] as ExcelReferenceData[];
+          let rows = sheetsData[sheetName] as ExcelReferenceData[];
+          if (rowFilter) {
+            rows = rows.filter(rowFilter as any);
+          }
+          allData[sheetName] = rows;
         });
 
         setAllSheetsData(allData);

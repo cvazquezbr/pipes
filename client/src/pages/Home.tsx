@@ -424,6 +424,10 @@ export default function Home() {
                     isLoading={isProcessing}
                     title="Planilha de Cobranças"
                     description="Carregue o arquivo de cobranças (ex: Cobrança 01-2026)"
+                    rowFilter={(row) => {
+                      const billNumberKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'bill number') || 'Bill Number';
+                      return String(row[billNumberKey] || '').toUpperCase().includes(' ISS');
+                    }}
                   />
 
                   <div className="flex justify-between pt-4">
