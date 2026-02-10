@@ -328,7 +328,7 @@ export function processPisCofinsIssData(
     const rate = parseNumber(getVal(bill, 'Rate'));
 
     // Extrair números (números das notas)
-    const matches = billNumber.match(/\d+/g) || [];
+    const matches: string[] = billNumber.match(/\d+/g) || [];
 
     if (matches.length === 1) {
       const invNum = matches[0];
