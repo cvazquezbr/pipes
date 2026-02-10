@@ -153,4 +153,91 @@ describe('pisCofinsIssExport', () => {
     const result = processPisCofinsIssData(invoiceData, [], null);
     expect(result.faturasFinais.length).toBe(2);
   });
+
+  it('should use ISS override from the third sheet when available', () => {
+    const invoiceData = [
+      {
+        'Invoice Number': '4001',
+        'Invoice Date': '2023-12-15',
+        'Invoice Status': 'Paid',
+        'Customer Name': 'Cliente Especial',
+        'Total': 1000,
+        'Item Tax': 'Standard',
+        'Item Tax Amount': 50
+      },
+      {
+        'Invoice Number': '4002',
+        'Invoice Date': '2023-12-15',
+        'Invoice Status': 'Paid',
+        'Customer Name': 'Cliente Normal',
+        'Total': 1000,
+        'Item Tax': 'Standard',
+        'Item Tax Amount': 50
+      }
+    ];
+
+    const taxMappings = [
+      {
+        'Item Tax1': 'Standard',
+        'Item Tax1 %': '5%',
+        'ISS': 0 // ISS retido = 0
+      }
+    ];
+
+    const allocationData = [
+      {
+        'Cliente': 'Cliente Especial',
+        'Equipe': 'EM-1',
+        'Projeto': 'P1',
+        'Vencimento': 30,
+        'ISS': '5%' // Override to 5%
+      }
+    ];
+
+    const allSheets = {
+      'Impostos': taxMappings,
+      'Clientes': [],
+      'Alocação': allocationData
+    };
+
+    const result = processPisCofinsIssData(invoiceData, [], allSheets);
+
+    const fEspecial = result.faturasFinais.find(f => f.InvoiceNumber === '4001');
+    const fNormal = result.faturasFinais.find(f => f.InvoiceNumber === '4002');
+
+    // Cliente Especial: ISS devido deve ser 1000 * 0.05 = 50
+    expect(fEspecial?.['ISS.devido']).toBe(50);
+
+    // Cliente Normal: ISS devido deve ser o padrão 1000 * 0.02 = 20
+    expect(fNormal?.['ISS.devido']).toBe(20);
+  });
+
+  it('should handle ISS override as a number (fraction) in the third sheet', () => {
+    const invoiceData = [
+      {
+        'Invoice Number': '5001',
+        'Invoice Date': '2023-12-15',
+        'Invoice Status': 'Paid',
+        'Customer Name': 'Cliente Numero',
+        'Total': 1000
+      }
+    ];
+
+    const allSheets = {
+      'Impostos': [],
+      'Clientes': [],
+      'Alocação': [
+        {
+          'Cliente': 'Cliente Numero',
+          'ISS': 0.03 // 3% as number
+        }
+      ]
+    };
+
+    const result = processPisCofinsIssData(invoiceData, [], allSheets);
+    const f = result.faturasFinais[0];
+
+    // ISS devido deve ser 1000 * 0.03 = 30
+    expect(f['ISS.devido']).toBe(30);
+  });
 });
