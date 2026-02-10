@@ -102,7 +102,17 @@ export function processIrpjCsllData(
 
   // IRPJ Total
   const irDevido = baseCalculo * ALIQUOTAS.IR_ALIQUOTA;
-  const irAdicional = Math.max(0, baseCalculo - ALIQUOTAS.LIMITE_IR_ADICIONAL) * ALIQUOTAS.IR_ADICIONAL;
+
+  // Adicional IRPJ (10%) apenas se houver fatura com emissão posterior a 2025
+  const hasInvoicesAfter2025 = faturasProcessadas.some(f => {
+    const year = parseInt(String(f.InvoiceDateFormatted || '').split('-')[0]);
+    return year > 2025;
+  });
+
+  const irAdicional = hasInvoicesAfter2025
+    ? Math.max(0, baseCalculo - ALIQUOTAS.LIMITE_IR_ADICIONAL) * ALIQUOTAS.IR_ADICIONAL
+    : 0;
+
   const irRetidoTotal = faturasProcessadas.reduce((sum, f) => sum + f['IRPJ.retido'], 0) + retencaoAplicacao;
   const totalIrpjDevido = irDevido + irAdicional - irRetidoTotal;
 
