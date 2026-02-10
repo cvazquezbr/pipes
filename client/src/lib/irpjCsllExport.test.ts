@@ -67,8 +67,23 @@ describe('irpjCsllExport', () => {
     expect(faturasFinais[0]['contribuicao.CSLL']).toBe(638);
   });
 
-  it('should calculate IR Adicional when base is above 60000', () => {
-    const result = processIrpjCsllData(mockInvoices, mockAllSheets, 100000, 0);
+  it('should NOT calculate IR Adicional when all invoices are from 2025 or before', () => {
+    const invoices2025 = [
+      { ...mockInvoices[0], 'Invoice Date': '2025-12-31' }
+    ];
+    const result = processIrpjCsllData(invoices2025, mockAllSheets, 100000, 0);
+    const { resumo } = result;
+
+    // Base de Cálculo = 3200 + 100000 = 103200
+    // Even though base is > 60000, year is 2025, so IR Adicional should be 0
+    expect(resumo.irAdicional).toBe(0);
+  });
+
+  it('should calculate IR Adicional when there is an invoice after 2025 and base is above 60000', () => {
+    const invoices2026 = [
+      { ...mockInvoices[0], 'Invoice Date': '2026-01-01' }
+    ];
+    const result = processIrpjCsllData(invoices2026, mockAllSheets, 100000, 0);
     const { resumo } = result;
 
     // Base de Cálculo = 3200 + 100000 = 103200
