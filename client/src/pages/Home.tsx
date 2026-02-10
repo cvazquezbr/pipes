@@ -531,20 +531,6 @@ export default function Home() {
                       </thead>
                       <tbody className="divide-y">
                         <tr>
-                          <td className="py-2 font-medium text-xs">IRPJ</td>
-                          <td className="text-right py-2 text-xs">{taxTotals.irpjDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right py-2 text-xs">{taxTotals.irpjRetido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right py-2 text-xs text-slate-300">-</td>
-                          <td className="text-right py-2 text-xs font-semibold">{taxTotals.irpjPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-2 font-medium text-xs">CSLL</td>
-                          <td className="text-right py-2 text-xs">{taxTotals.csllDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right py-2 text-xs">{taxTotals.csllRetido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td className="text-right py-2 text-xs text-slate-300">-</td>
-                          <td className="text-right py-2 text-xs font-semibold">{taxTotals.csllPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        </tr>
-                        <tr>
                           <td className="py-2 font-medium text-xs">COFINS</td>
                           <td className="text-right py-2 text-xs">{taxTotals.cofinsDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                           <td className="text-right py-2 text-xs">{taxTotals.cofinsRetido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -570,16 +556,16 @@ export default function Home() {
                         <tr className="border-t-2 font-bold bg-slate-100/50">
                           <td className="py-2 text-xs">TOTAL</td>
                           <td className="text-right py-2 text-xs">
-                            {(taxTotals.irpjDevido + taxTotals.csllDevido + taxTotals.cofinsDevido + taxTotals.pisDevido + taxTotals.issDevido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            {(taxTotals.cofinsDevido + taxTotals.pisDevido + taxTotals.issDevido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                           <td className="text-right py-2 text-xs">
-                            {(taxTotals.irpjRetido + taxTotals.csllRetido + taxTotals.cofinsRetido + taxTotals.pisRetido + taxTotals.issRetido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            {(taxTotals.cofinsRetido + taxTotals.pisRetido + taxTotals.issRetido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                           <td className="text-right py-2 text-xs">
                             {taxTotals.issAntecipado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                           <td className="text-right py-2 text-xs text-primary">
-                            {(taxTotals.irpjPendente + taxTotals.csllPendente + taxTotals.cofinsPendente + taxTotals.pisPendente + taxTotals.issPendente).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            {(taxTotals.cofinsPendente + taxTotals.pisPendente + taxTotals.issPendente).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                         </tr>
                       </tfoot>
