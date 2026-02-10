@@ -16,17 +16,22 @@ import { useInvoiceProcessor } from '@/hooks/useInvoiceProcessor';
 import { exportToCSV, exportToJSON, exportToExcel, downloadFile } from '@/lib/excelUtils';
 import { exportToZOHOExcel, generateZOHOValidationReport } from '@/lib/zohoExport';
 import { exportPisCofinsIssExcel, processPisCofinsIssData } from '@/lib/pisCofinsIssExport';
+import { exportIrpjCsllExcel, processIrpjCsllData } from '@/lib/irpjCsllExport';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, Loader2, X, Receipt, Coins } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, Loader2, X, Receipt, Coins, TrendingUp } from 'lucide-react';
 import type { ExtractedInvoice } from '@/lib/types';
 
 export default function Home() {
-  const [workflow, setWorkflow] = useState<'nfse' | 'piscofinsiss' | null>(null);
+  const [workflow, setWorkflow] = useState<'nfse' | 'piscofinsiss' | 'irpjcsll' | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isVerResultadosLoading, setIsVerResultadosLoading] = useState(false);
+  const [resultadoAplicacao, setResultadoAplicacao] = useState<string>('');
+  const [retencaoAplicacao, setRetencaoAplicacao] = useState<string>('');
 
   const {
     invoices,
@@ -105,13 +110,29 @@ export default function Home() {
     clearAll();
     setCurrentStep(1);
     setWorkflow(null);
+    setResultadoAplicacao('');
+    setRetencaoAplicacao('');
     toast.success('Todos os dados foram limpos');
   }, [clearAll]);
 
-  // Processar dados para visualização no passo 4 do fluxo PIS/COFINS/ISS
-  const processedData = (workflow === 'piscofinsiss' && currentStep === 4)
-    ? processPisCofinsIssData(invoiceSheetData, billSheetData, allSheets).faturasFinais
-    : [];
+  // Processar dados para visualização no passo 4
+  let processedData: any[] = [];
+  let irpjCsllResumo: any = null;
+
+  if (currentStep === 4) {
+    if (workflow === 'piscofinsiss') {
+      processedData = processPisCofinsIssData(invoiceSheetData, billSheetData, allSheets).faturasFinais;
+    } else if (workflow === 'irpjcsll') {
+      const result = processIrpjCsllData(
+        invoiceSheetData,
+        allSheets,
+        parseFloat(resultadoAplicacao.replace(',', '.')) || 0,
+        parseFloat(retencaoAplicacao.replace(',', '.')) || 0
+      );
+      processedData = result.faturasFinais;
+      irpjCsllResumo = result.resumo;
+    }
+  }
 
   // Cálculos de totais para o fluxo PIS/COFINS/ISS
   const taxTotals = (processedData as any[]).reduce((acc, f) => ({
@@ -146,6 +167,13 @@ export default function Home() {
         { id: 1, name: 'Planilha de Referência', icon: FileSpreadsheet },
         { id: 2, name: 'Planilha de Faturas', icon: FileSpreadsheet },
         { id: 3, name: 'Planilha de Cobranças', icon: FileSpreadsheet },
+        { id: 4, name: 'Resultados e Exportação', icon: LayoutList },
+      ]
+    : workflow === 'irpjcsll'
+    ? [
+        { id: 1, name: 'Planilha de Referência', icon: FileSpreadsheet },
+        { id: 2, name: 'Planilha de Faturas', icon: FileSpreadsheet },
+        { id: 3, name: 'Valores de Aplicação', icon: TrendingUp },
         { id: 4, name: 'Resultados e Exportação', icon: LayoutList },
       ]
     : [
@@ -267,6 +295,29 @@ export default function Home() {
                     <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de referência</li>
                     <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de faturas</li>
                     <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de cobranças</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
+                onClick={() => setWorkflow('irpjcsll')}
+              >
+                <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                <CardHeader>
+                  <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="text-primary h-6 w-6" />
+                  </div>
+                  <CardTitle>IRPJ e CSLL Trimestral</CardTitle>
+                  <CardDescription>
+                    Gerar relatório de IRPJ e CSLL com base em faturamento e resultados de aplicação.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de referência</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Planilha de faturas</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Valores de aplicação</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -425,7 +476,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Step 3: NFSe -> Results / PISCOFINSISS -> Bill Excel */}
+          {/* Step 3: NFSe -> Results / PISCOFINSISS -> Bill Excel / IRPJCSLL -> Application Values */}
           {currentStep === 3 && (
             <div className="space-y-6 animate-in fade-in duration-500">
               {workflow === 'nfse' ? (
@@ -450,7 +501,7 @@ export default function Home() {
                     isLoading={isProcessing}
                   />
                 </div>
-              ) : (
+              ) : workflow === 'piscofinsiss' ? (
                 <div className="max-w-2xl mx-auto space-y-6">
                   <ExcelUpload
                     onFileLoaded={(_, file) => loadBillSheet(file)}
@@ -485,12 +536,62 @@ export default function Home() {
                     </Button>
                   </div>
                 </div>
+              ) : (
+                <div className="max-w-md mx-auto space-y-8 py-8">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold">Valores de Aplicação</h3>
+                    <p className="text-sm text-slate-500">Informe os valores para compor a base de cálculo do trimestre.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="resultado">Resultado da Aplicação (R$)</Label>
+                      <Input
+                        id="resultado"
+                        placeholder="Ex: 3560.10"
+                        value={resultadoAplicacao}
+                        onChange={(e) => setResultadoAplicacao(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="retencao">Retenção da Aplicação (R$)</Label>
+                      <Input
+                        id="retencao"
+                        placeholder="Ex: 874.21"
+                        value={retencaoAplicacao}
+                        onChange={(e) => setRetencaoAplicacao(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentStep(2)}
+                      disabled={isProcessing}
+                      size="lg"
+                    >
+                      <ChevronLeft className="mr-2 h-4 w-4" />
+                      Voltar
+                    </Button>
+
+                    <Button
+                      onClick={() => setCurrentStep(4)}
+                      disabled={isProcessing}
+                      size="lg"
+                      className="min-w-[140px]"
+                    >
+                      Ver Resultados
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           )}
 
-          {/* Step 4: PISCOFINSISS -> Final Results & Export */}
-          {currentStep === 4 && workflow === 'piscofinsiss' && (
+          {/* Step 4: Results & Export */}
+          {currentStep === 4 && (workflow === 'piscofinsiss' || workflow === 'irpjcsll') && (
             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
               <div className="flex items-center justify-between mb-2">
                 <Button
@@ -503,6 +604,7 @@ export default function Home() {
                   Voltar
                 </Button>
 
+                {workflow === 'piscofinsiss' ? (
                 <Button
                   onClick={() => exportPisCofinsIssExcel(invoiceSheetData, billSheetData, allSheets)}
                   className="bg-green-600 hover:bg-green-700"
@@ -510,8 +612,23 @@ export default function Home() {
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   Exportar PIS/COFINS e ISS
                 </Button>
+                ) : (
+                  <Button
+                    onClick={() => exportIrpjCsllExcel(
+                      invoiceSheetData,
+                      allSheets,
+                      parseFloat(resultadoAplicacao.replace(',', '.')) || 0,
+                      parseFloat(retencaoAplicacao.replace(',', '.')) || 0
+                    )}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Exportar IRPJ e CSLL
+                  </Button>
+                )}
               </div>
 
+              {workflow === 'piscofinsiss' ? (
               <Card className="bg-slate-50/50 border-primary/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -581,6 +698,90 @@ export default function Home() {
                   </div>
                 </CardContent>
               </Card>
+              ) : irpjCsllResumo && (
+                <Card className="bg-slate-50/50 border-primary/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-primary" />
+                      Resumo Consolidado IRPJ e CSLL
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">Base de Cálculo</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Total Faturado:</span>
+                            <span className="font-mono">R$ {irpjCsllResumo.totalFaturado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Presunção de Lucro (32%):</span>
+                            <span className="font-mono">R$ {irpjCsllResumo.presuncaoLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between font-bold border-t pt-1">
+                            <span>Base de Cálculo:</span>
+                            <span className="font-mono">R$ {irpjCsllResumo.baseCalculo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-primary/5 p-3 rounded-lg space-y-1 text-xs">
+                          <div className="flex justify-between">
+                            <span>Resultado da Aplicação:</span>
+                            <span className="font-bold">R$ {irpjCsllResumo.resultadoAplicacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between text-blue-600">
+                            <span>Retenção da Aplicação:</span>
+                            <span className="font-bold">R$ {irpjCsllResumo.retencaoAplicacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">IRPJ</h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">IR Devido (15%):</span>
+                              <span className="font-mono">R$ {irpjCsllResumo.irDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">IR Adicional (10%):</span>
+                              <span className="font-mono">R$ {irpjCsllResumo.irAdicional.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-blue-600">
+                              <span className="text-slate-600">IR Retido Total:</span>
+                              <span className="font-mono">R$ {irpjCsllResumo.irRetidoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-primary border-t pt-1">
+                              <span>Total IRPJ Devido:</span>
+                              <span className="font-mono">R$ {irpjCsllResumo.totalIrpjDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">CSLL</h4>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">CSLL Devido (9%):</span>
+                              <span className="font-mono">R$ {irpjCsllResumo.csllDevidoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-blue-600">
+                              <span className="text-slate-600">CSLL Retido Total:</span>
+                              <span className="font-mono">R$ {irpjCsllResumo.csllRetidoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-primary border-t pt-1">
+                              <span>Total CSLL Devido:</span>
+                              <span className="font-mono">R$ {irpjCsllResumo.totalCsllDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="grid grid-cols-1 gap-8">
                 <Card>
@@ -599,9 +800,19 @@ export default function Home() {
                             <th className="p-1 text-right">Total</th>
                             <th className="p-1 text-right text-blue-600">IRPJ Ret.</th>
                             <th className="p-1 text-right text-blue-600">CSLL Ret.</th>
-                            <th className="p-1 text-right text-blue-600">COFINS Ret.</th>
-                            <th className="p-1 text-right text-blue-600">PIS Ret.</th>
-                            <th className="p-1 text-right text-blue-600">ISS Ret.</th>
+                            {workflow === 'piscofinsiss' && (
+                              <>
+                                <th className="p-1 text-right text-blue-600">COFINS Ret.</th>
+                                <th className="p-1 text-right text-blue-600">PIS Ret.</th>
+                                <th className="p-1 text-right text-blue-600">ISS Ret.</th>
+                              </>
+                            )}
+                            {workflow === 'irpjcsll' && (
+                              <>
+                                <th className="p-1 text-right text-primary">IRPJ Contrib.</th>
+                                <th className="p-1 text-right text-primary">CSLL Contrib.</th>
+                              </>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -615,12 +826,22 @@ export default function Home() {
                                   {f.ItemTaxScheme}
                                 </span>
                               </td>
-                              <td className="p-1 text-right font-medium">{f.Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                              <td className="p-1 text-right text-blue-600">{f['IRPJ.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                              <td className="p-1 text-right text-blue-600">{f['CSLL.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                              <td className="p-1 text-right text-blue-600">{f['COFINS.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                              <td className="p-1 text-right text-blue-600">{f['PIS.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                              <td className="p-1 text-right text-blue-600">{f['ISS.retido'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-1 text-right font-medium">{(f.Total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-1 text-right text-blue-600">{(f['IRPJ.retido'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-1 text-right text-blue-600">{(f['CSLL.retido'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              {workflow === 'piscofinsiss' && (
+                                <>
+                                  <td className="p-1 text-right text-blue-600">{(f['COFINS.retido'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                  <td className="p-1 text-right text-blue-600">{(f['PIS.retido'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                  <td className="p-1 text-right text-blue-600">{(f['ISS.retido'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                </>
+                              )}
+                              {workflow === 'irpjcsll' && (
+                                <>
+                                  <td className="p-1 text-right text-primary">{(f['contribuicao.IRPJ'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                  <td className="p-1 text-right text-primary">{(f['contribuicao.CSLL'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                </>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -629,6 +850,7 @@ export default function Home() {
                   </CardContent>
                 </Card>
 
+                {workflow === 'piscofinsiss' && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-sm font-medium">Cobranças ISS Importadas ({billSheetData.length})</CardTitle>
@@ -661,6 +883,7 @@ export default function Home() {
                     </div>
                   </CardContent>
                 </Card>
+                )}
               </div>
             </div>
           )}
