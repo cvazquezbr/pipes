@@ -114,16 +114,45 @@ function parseReferenceValue(value: unknown): number {
   if (value === undefined || value === null || value === '') return 0;
 
   const str = String(value).trim();
+  const hasPercent = str.includes('%');
   const cleaned = str.replace('%', '').replace(/\s/g, '');
 
+  let val: number;
   if (cleaned.includes(',')) {
     if (cleaned.includes('.')) {
-      return parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+      val = parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+    } else {
+      val = parseFloat(cleaned.replace(',', '.')) || 0;
     }
-    return parseFloat(cleaned.replace(',', '.')) || 0;
+  } else {
+    val = parseFloat(cleaned) || 0;
   }
 
-  return parseFloat(cleaned) || 0;
+  return hasPercent ? val / 100 : val;
+}
+
+/**
+ * Extrai overrides de ISS da terceira aba (Alocação/ISS)
+ */
+function extractIssOverrides(data: any[]): Record<string, number> {
+  const overrides: Record<string, number> = {};
+  data.forEach(row => {
+    const keys = Object.keys(row);
+    const cliente = String(row['Cliente'] || row['Customer Name'] || row[keys[0]] || '').trim().toUpperCase();
+
+    // Procura por 'ISS' na linha. Se não achar por nome, tenta a 5ª coluna (index 4)
+    let rawIss = row['ISS'];
+    if (rawIss === undefined || rawIss === '') {
+      if (keys.length >= 5) {
+        rawIss = row[keys[4]];
+      }
+    }
+
+    if (cliente && rawIss !== undefined && rawIss !== '') {
+      overrides[cliente] = parseReferenceValue(rawIss);
+    }
+  });
+  return overrides;
 }
 
 /**
@@ -223,6 +252,16 @@ export function processPisCofinsIssData(
     taxMappings = allSheets[firstSheetName] || [];
   }
 
+  // 1.1 Carga de overrides de ISS (3ª aba)
+  let issOverrides: Record<string, number> = {};
+  if (allSheets) {
+    const sheetNames = Object.keys(allSheets);
+    if (sheetNames.length >= 3) {
+      const thirdSheetName = sheetNames[2];
+      issOverrides = extractIssOverrides(allSheets[thirdSheetName] || []);
+    }
+  }
+
   // 2. Processamento de Faturas
   let faturas = invoiceData.map(row => {
     const invoiceDate = String(getVal(row, 'Invoice Date') || '');
@@ -292,7 +331,11 @@ export function processPisCofinsIssData(
     const pisPendente = pisDevido - pisRetido;
 
     // ISS (Inicial)
-    const issDevido = isItaipuSpecial ? 0 : round2(f.Total * ALIQUOTAS.ISS);
+    const clientKey = f.CustomerName.trim().toUpperCase();
+    const clientIssOverride = issOverrides[clientKey];
+    const issRate = (clientIssOverride !== undefined) ? clientIssOverride : ALIQUOTAS.ISS;
+
+    const issDevido = isItaipuSpecial ? 0 : round2(f.Total * issRate);
     const issRetido = round2(f.Total * issRet);
 
     return {
