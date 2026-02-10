@@ -131,12 +131,14 @@ export default function Home() {
     issRetido: acc.issRetido + (f['ISS.retido'] || 0),
     issAntecipado: acc.issAntecipado + (f['ISS.antecipado'] || 0),
     issPendente: acc.issPendente + (f['ISS.pendente'] || 0),
+    totalFaturado: acc.totalFaturado + (f.Total || 0),
   }), {
     irpjDevido: 0, irpjRetido: 0, irpjPendente: 0,
     csllDevido: 0, csllRetido: 0, csllPendente: 0,
     cofinsDevido: 0, cofinsRetido: 0, cofinsPendente: 0,
     pisDevido: 0, pisRetido: 0, pisPendente: 0,
-    issDevido: 0, issRetido: 0, issAntecipado: 0, issPendente: 0
+    issDevido: 0, issRetido: 0, issAntecipado: 0, issPendente: 0,
+    totalFaturado: 0
   });
 
   const steps = workflow === 'piscofinsiss'
@@ -530,6 +532,12 @@ export default function Home() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
+                        <tr className="bg-slate-50/50">
+                          <td className="py-2 font-bold text-xs">TOTAL FATURADO</td>
+                          <td className="text-right py-2 text-xs font-bold" colSpan={4}>
+                            {taxTotals.totalFaturado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
                         <tr>
                           <td className="py-2 font-medium text-xs">COFINS</td>
                           <td className="text-right py-2 text-xs">{taxTotals.cofinsDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
