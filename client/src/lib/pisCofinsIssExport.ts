@@ -4,6 +4,15 @@
  */
 
 import * as XLSX from 'xlsx';
+import {
+  round2,
+  parseNumber,
+  getVal,
+  parseReferenceValue,
+  normalizeString,
+  findTaxMapping,
+  calculateDates
+} from './taxUtils';
 
 // Alíquotas padrão conforme script R
 const ALIQUOTAS = {
@@ -13,123 +22,6 @@ const ALIQUOTAS = {
   PIS: 0.0065,
   ISS: 0.02
 };
-
-/**
- * Arredondamento padrão para 2 casas decimais (compatível com round2 do R)
- */
-function round2(x: number, digits: number = 2): number {
-  if (x === undefined || x === null || isNaN(x)) return 0;
-  if (Math.abs(x) < 0.0000000001) return 0;
-  const factor = Math.pow(10, digits);
-  // Usamos Math.sign * Math.round(Math.abs) para garantir arredondamento simétrico (away from zero)
-  // que é o comportamento comum em contabilidade e o que o script R parece fazer manualmente
-  return Math.sign(x) * Math.round(Math.abs(x) * factor) / factor;
-}
-
-/**
- * Converte valor para número, tratando formatos brasileiros
- */
-function parseNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value === undefined || value === null || value === '') return 0;
-
-  let str = String(value).trim();
-  // Se for uma string vazia após o trim
-  if (str === '') return 0;
-  // Trata '-' como 0
-  if (str === '-') return 0;
-
-  // Remove pontos de milhar e troca vírgula por ponto
-  // Formato: 1.234,56 -> 1234.56
-  // Mas cuidado para não quebrar se já estiver em formato ponto: 1234.56
-  if (str.includes(',') && str.includes('.')) {
-    // Possível formato brasileiro: 1.234,56
-    if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
-      str = str.replace(/\./g, '').replace(',', '.');
-    } else {
-      // Formato americano com vírgula de milhar: 1,234.56
-      str = str.replace(/,/g, '');
-    }
-  } else if (str.includes(',')) {
-    // Apenas vírgula: 1234,56
-    str = str.replace(',', '.');
-  }
-
-  const num = parseFloat(str);
-  return isNaN(num) ? 0 : num;
-}
-
-/**
- * Busca valor em um objeto por múltiplas chaves possíveis (case-insensitive e flexível com separadores)
- */
-function getVal(row: Record<string, unknown>, ...keys: string[]): any {
-  for (const key of keys) {
-    if (row[key] !== undefined && row[key] !== '') return row[key];
-
-    const normalizedTarget = key.toLowerCase().replace(/[._\s]/g, '');
-    for (const rowKey of Object.keys(row)) {
-      const normalizedRowKey = rowKey.toLowerCase().replace(/[._\s]/g, '');
-      if (normalizedRowKey === normalizedTarget && row[rowKey] !== undefined && row[rowKey] !== '') {
-        return row[rowKey];
-      }
-    }
-  }
-  return undefined;
-}
-
-/**
- * Calcula período alvo e datas de vencimento
- */
-function calculateDates() {
-  const now = new Date();
-  const targetDate = new Date(now);
-  targetDate.setDate(now.getDate() - 20);
-
-  const year = targetDate.getFullYear();
-  const month = targetDate.getMonth() + 1; // 1-12
-  const monthStr = String(month).padStart(2, '0');
-  const periodD = `${year}-${monthStr}`;
-
-  // Datas de pagamento (mês seguinte ao alvo)
-  const nextMonthDate = new Date(year, month, 1); // JS Date: month 0-11, so passing 'month' gives next month
-  const nextYear = nextMonthDate.getFullYear();
-  const nextMonth = nextMonthDate.getMonth() + 1;
-  const nextMonthStr = String(nextMonth).padStart(2, '0');
-
-  return {
-    periodD,
-    dataCOFINS: `24/${nextMonthStr}/${nextYear}`,
-    dataPIS: `24/${nextMonthStr}/${nextYear}`,
-    dataISS: `19/${nextMonthStr}/${nextYear}`,
-    year,
-    monthStr
-  };
-}
-
-/**
- * Converte valor da planilha de referência para número (porcentagem)
- */
-function parseReferenceValue(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value === undefined || value === null || value === '') return 0;
-
-  const str = String(value).trim();
-  const hasPercent = str.includes('%');
-  const cleaned = str.replace('%', '').replace(/\s/g, '');
-
-  let val: number;
-  if (cleaned.includes(',')) {
-    if (cleaned.includes('.')) {
-      val = parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
-    } else {
-      val = parseFloat(cleaned.replace(',', '.')) || 0;
-    }
-  } else {
-    val = parseFloat(cleaned) || 0;
-  }
-
-  return hasPercent ? val / 100 : val;
-}
 
 /**
  * Extrai overrides de ISS da terceira aba (Alocação/ISS)
@@ -155,84 +47,6 @@ function extractIssOverrides(data: any[]): Record<string, number> {
   return overrides;
 }
 
-/**
- * Tenta obter o percentual de uma linha de mapeamento
- */
-function getMappingPercentage(mapping: any): number {
-  const rawPercent = mapping['Item Tax1 %_1'] !== undefined && mapping['Item Tax1 %_1'] !== ''
-    ? mapping['Item Tax1 %_1']
-    : mapping['Item Tax1 %2'] !== undefined && mapping['Item Tax1 %2'] !== ''
-      ? mapping['Item Tax1 %2']
-      : mapping['Item Tax1 %'];
-
-  return parseReferenceValue(rawPercent);
-}
-
-/**
- * Normaliza strings para comparação (remove acentos, espaços extras e caracteres especiais)
- */
-function normalizeString(str: string): string {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^a-z0-9]/g, ''); // Mantém apenas alfanuméricos
-}
-
-/**
- * Encontra o mapeamento de imposto mais próximo
- */
-function findTaxMapping(
-  retentionPercentage: number,
-  taxMappings: any[],
-  itemTaxName: string
-): any {
-  if (taxMappings.length === 0) return null;
-
-  const normalizedItemTaxName = normalizeString(itemTaxName);
-  console.log(`[TaxMapping] Buscando mapping para: "${itemTaxName}" (${retentionPercentage.toFixed(4)}%)`);
-
-  // 1. Tenta por nome primeiro (comparação exata após trim)
-  let match = taxMappings.find(m => {
-    const mName = String(getVal(m, 'Item Tax', 'Item Tax1') || '').trim();
-    return mName.toLowerCase() === itemTaxName.trim().toLowerCase();
-  });
-
-  if (match) {
-    console.log(`[TaxMapping] Encontrado por nome (exato): "${getVal(match, 'Item Tax', 'Item Tax1')}"`);
-    return match;
-  }
-
-  // 2. Tenta por nome normalizado (mais flexível com espaços e símbolos)
-  match = taxMappings.find(m => {
-    const mName = String(getVal(m, 'Item Tax', 'Item Tax1') || '').trim();
-    return normalizeString(mName) === normalizedItemTaxName && normalizedItemTaxName !== '';
-  });
-
-  if (match) {
-    console.log(`[TaxMapping] Encontrado por nome (normalizado): "${getVal(match, 'Item Tax', 'Item Tax1')}"`);
-    return match;
-  }
-
-  // 3. Fallback para percentual
-  console.log(`[TaxMapping] Fallback para percentual...`);
-  const closest = taxMappings.reduce((prev, curr) => {
-    let currPercent = getMappingPercentage(curr);
-    let prevPercent = getMappingPercentage(prev);
-
-    // Normalização básica: se o percentual da planilha for fracionário (ex: 0.0615)
-    // e o calculado for percentual (6.15), ajustamos para comparação
-    if (currPercent < 1 && retentionPercentage > 1 && currPercent !== 0) currPercent *= 100;
-    if (prevPercent < 1 && retentionPercentage > 1 && prevPercent !== 0) prevPercent *= 100;
-
-    return Math.abs(currPercent - retentionPercentage) < Math.abs(prevPercent - retentionPercentage)
-      ? curr
-      : prev;
-  });
-
-  console.log(`[TaxMapping] Selecionado por percentual mais próximo: "${getVal(closest, 'Item Tax', 'Item Tax1')}" (${getMappingPercentage(closest)}%)`);
-  return closest;
-}
 
 /**
  * Processa dados de faturamento e cobrança seguindo a lógica do script R e requisitos do usuário
