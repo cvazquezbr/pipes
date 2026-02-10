@@ -498,17 +498,27 @@ export function exportPisCofinsIssExcel(
 
   // A. Planilha de Conferência
   const conferencialRows = faturasFinais.map(f => {
-    const newRow = { ...f };
-    delete (newRow as any).InvoiceDateFormatted;
-    delete (newRow as any).InvoiceStatus;
-    delete (newRow as any).InvoiceNumber;
-    delete (newRow as any).CustomerName;
-    delete (newRow as any).Total;
-    delete (newRow as any).ItemTax;
-    delete (newRow as any).ProjectName;
-    delete (newRow as any).Equipe;
-    delete (newRow as any).ItemTaxAmount;
-    return newRow;
+    // Reorganiza e renomeia colunas para o relatório de conferência
+    const {
+      InvoiceNumber,
+      InvoiceDateFormatted,
+      CustomerName,
+      Total,
+      InvoiceStatus,
+      ItemTax,
+      ProjectName,
+      Equipe,
+      ItemTaxAmount,
+      ...rest
+    } = f as any;
+
+    return {
+      'Fatura': InvoiceNumber,
+      'Data': InvoiceDateFormatted,
+      'Cliente': CustomerName,
+      'Valor da Fatura': Total,
+      ...rest
+    };
   });
   const wbConf = XLSX.utils.book_new();
   const sheetConf = XLSX.utils.json_to_sheet(conferencialRows);
