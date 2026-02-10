@@ -113,6 +113,32 @@ export default function Home() {
     ? processPisCofinsIssData(invoiceSheetData, billSheetData, allSheets).faturasFinais
     : [];
 
+  // Cálculos de totais para o fluxo PIS/COFINS/ISS
+  const taxTotals = (processedData as any[]).reduce((acc, f) => ({
+    irpjDevido: acc.irpjDevido + (f['IRPJ.devido'] || 0),
+    irpjRetido: acc.irpjRetido + (f['IRPJ.retido'] || 0),
+    irpjPendente: acc.irpjPendente + (f['IRPJ.pendente'] || 0),
+    csllDevido: acc.csllDevido + (f['CSLL.devido'] || 0),
+    csllRetido: acc.csllRetido + (f['CSLL.retido'] || 0),
+    csllPendente: acc.csllPendente + (f['CSLL.pendente'] || 0),
+    cofinsDevido: acc.cofinsDevido + (f['COFINS.devido'] || 0),
+    cofinsRetido: acc.cofinsRetido + (f['COFINS.retido'] || 0),
+    cofinsPendente: acc.cofinsPendente + (f['COFINS.pendente'] || 0),
+    pisDevido: acc.pisDevido + (f['PIS.devido'] || 0),
+    pisRetido: acc.pisRetido + (f['PIS.retido'] || 0),
+    pisPendente: acc.pisPendente + (f['PIS.pendente'] || 0),
+    issDevido: acc.issDevido + (f['ISS.devido'] || 0),
+    issRetido: acc.issRetido + (f['ISS.retido'] || 0),
+    issAntecipado: acc.issAntecipado + (f['ISS.antecipado'] || 0),
+    issPendente: acc.issPendente + (f['ISS.pendente'] || 0),
+  }), {
+    irpjDevido: 0, irpjRetido: 0, irpjPendente: 0,
+    csllDevido: 0, csllRetido: 0, csllPendente: 0,
+    cofinsDevido: 0, cofinsRetido: 0, cofinsPendente: 0,
+    pisDevido: 0, pisRetido: 0, pisPendente: 0,
+    issDevido: 0, issRetido: 0, issAntecipado: 0, issPendente: 0
+  });
+
   const steps = workflow === 'piscofinsiss'
     ? [
         { id: 1, name: 'Planilha de Referência', icon: FileSpreadsheet },
@@ -483,6 +509,84 @@ export default function Home() {
                   Exportar PIS/COFINS e ISS
                 </Button>
               </div>
+
+              <Card className="bg-slate-50/50 border-primary/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-primary" />
+                    Resumo Consolidado de Impostos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-slate-500 border-b">
+                          <th className="text-left py-2 font-medium">Imposto</th>
+                          <th className="text-right py-2 font-medium">Devido</th>
+                          <th className="text-right py-2 font-medium">Retido</th>
+                          <th className="text-right py-2 font-medium">Antecipado</th>
+                          <th className="text-right py-2 font-medium text-primary">Pendente</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        <tr>
+                          <td className="py-2 font-medium text-xs">IRPJ</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.irpjDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.irpjRetido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs text-slate-300">-</td>
+                          <td className="text-right py-2 text-xs font-semibold">{taxTotals.irpjPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 font-medium text-xs">CSLL</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.csllDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.csllRetido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs text-slate-300">-</td>
+                          <td className="text-right py-2 text-xs font-semibold">{taxTotals.csllPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 font-medium text-xs">COFINS</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.cofinsDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.cofinsRetido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs text-slate-300">-</td>
+                          <td className="text-right py-2 text-xs font-semibold">{taxTotals.cofinsPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 font-medium text-xs">PIS</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.pisDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.pisRetido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs text-slate-300">-</td>
+                          <td className="text-right py-2 text-xs font-semibold">{taxTotals.pisPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 font-medium text-xs">ISS</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.issDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.issRetido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs">{taxTotals.issAntecipado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right py-2 text-xs font-semibold">{taxTotals.issPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 font-bold bg-slate-100/50">
+                          <td className="py-2 text-xs">TOTAL</td>
+                          <td className="text-right py-2 text-xs">
+                            {(taxTotals.irpjDevido + taxTotals.csllDevido + taxTotals.cofinsDevido + taxTotals.pisDevido + taxTotals.issDevido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="text-right py-2 text-xs">
+                            {(taxTotals.irpjRetido + taxTotals.csllRetido + taxTotals.cofinsRetido + taxTotals.pisRetido + taxTotals.issRetido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="text-right py-2 text-xs">
+                            {taxTotals.issAntecipado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="text-right py-2 text-xs text-primary">
+                            {(taxTotals.irpjPendente + taxTotals.csllPendente + taxTotals.cofinsPendente + taxTotals.pisPendente + taxTotals.issPendente).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="grid grid-cols-1 gap-8">
                 <Card>
