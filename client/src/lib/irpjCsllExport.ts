@@ -21,7 +21,9 @@ const ALIQUOTAS = {
   IR_ALIQUOTA: 0.15,
   IR_ADICIONAL: 0.10,
   CSLL_ALIQUOTA: 0.09,
-  LIMITE_IR_ADICIONAL: 60000
+  LIMITE_IR_ADICIONAL: 60000,
+  LIMITE_FAIXA: 1250000,
+  ALIQUOTA_EXCEDENTE: 0.352,
 };
 
 /**
@@ -98,6 +100,11 @@ export function processIrpjCsllData(
   // Cálculos Totais
   const totalFaturado = faturasProcessadas.reduce((sum, f) => sum + f.Total, 0);
   const presuncaoLucro = totalFaturado * ALIQUOTAS.PRESUNCAO_LUCRO;
+
+  const presuncaoLucro = 
+    (Math.min(totalFaturado, ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.PRESUNCAO_LUCRO) + 
+    (Math.max(0, totalFaturado - ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.ALIQUOTA_EXCEDENTE);
+  
   const baseCalculo = presuncaoLucro + resultadoAplicacao;
 
   // IRPJ Total
@@ -109,9 +116,7 @@ export function processIrpjCsllData(
     return year > 2025;
   });
 
-  const irAdicional = hasInvoicesAfter2025
-    ? Math.max(0, baseCalculo - ALIQUOTAS.LIMITE_IR_ADICIONAL) * ALIQUOTAS.IR_ADICIONAL
-    : 0;
+  const irAdicional = Math.max(0, baseCalculo - ALIQUOTAS.LIMITE_IR_ADICIONAL) * ALIQUOTAS.IR_ADICIONAL;
 
   const irRetidoTotal = faturasProcessadas.reduce((sum, f) => sum + f['IRPJ.retido'], 0) + retencaoAplicacao;
   const totalIrpjDevido = irDevido + irAdicional - irRetidoTotal;
