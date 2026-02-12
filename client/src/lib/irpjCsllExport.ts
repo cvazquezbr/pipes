@@ -100,20 +100,21 @@ export function processIrpjCsllData(
   // Cálculos Totais
   const totalFaturado = faturasProcessadas.reduce((sum, f) => sum + f.Total, 0);
 
-  const presuncaoLucro = 
-    (Math.min(totalFaturado, ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.PRESUNCAO_LUCRO) + 
-    (Math.max(0, totalFaturado - ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.ALIQUOTA_EXCEDENTE);
+  // Adicional IRPJ (BASE) apenas se houver fatura com emissão posterior a 2025
+  const hasInvoicesAfter2025 = faturasProcessadas.some(f => {
+    const year = parseInt(String(f.InvoiceDateFormatted || '').split('-')[0]);
+    return year > 2025;
+  });
+
+  const presuncaoLucro = hasInvoicesAfter2025 
+    ? (Math.min(totalFaturado, ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.PRESUNCAO_LUCRO) + 
+      (Math.max(0, totalFaturado - ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.ALIQUOTA_EXCEDENTE);
+    : (totalFaturado * ALIQUOTAS.PRESUNCAO_LUCRO);
   
   const baseCalculo = presuncaoLucro + resultadoAplicacao;
 
   // IRPJ Total
   const irDevido = baseCalculo * ALIQUOTAS.IR_ALIQUOTA;
-
-  // Adicional IRPJ (10%) apenas se houver fatura com emissão posterior a 2025
-  const hasInvoicesAfter2025 = faturasProcessadas.some(f => {
-    const year = parseInt(String(f.InvoiceDateFormatted || '').split('-')[0]);
-    return year > 2025;
-  });
 
   const irAdicional = Math.max(0, baseCalculo - ALIQUOTAS.LIMITE_IR_ADICIONAL) * ALIQUOTAS.IR_ADICIONAL;
 
