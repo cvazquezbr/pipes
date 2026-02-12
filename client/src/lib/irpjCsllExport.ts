@@ -99,7 +99,6 @@ export function processIrpjCsllData(
 
   // Cálculos Totais
   const totalFaturado = faturasProcessadas.reduce((sum, f) => sum + f.Total, 0);
-  const presuncaoLucro = totalFaturado * ALIQUOTAS.PRESUNCAO_LUCRO;
 
   const presuncaoLucro = 
     (Math.min(totalFaturado, ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.PRESUNCAO_LUCRO) + 
