@@ -108,7 +108,7 @@ export function processIrpjCsllData(
 
   const presuncaoLucro = hasInvoicesAfter2025 
     ? (Math.min(totalFaturado, ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.PRESUNCAO_LUCRO) + 
-      (Math.max(0, totalFaturado - ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.ALIQUOTA_EXCEDENTE);
+      (Math.max(0, totalFaturado - ALIQUOTAS.LIMITE_FAIXA) * ALIQUOTAS.ALIQUOTA_EXCEDENTE)
     : (totalFaturado * ALIQUOTAS.PRESUNCAO_LUCRO);
   
   const baseCalculo = presuncaoLucro + resultadoAplicacao;
