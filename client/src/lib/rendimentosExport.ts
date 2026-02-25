@@ -109,7 +109,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
               irrfMensal: ['999', '828', '942', '8128'],
               salario13: ['12', '8104', '13', '800', '801', '802',  '8216', '8374', '8550'],
               irrf13: ['804', '827'],
-              plr: ['873'],
+              plr: ['873', '242'],
               irrfPlr: ['874'],
               planoSaude: '8111',
               reembolsoPlanoSaude: '8917',
