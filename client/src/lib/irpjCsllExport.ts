@@ -116,7 +116,9 @@ export function processIrpjCsllData(
   // IRPJ Total
   const irDevido = baseCalculo * ALIQUOTAS.IR_ALIQUOTA;
 
-  const irAdicional = Math.max(0, baseCalculo - ALIQUOTAS.LIMITE_IR_ADICIONAL) * ALIQUOTAS.IR_ADICIONAL;
+  const irAdicional = hasInvoicesAfter2025
+    ? Math.max(0, baseCalculo - ALIQUOTAS.LIMITE_IR_ADICIONAL) * ALIQUOTAS.IR_ADICIONAL
+    : 0;
 
   const irRetidoTotal = faturasProcessadas.reduce((sum, f) => sum + f['IRPJ.retido'], 0) + retencaoAplicacao;
   const totalIrpjDevido = irDevido + irAdicional - irRetidoTotal;
