@@ -12,6 +12,7 @@ import { useCallback, useState } from 'react';
 import { ExcelUpload } from '@/components/ExcelUpload';
 import { PDFUpload } from '@/components/PDFUpload';
 import { ResultsTable } from '@/components/ResultsTable';
+import { RendimentosTable } from '@/components/RendimentosTable';
 import { useInvoiceProcessor } from '@/hooks/useInvoiceProcessor';
 import { exportToCSV, exportToJSON, exportToExcel, downloadFile } from '@/lib/excelUtils';
 import { exportToZOHOExcel, generateZOHOValidationReport } from '@/lib/zohoExport';
@@ -614,62 +615,14 @@ export default function Home() {
                       <ChevronLeft className="mr-2 h-4 w-4" />
                       Voltar
                     </Button>
-
-                    <Button
-                      onClick={() => exportRendimentosToExcel(aggregatedWorkers, processingYear)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <FileSpreadsheet className="mr-2 h-4 w-4" />
-                      Exportar para Excel
-                    </Button>
                   </div>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm font-medium">Trabalhadores Processados ({aggregatedWorkers.length})</CardTitle>
-                      <CardDescription>Dados acumulados para o ano de {processingYear}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="max-h-[500px] overflow-auto rounded-md border text-[10px]">
-                        <table className="w-full">
-                          <thead className="bg-muted sticky top-0 z-10">
-                            <tr>
-                              <th className="p-1 text-left">Matrícula</th>
-                              <th className="p-1 text-left">Nome</th>
-                              <th className="p-1 text-left">CPF</th>
-                              <th className="p-1 text-right">Rend. Trib.</th>
-                              <th className="p-1 text-right">Prev. Ofic.</th>
-                              <th className="p-1 text-right">IRRF</th>
-                              <th className="p-1 text-right">13º Sal.</th>
-                              <th className="p-1 text-right">IRRF 13º</th>
-                              <th className="p-1 text-right">PLR</th>
-                              <th className="p-1 text-right">IRRF PLR</th>
-                              <th className="p-1 text-right">Plano Saúde</th>
-                              <th className="p-1 text-right">Rend. Isentos</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {aggregatedWorkers.map((w, i) => (
-                              <tr key={i} className="border-t hover:bg-slate-50">
-                                <td className="p-1 font-mono">{w.matricula}</td>
-                                <td className="p-1 truncate max-w-[100px]" title={w.nome}>{w.nome}</td>
-                                <td className="p-1">{w.cpf}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'Rendimentos Tributáveis')}>{w['Rendimentos Tributáveis'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'Previdência Oficial')}>{w['Previdência Oficial'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'IRRF (Mensal/Férias)')}>{w['IRRF (Mensal/Férias)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, '13º Salário (Exclusiva)')}>{w['13º Salário (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'IRRF sobre 13º (Exclusiva)')}>{w['IRRF sobre 13º (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'PLR (Exclusiva)')}>{w['PLR (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'IRRF sobre PLR (Exclusiva)')}>{w['IRRF sobre PLR (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'Desconto Plano de Saúde')}>{w['Desconto Plano de Saúde'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'Rendimentos Isentos')}>{w['Rendimentos Isentos'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <RendimentosTable
+                    data={aggregatedWorkers}
+                    processingYear={processingYear}
+                    onCellClick={handleCellClick}
+                    onExport={() => exportRendimentosToExcel(aggregatedWorkers, processingYear)}
+                  />
                 </div>
               ) : workflow === 'nfse' ? (
                 <div className="space-y-6">
