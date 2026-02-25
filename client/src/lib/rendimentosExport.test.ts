@@ -15,23 +15,33 @@ describe('rendimentosExport', () => {
   });
 
   describe('aggregateWorkerData', () => {
-    it('should correctly aggregate worker data and filter by year', () => {
+    it('should correctly aggregate worker data and filter by year in the new structure', () => {
       const workers: WorkerData[] = [
         {
           matricula: '123',
           nome: 'João Silva',
           cpf: '111.222.333-44',
-          contracheque: [
-            { codigo: 8781, valor: '1.000,50', ano: 2024 }, // Correct year
-            { codigo: 9380, valor: '500,00', ano: 2024 },  // Correct year
-            { codigo: 998, valor: '100,00', ano: 2023 },   // Wrong year
-            { codigo: 999, valor: '200,00', ano: '2024' }, // Correct year (string)
-            { codigo: 12, valor: '1.200,00', ano: 2024 },  // Correct year
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [
+                { codigo: 8781, valor: '1.000,50' }, // Correct year
+                { codigo: 9380, valor: 500.00 },      // Correct year
+                { codigo: 999, valor: '200,00' },     // Correct year
+                { codigo: 12, valor: '1.200,00' },    // Correct year
+              ]
+            },
+            {
+              ano: 2024,
+              lancamentos: [
+                { codigo: 998, valor: '100,00' },     // Wrong year
+              ]
+            }
           ]
         }
       ];
 
-      const aggregated = aggregateWorkerData(workers, '2024');
+      const aggregated = aggregateWorkerData(workers, '2025');
 
       expect(aggregated).toHaveLength(1);
       expect(aggregated[0]).toEqual({
@@ -39,7 +49,7 @@ describe('rendimentosExport', () => {
         nome: 'João Silva',
         cpf: '111.222.333-44',
         'Total dos rendimentos (inclusive férias)': 1500.50,
-        'Contribuição previdenciária oficial': 0, // Code 998 was 2023
+        'Contribuição previdenciária oficial': 0, // Code 998 was in 2024
         'IRRF': 200.00,
         '13º salário': 1200.00,
         'IRRF sobre 13º salário': 0,
@@ -47,19 +57,26 @@ describe('rendimentosExport', () => {
       });
     });
 
-    it('should handle Brazilian currency strings with R$', () => {
+    it('should aggregate from multiple paychecks of the same year', () => {
         const workers: WorkerData[] = [
           {
             matricula: '456',
             nome: 'Maria Souza',
             cpf: '555.666.777-88',
-            contracheque: [
-              { codigo: 8781, valor: 'R$ 2.000,00', ano: 2024 },
+            contracheques: [
+              {
+                ano: 2025,
+                lancamentos: [{ codigo: '8781', valor: 1000 }]
+              },
+              {
+                ano: 2025,
+                lancamentos: [{ codigo: '8781', valor: 1000 }]
+              }
             ]
           }
         ];
 
-        const aggregated = aggregateWorkerData(workers, 2024);
+        const aggregated = aggregateWorkerData(workers, 2025);
         expect(aggregated[0]['Total dos rendimentos (inclusive férias)']).toBe(2000);
       });
   });
