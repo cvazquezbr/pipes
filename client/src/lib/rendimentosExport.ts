@@ -22,6 +22,9 @@ export interface Gozo {
   proventos: number | string;
   Pagamento: string;
   descricao?: string;
+  simplificado?: boolean;
+  irSimplificado?: number | string;
+  irBaseadoEmDeducoes?: number | string;
 }
 
 export interface PeriodoAquisitivo {
@@ -216,6 +219,22 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
                 valor: valor,
                 data: g.Pagamento
               });
+
+              // Acumular IRRF (Mensal/Férias) dos gozos
+              const irValueRaw = g.simplificado === false
+                ? parseValue(g.irSimplificado)
+                : parseValue(g.irBaseadoEmDeducoes);
+
+              if (irValueRaw !== 0) {
+                const irValue = Number(irValueRaw.toFixed(2));
+                aggregated['IRRF (Mensal/Férias)'] += irValue;
+                aggregated.details['IRRF (Mensal/Férias)'].push({
+                  origem: 'Férias/Gozos',
+                  descricao: `IRRF Férias (${g.simplificado === false ? 'Simplificado' : 'Deduções'})`,
+                  valor: irValue,
+                  data: g.Pagamento
+                });
+              }
             }
           });
         }
