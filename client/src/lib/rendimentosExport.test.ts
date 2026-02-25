@@ -25,16 +25,21 @@ describe('rendimentosExport', () => {
             {
               ano: 2025,
               lancamentos: [
-                { codigo: 8781, valor: '1.000,50' }, // Correct year
-                { codigo: 9380, valor: 500.00 },      // Correct year
-                { codigo: 999, valor: '200,00' },     // Correct year
-                { codigo: 12, valor: '1.200,00' },    // Correct year
+                { codigo: 8781, valor: '1.000,50' }, // Rendimentos Tributáveis
+                { codigo: 9380, valor: 500.00 },      // Rendimentos Tributáveis
+                { codigo: 999, valor: '200,00' },     // IRRF (Mensal/Férias)
+                { codigo: 12, valor: '1.200,00' },    // 13º Salário (Exclusiva)
+                { codigo: 8111, valor: '300,00' },    // Plano de Saúde
+                { codigo: 8917, valor: '50,00' },     // Reembolso Plano de Saúde
+                { codigo: 931, valor: '100,00' },     // Rendimentos Isentos
+                { codigo: 873, valor: '1000,00' },    // PLR
+                { codigo: 874, valor: '150,00' },     // IRRF PLR
               ]
             },
             {
               ano: 2024,
               lancamentos: [
-                { codigo: 998, valor: '100,00' },     // Wrong year
+                { codigo: 998, valor: '100,00' },     // Wrong year (Previdência)
               ]
             }
           ]
@@ -48,12 +53,15 @@ describe('rendimentosExport', () => {
         matricula: '123',
         nome: 'João Silva',
         cpf: '111.222.333-44',
-        'Total dos rendimentos (inclusive férias)': 1500.50,
-        'Contribuição previdenciária oficial': 0, // Code 998 was in 2024
-        'IRRF': 200.00,
-        '13º salário': 1200.00,
-        'IRRF sobre 13º salário': 0,
-        'Desconto Plano de Saúde': 0,
+        'Rendimentos Tributáveis': 1500.50,
+        'Previdência Oficial': 0, // Code 998 was in 2024
+        'IRRF (Mensal/Férias)': 200.00,
+        '13º Salário (Exclusiva)': 1200.00,
+        'IRRF sobre 13º (Exclusiva)': 0,
+        'PLR (Exclusiva)': 1000.00,
+        'IRRF sobre PLR (Exclusiva)': 150.00,
+        'Desconto Plano de Saúde': 250.00, // 300 - 50
+        'Rendimentos Isentos': 100.00,
       });
     });
 
@@ -77,7 +85,7 @@ describe('rendimentosExport', () => {
         ];
 
         const aggregated = aggregateWorkerData(workers, 2025);
-        expect(aggregated[0]['Total dos rendimentos (inclusive férias)']).toBe(2000);
+        expect(aggregated[0]['Rendimentos Tributáveis']).toBe(2000);
       });
   });
 });
