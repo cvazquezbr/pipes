@@ -17,21 +17,24 @@ import { exportToCSV, exportToJSON, exportToExcel, downloadFile } from '@/lib/ex
 import { exportToZOHOExcel, generateZOHOValidationReport } from '@/lib/zohoExport';
 import { exportPisCofinsIssExcel, processPisCofinsIssData } from '@/lib/pisCofinsIssExport';
 import { exportIrpjCsllExcel, processIrpjCsllData } from '@/lib/irpjCsllExport';
+import { JsonUpload } from '@/components/JsonUpload';
+import { aggregateWorkerData, exportRendimentosToExcel } from '@/lib/rendimentosExport';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, Loader2, X, Receipt, Coins, TrendingUp } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, Loader2, X, Receipt, Coins, TrendingUp, Users, FileCode } from 'lucide-react';
 import type { ExtractedInvoice } from '@/lib/types';
 
 export default function Home() {
-  const [workflow, setWorkflow] = useState<'nfse' | 'piscofinsiss' | 'irpjcsll' | null>(null);
+  const [workflow, setWorkflow] = useState<'nfse' | 'piscofinsiss' | 'irpjcsll' | 'rendimentos' | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isVerResultadosLoading, setIsVerResultadosLoading] = useState(false);
   const [resultadoAplicacao, setResultadoAplicacao] = useState<string>('');
   const [retencaoAplicacao, setRetencaoAplicacao] = useState<string>('');
+  const [processingYear, setProcessingYear] = useState<string>(new Date().getFullYear().toString());
 
   const {
     invoices,
@@ -39,12 +42,14 @@ export default function Home() {
     allSheets,
     invoiceSheetData,
     billSheetData,
+    workerData,
     isProcessing,
     progress,
     error,
     loadExcelReference,
     loadInvoiceSheet,
     loadBillSheet,
+    loadWorkerData,
     processPDFsParallel,
     addInvoices,
     updateInvoice,
@@ -112,12 +117,18 @@ export default function Home() {
     setWorkflow(null);
     setResultadoAplicacao('');
     setRetencaoAplicacao('');
+    setProcessingYear(new Date().getFullYear().toString());
     toast.success('Todos os dados foram limpos');
   }, [clearAll]);
 
-  // Processar dados para visualização no passo 4
+  // Processar dados para visualização no passo 4 (ou 3 para rendimentos)
   let processedData: any[] = [];
   let irpjCsllResumo: any = null;
+  let aggregatedWorkers: any[] = [];
+
+  if (workflow === 'rendimentos' && currentStep === 3) {
+    aggregatedWorkers = aggregateWorkerData(workerData);
+  }
 
   if (currentStep === 4) {
     if (workflow === 'piscofinsiss') {
@@ -175,6 +186,12 @@ export default function Home() {
         { id: 2, name: 'Planilha de Faturas', icon: FileSpreadsheet },
         { id: 3, name: 'Valores de Aplicação', icon: TrendingUp },
         { id: 4, name: 'Resultados e Exportação', icon: LayoutList },
+      ]
+    : workflow === 'rendimentos'
+    ? [
+        { id: 1, name: 'Carga JSON', icon: FileCode },
+        { id: 2, name: 'Processamento', icon: TrendingUp },
+        { id: 3, name: 'Resultados e Exportação', icon: LayoutList },
       ]
     : [
         { id: 1, name: 'Planilha de Referência', icon: FileSpreadsheet },
@@ -253,6 +270,29 @@ export default function Home() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
+              <Card
+                className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
+                onClick={() => setWorkflow('rendimentos')}
+              >
+                <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                <CardHeader>
+                  <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Users className="text-primary h-6 w-6" />
+                  </div>
+                  <CardTitle>Declaração de Rendimentos</CardTitle>
+                  <CardDescription>
+                    Processar dados de trabalhadores (JSON) e gerar informe de rendimentos.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Carga de JSON</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Agregação de códigos</li>
+                    <li className="flex items-center gap-2"><Check className="h-3 w-3 text-green-500" /> Exportação para Excel</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
               <Card
                 className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
                 onClick={() => setWorkflow('nfse')}
@@ -383,12 +423,17 @@ export default function Home() {
                   Trocar fluxo
                 </Button>
               </div>
-              <ExcelUpload onFileLoaded={handleExcelLoaded} isLoading={isProcessing} />
+
+              {workflow === 'rendimentos' ? (
+                <JsonUpload onFileLoaded={(data) => loadWorkerData(data)} isLoading={isProcessing} />
+              ) : (
+                <ExcelUpload onFileLoaded={handleExcelLoaded} isLoading={isProcessing} />
+              )}
 
               <div className="flex justify-end pt-4">
                 <Button
                   onClick={() => setCurrentStep(2)}
-                  disabled={isProcessing}
+                  disabled={isProcessing || (workflow === 'rendimentos' ? workerData.length === 0 : false)}
                   size="lg"
                   className="min-w-[140px]"
                 >
@@ -399,10 +444,66 @@ export default function Home() {
             </div>
           )}
 
-          {/* Step 2: NFSe -> PDF Upload / PISCOFINSISS -> Invoice Excel */}
+          {/* Step 2: NFSe -> PDF Upload / PISCOFINSISS -> Invoice Excel / Rendimentos -> Year */}
           {currentStep === 2 && (
             <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {workflow === 'nfse' ? (
+              {workflow === 'rendimentos' ? (
+                <div className="max-w-md mx-auto space-y-8 py-8">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold">Processamento de Rendimentos</h3>
+                    <p className="text-sm text-slate-500">Informe o ano de referência para o processamento.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ano-step2">Ano do Processamento</Label>
+                      <Input
+                        id="ano-step2"
+                        placeholder="Ex: 2024"
+                        value={processingYear}
+                        onChange={(e) => setProcessingYear(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentStep(1)}
+                      disabled={isProcessing}
+                      size="lg"
+                    >
+                      <ChevronLeft className="mr-2 h-4 w-4" />
+                      Voltar
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        setIsVerResultadosLoading(true);
+                        setTimeout(() => {
+                          setCurrentStep(3);
+                          setIsVerResultadosLoading(false);
+                        }, 800);
+                      }}
+                      disabled={isProcessing || !processingYear}
+                      size="lg"
+                      className="min-w-[140px]"
+                    >
+                      {isVerResultadosLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          Processar Dados
+                          <ChevronRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : workflow === 'nfse' ? (
               <PDFUpload
                 onProcess={async (files) => {
                   try {
@@ -476,10 +577,73 @@ export default function Home() {
             </div>
           )}
 
-          {/* Step 3: NFSe -> Results / PISCOFINSISS -> Bill Excel / IRPJCSLL -> Application Values */}
+          {/* Step 3: NFSe -> Results / PISCOFINSISS -> Bill Excel / IRPJCSLL -> Application Values / Rendimentos -> Results */}
           {currentStep === 3 && (
             <div className="space-y-6 animate-in fade-in duration-500">
-              {workflow === 'nfse' ? (
+              {workflow === 'rendimentos' ? (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentStep(2)}
+                      disabled={isProcessing}
+                    >
+                      <ChevronLeft className="mr-2 h-4 w-4" />
+                      Voltar
+                    </Button>
+
+                    <Button
+                      onClick={() => exportRendimentosToExcel(aggregatedWorkers, processingYear)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Exportar para Excel
+                    </Button>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">Trabalhadores Processados ({aggregatedWorkers.length})</CardTitle>
+                      <CardDescription>Dados acumulados para o ano de {processingYear}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="max-h-[500px] overflow-auto rounded-md border text-[10px]">
+                        <table className="w-full">
+                          <thead className="bg-muted sticky top-0 z-10">
+                            <tr>
+                              <th className="p-1 text-left">Matrícula</th>
+                              <th className="p-1 text-left">Nome</th>
+                              <th className="p-1 text-left">CPF</th>
+                              <th className="p-1 text-right">Rendimentos</th>
+                              <th className="p-1 text-right">Prev. Oficial</th>
+                              <th className="p-1 text-right">IRRF</th>
+                              <th className="p-1 text-right">13º Salário</th>
+                              <th className="p-1 text-right">IRRF 13º</th>
+                              <th className="p-1 text-right">Plano Saúde</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {aggregatedWorkers.map((w, i) => (
+                              <tr key={i} className="border-t hover:bg-slate-50">
+                                <td className="p-1 font-mono">{w.matricula}</td>
+                                <td className="p-1 truncate max-w-[150px]" title={w.nome}>{w.nome}</td>
+                                <td className="p-1">{w.cpf}</td>
+                                <td className="p-1 text-right">{w['Total dos rendimentos (inclusive férias)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['Contribuição previdenciária oficial'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['IRRF'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['13º salário'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['IRRF sobre 13º salário'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['Desconto Plano de Saúde'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : workflow === 'nfse' ? (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between mb-2">
                     <Button
