@@ -221,7 +221,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
               });
 
               // Acumular IRRF (Mensal/Férias) dos gozos
-              const irValueRaw = g.simplificado === false
+              const irValueRaw = g.simplificado === true
                 ? parseValue(g.irSimplificado)
                 : parseValue(g.irBaseadoEmDeducoes);
 
@@ -230,7 +230,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
                 aggregated['IRRF (Mensal/Férias)'] += irValue;
                 aggregated.details['IRRF (Mensal/Férias)'].push({
                   origem: 'Férias/Gozos',
-                  descricao: `IRRF Férias (${g.simplificado === false ? 'Simplificado' : 'Deduções'})`,
+                  descricao: `IRRF Férias (${g.simplificado === true ? 'Simplificado' : 'Deduções'})`,
                   valor: irValue,
                   data: g.Pagamento
                 });
