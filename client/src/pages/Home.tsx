@@ -127,7 +127,7 @@ export default function Home() {
   let aggregatedWorkers: any[] = [];
 
   if (workflow === 'rendimentos' && currentStep === 3) {
-    aggregatedWorkers = aggregateWorkerData(workerData);
+    aggregatedWorkers = aggregateWorkerData(workerData, processingYear);
   }
 
   if (currentStep === 4) {
