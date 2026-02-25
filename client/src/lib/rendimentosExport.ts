@@ -4,18 +4,24 @@
 
 import * as XLSX from 'xlsx';
 
-export interface ContrachequeItem {
+export interface Lancamento {
   codigo: number | string;
   valor: number | string;
-  ano?: number | string;
   descricao?: string;
+  natureza?: string;
+}
+
+export interface Contracheque {
+  ano: number | string;
+  lancamentos: Lancamento[];
+  [key: string]: any; // Permite outros campos como valorLiquido, etc.
 }
 
 export interface WorkerData {
   matricula: string;
   nome: string;
   cpf: string;
-  contracheque: ContrachequeItem[];
+  contracheques: Contracheque[];
 }
 
 export interface AggregatedWorkerData {
@@ -73,28 +79,32 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       'Desconto Plano de Saúde': 0,
     };
 
-    if (Array.isArray(worker.contracheque)) {
-      worker.contracheque.forEach(item => {
-        // Filtrar por ano
-        if (item.ano && String(item.ano) !== targetYear) {
+    if (Array.isArray(worker.contracheques)) {
+      worker.contracheques.forEach(cc => {
+        // Filtrar por ano no nível do contracheque
+        if (cc.ano && String(cc.ano) !== targetYear) {
           return;
         }
 
-        const codigo = Number(item.codigo);
-        const valor = parseValue(item.valor);
+        if (Array.isArray(cc.lancamentos)) {
+          cc.lancamentos.forEach(item => {
+            const codigo = String(item.codigo);
+            const valor = parseValue(item.valor);
 
-        if (codigo === 8781 || codigo === 9380) {
-          aggregated['Total dos rendimentos (inclusive férias)'] += valor;
-        } else if (codigo === 998 || codigo === 843) {
-          aggregated['Contribuição previdenciária oficial'] += valor;
-        } else if (codigo === 999) {
-          aggregated['IRRF'] += valor;
-        } else if (codigo === 12) {
-          aggregated['13º salário'] += valor;
-        } else if (codigo === 804) {
-          aggregated['IRRF sobre 13º salário'] += valor;
-        } else if (codigo === 8111) {
-          aggregated['Desconto Plano de Saúde'] += valor;
+            if (codigo === '8781' || codigo === '9380') {
+              aggregated['Total dos rendimentos (inclusive férias)'] += valor;
+            } else if (codigo === '998' || codigo === '843') {
+              aggregated['Contribuição previdenciária oficial'] += valor;
+            } else if (codigo === '999') {
+              aggregated['IRRF'] += valor;
+            } else if (codigo === '12') {
+              aggregated['13º salário'] += valor;
+            } else if (codigo === '804') {
+              aggregated['IRRF sobre 13º salário'] += valor;
+            } else if (codigo === '8111') {
+              aggregated['Desconto Plano de Saúde'] += valor;
+            }
+          });
         }
       });
     }
