@@ -104,7 +104,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
             const valor = parseValue(item.valor);
 
             const rules = {
-              rendimentosTributaveis: ['8781', '9380', '19', '150', '207', '229', '244', '249', '250', '805', '806', '8125', '8783', '8784', '8832', '8870', '9180', '9384', '9661'],
+              rendimentosTributaveis: ['8781', '8784', '9380', '19', '150', '207', '244', '249', '250', '805', '806', '8125', '8783', '8832', '8870', '9180', '9384', '9661'],
               previdenciaOficial: ['998', '843', '812', '821', '826', '858', '825'],
               irrfMensal: ['999', '828', '942', '8128'],
               salario13: ['12', '8104', '13', '800', '801', '802',  '8216', '8374', '8550'],
