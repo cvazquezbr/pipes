@@ -14,6 +14,7 @@ export function useInvoiceProcessor() {
   const [allSheets, setAllSheets] = useState<Record<string, Record<string, unknown>[]> | null>(null);
   const [invoiceSheetData, setInvoiceSheetData] = useState<Record<string, unknown>[]>([]);
   const [billSheetData, setBillSheetData] = useState<Record<string, unknown>[]>([]);
+  const [workerData, setWorkerData] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,13 @@ export function useInvoiceProcessor() {
       setError(errorMessage);
       throw err;
     }
+  }, []);
+
+  /**
+   * Carrega dados de trabalhadores (JSON)
+   */
+  const loadWorkerData = useCallback((data: any) => {
+    setWorkerData(Array.isArray(data) ? data : [data]);
   }, []);
 
   /**
@@ -165,6 +173,7 @@ export function useInvoiceProcessor() {
     setAllSheets(null);
     setInvoiceSheetData([]);
     setBillSheetData([]);
+    setWorkerData([]);
     setError(null);
     setProgress(0);
   }, []);
@@ -198,6 +207,7 @@ export function useInvoiceProcessor() {
     allSheets,
     invoiceSheetData,
     billSheetData,
+    workerData,
     isProcessing,
     progress,
     error,
@@ -206,6 +216,7 @@ export function useInvoiceProcessor() {
     loadExcelReference,
     loadInvoiceSheet,
     loadBillSheet,
+    loadWorkerData,
     processPDFs,
     processPDFsParallel,
     addInvoices,
