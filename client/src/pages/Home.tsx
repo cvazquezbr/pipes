@@ -25,6 +25,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Check, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, LayoutList, Loader2, X, Receipt, Coins, TrendingUp, Users, FileCode } from 'lucide-react';
 import type { ExtractedInvoice } from '@/lib/types';
 
@@ -35,6 +42,12 @@ export default function Home() {
   const [resultadoAplicacao, setResultadoAplicacao] = useState<string>('');
   const [retencaoAplicacao, setRetencaoAplicacao] = useState<string>('');
   const [processingYear, setProcessingYear] = useState<string>(new Date().getFullYear().toString());
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState<{
+    workerName: string;
+    category: string;
+    items: any[];
+  } | null>(null);
 
   const {
     invoices,
@@ -110,6 +123,15 @@ export default function Home() {
     },
     [invoices]
   );
+
+  const handleCellClick = useCallback((worker: any, category: string) => {
+    setSelectedDetail({
+      workerName: worker.nome,
+      category,
+      items: worker.details[category] || []
+    });
+    setDetailDialogOpen(true);
+  }, []);
 
   const handleClearAll = useCallback(() => {
     clearAll();
@@ -632,15 +654,15 @@ export default function Home() {
                                 <td className="p-1 font-mono">{w.matricula}</td>
                                 <td className="p-1 truncate max-w-[100px]" title={w.nome}>{w.nome}</td>
                                 <td className="p-1">{w.cpf}</td>
-                                <td className="p-1 text-right">{w['Rendimentos Tributáveis'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['Previdência Oficial'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['IRRF (Mensal/Férias)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['13º Salário (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['IRRF sobre 13º (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['PLR (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['IRRF sobre PLR (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['Desconto Plano de Saúde'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['Rendimentos Isentos'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'Rendimentos Tributáveis')}>{w['Rendimentos Tributáveis'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'Previdência Oficial')}>{w['Previdência Oficial'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'IRRF (Mensal/Férias)')}>{w['IRRF (Mensal/Férias)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, '13º Salário (Exclusiva)')}>{w['13º Salário (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'IRRF sobre 13º (Exclusiva)')}>{w['IRRF sobre 13º (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'PLR (Exclusiva)')}>{w['PLR (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'IRRF sobre PLR (Exclusiva)')}>{w['IRRF sobre PLR (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'Desconto Plano de Saúde')}>{w['Desconto Plano de Saúde'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all" onClick={() => handleCellClick(w, 'Rendimentos Isentos')}>{w['Rendimentos Isentos'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1075,6 +1097,52 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedDetail?.category}</DialogTitle>
+            <DialogDescription>
+              Detalhamento dos lançamentos para {selectedDetail?.workerName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-auto rounded-md border">
+            <table className="w-full text-[10px]">
+              <thead className="bg-muted sticky top-0 z-10">
+                <tr>
+                  <th className="p-2 text-left">Origem</th>
+                  <th className="p-2 text-left">Código</th>
+                  <th className="p-2 text-left">Descrição</th>
+                  <th className="p-2 text-left">Data</th>
+                  <th className="p-2 text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedDetail?.items.map((item, idx) => (
+                  <tr key={idx} className="border-t hover:bg-slate-50">
+                    <td className="p-2">{item.origem}</td>
+                    <td className="p-2 font-mono">{item.codigo || '-'}</td>
+                    <td className="p-2">{item.descricao || '-'}</td>
+                    <td className="p-2 whitespace-nowrap">{item.data || '-'}</td>
+                    <td className="p-2 text-right font-mono">
+                      {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-muted/50 font-bold sticky bottom-0">
+                <tr>
+                  <td colSpan={4} className="p-2 text-right uppercase tracking-wider">Total Agregado:</td>
+                  <td className="p-2 text-right font-mono">
+                    {selectedDetail?.items.reduce((acc, item) => acc + item.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white mt-12">
