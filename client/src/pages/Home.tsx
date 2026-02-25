@@ -615,26 +615,32 @@ export default function Home() {
                               <th className="p-1 text-left">Matrícula</th>
                               <th className="p-1 text-left">Nome</th>
                               <th className="p-1 text-left">CPF</th>
-                              <th className="p-1 text-right">Rendimentos</th>
-                              <th className="p-1 text-right">Prev. Oficial</th>
+                              <th className="p-1 text-right">Rend. Trib.</th>
+                              <th className="p-1 text-right">Prev. Ofic.</th>
                               <th className="p-1 text-right">IRRF</th>
-                              <th className="p-1 text-right">13º Salário</th>
+                              <th className="p-1 text-right">13º Sal.</th>
                               <th className="p-1 text-right">IRRF 13º</th>
+                              <th className="p-1 text-right">PLR</th>
+                              <th className="p-1 text-right">IRRF PLR</th>
                               <th className="p-1 text-right">Plano Saúde</th>
+                              <th className="p-1 text-right">Rend. Isentos</th>
                             </tr>
                           </thead>
                           <tbody>
                             {aggregatedWorkers.map((w, i) => (
                               <tr key={i} className="border-t hover:bg-slate-50">
                                 <td className="p-1 font-mono">{w.matricula}</td>
-                                <td className="p-1 truncate max-w-[150px]" title={w.nome}>{w.nome}</td>
+                                <td className="p-1 truncate max-w-[100px]" title={w.nome}>{w.nome}</td>
                                 <td className="p-1">{w.cpf}</td>
-                                <td className="p-1 text-right">{w['Total dos rendimentos (inclusive férias)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['Contribuição previdenciária oficial'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['IRRF'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['13º salário'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-1 text-right">{w['IRRF sobre 13º salário'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['Rendimentos Tributáveis'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['Previdência Oficial'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['IRRF (Mensal/Férias)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['13º Salário (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['IRRF sobre 13º (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['PLR (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['IRRF sobre PLR (Exclusiva)'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                                 <td className="p-1 text-right">{w['Desconto Plano de Saúde'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-1 text-right">{w['Rendimentos Isentos'].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                               </tr>
                             ))}
                           </tbody>

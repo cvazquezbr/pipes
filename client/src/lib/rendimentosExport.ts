@@ -28,12 +28,15 @@ export interface AggregatedWorkerData {
   matricula: string;
   nome: string;
   cpf: string;
-  'Total dos rendimentos (inclusive férias)': number;
-  'Contribuição previdenciária oficial': number;
-  'IRRF': number;
-  '13º salário': number;
-  'IRRF sobre 13º salário': number;
+  'Rendimentos Tributáveis': number;
+  'Previdência Oficial': number;
+  'IRRF (Mensal/Férias)': number;
+  '13º Salário (Exclusiva)': number;
+  'IRRF sobre 13º (Exclusiva)': number;
+  'PLR (Exclusiva)': number;
+  'IRRF sobre PLR (Exclusiva)': number;
   'Desconto Plano de Saúde': number;
+  'Rendimentos Isentos': number;
 }
 
 /**
@@ -77,12 +80,15 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       matricula: String(worker.matricula || ''),
       nome: String(worker.nome || ''),
       cpf: String(worker.cpf || ''),
-      'Total dos rendimentos (inclusive férias)': 0,
-      'Contribuição previdenciária oficial': 0,
-      'IRRF': 0,
-      '13º salário': 0,
-      'IRRF sobre 13º salário': 0,
+      'Rendimentos Tributáveis': 0,
+      'Previdência Oficial': 0,
+      'IRRF (Mensal/Férias)': 0,
+      '13º Salário (Exclusiva)': 0,
+      'IRRF sobre 13º (Exclusiva)': 0,
+      'PLR (Exclusiva)': 0,
+      'IRRF sobre PLR (Exclusiva)': 0,
       'Desconto Plano de Saúde': 0,
+      'Rendimentos Isentos': 0,
     };
 
     if (Array.isArray(worker.contracheques)) {
@@ -97,18 +103,39 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
             const codigo = String(item.codigo);
             const valor = parseValue(item.valor);
 
-            if (codigo === '8781' || codigo === '9380') {
-              aggregated['Total dos rendimentos (inclusive férias)'] += valor;
-            } else if (codigo === '998' || codigo === '843') {
-              aggregated['Contribuição previdenciária oficial'] += valor;
-            } else if (codigo === '999') {
-              aggregated['IRRF'] += valor;
-            } else if (codigo === '12') {
-              aggregated['13º salário'] += valor;
-            } else if (codigo === '804') {
-              aggregated['IRRF sobre 13º salário'] += valor;
-            } else if (codigo === '8111') {
+            const rules = {
+              rendimentosTributaveis: ['8781', '9380', '19', '150', '207', '229', '244', '249', '250', '805', '806', '8125', '8783', '8784', '8832', '8870', '9180', '9384', '9661'],
+              previdenciaOficial: ['998', '843', '812', '821', '826', '858'],
+              irrfMensal: ['999', '828', '942', '8128'],
+              salario13: ['12', '13', '50', '800', '801', '802', '8104', '8216', '8374', '8550', '8566', '8918', '8919'],
+              irrf13: ['804', '827'],
+              plr: ['873'],
+              irrfPlr: ['874'],
+              planoSaude: '8111',
+              reembolsoPlanoSaude: '8917',
+              rendimentosIsentos: ['931', '932', '8169', '28', '29', '64', '830', '9591', '8800']
+            };
+
+            if (rules.rendimentosTributaveis.includes(codigo)) {
+              aggregated['Rendimentos Tributáveis'] += valor;
+            } else if (rules.previdenciaOficial.includes(codigo)) {
+              aggregated['Previdência Oficial'] += valor;
+            } else if (rules.irrfMensal.includes(codigo)) {
+              aggregated['IRRF (Mensal/Férias)'] += valor;
+            } else if (rules.salario13.includes(codigo)) {
+              aggregated['13º Salário (Exclusiva)'] += valor;
+            } else if (rules.irrf13.includes(codigo)) {
+              aggregated['IRRF sobre 13º (Exclusiva)'] += valor;
+            } else if (rules.plr.includes(codigo)) {
+              aggregated['PLR (Exclusiva)'] += valor;
+            } else if (rules.irrfPlr.includes(codigo)) {
+              aggregated['IRRF sobre PLR (Exclusiva)'] += valor;
+            } else if (codigo === rules.planoSaude) {
               aggregated['Desconto Plano de Saúde'] += valor;
+            } else if (codigo === rules.reembolsoPlanoSaude) {
+              aggregated['Desconto Plano de Saúde'] -= valor;
+            } else if (rules.rendimentosIsentos.includes(codigo)) {
+              aggregated['Rendimentos Isentos'] += valor;
             }
           });
         }
@@ -126,12 +153,15 @@ export function exportRendimentosToExcel(data: AggregatedWorkerData[], year: str
   // Formata os números para o Excel (duas casas decimais)
   const formattedData = data.map(row => ({
     ...row,
-    'Total dos rendimentos (inclusive férias)': Number(row['Total dos rendimentos (inclusive férias)'].toFixed(2)),
-    'Contribuição previdenciária oficial': Number(row['Contribuição previdenciária oficial'].toFixed(2)),
-    'IRRF': Number(row['IRRF'].toFixed(2)),
-    '13º salário': Number(row['13º salário'].toFixed(2)),
-    'IRRF sobre 13º salário': Number(row['IRRF sobre 13º salário'].toFixed(2)),
+    'Rendimentos Tributáveis': Number(row['Rendimentos Tributáveis'].toFixed(2)),
+    'Previdência Oficial': Number(row['Previdência Oficial'].toFixed(2)),
+    'IRRF (Mensal/Férias)': Number(row['IRRF (Mensal/Férias)'].toFixed(2)),
+    '13º Salário (Exclusiva)': Number(row['13º Salário (Exclusiva)'].toFixed(2)),
+    'IRRF sobre 13º (Exclusiva)': Number(row['IRRF sobre 13º (Exclusiva)'].toFixed(2)),
+    'PLR (Exclusiva)': Number(row['PLR (Exclusiva)'].toFixed(2)),
+    'IRRF sobre PLR (Exclusiva)': Number(row['IRRF sobre PLR (Exclusiva)'].toFixed(2)),
     'Desconto Plano de Saúde': Number(row['Desconto Plano de Saúde'].toFixed(2)),
+    'Rendimentos Isentos': Number(row['Rendimentos Isentos'].toFixed(2)),
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
@@ -143,12 +173,15 @@ export function exportRendimentosToExcel(data: AggregatedWorkerData[], year: str
     { wch: 15 }, // matricula
     { wch: 40 }, // nome
     { wch: 15 }, // cpf
-    { wch: 30 }, // Total dos rendimentos
-    { wch: 25 }, // Contribuição previdenciária
-    { wch: 15 }, // IRRF
-    { wch: 15 }, // 13º salário
-    { wch: 25 }, // IRRF sobre 13º
+    { wch: 30 }, // Rendimentos Tributáveis
+    { wch: 25 }, // Previdência Oficial
+    { wch: 25 }, // IRRF (Mensal/Férias)
+    { wch: 25 }, // 13º Salário (Exclusiva)
+    { wch: 25 }, // IRRF sobre 13º (Exclusiva)
+    { wch: 20 }, // PLR (Exclusiva)
+    { wch: 25 }, // IRRF sobre PLR (Exclusiva)
     { wch: 25 }, // Desconto Plano de Saúde
+    { wch: 25 }, // Rendimentos Isentos
   ];
 
   worksheet['!cols'] = colWidths;
