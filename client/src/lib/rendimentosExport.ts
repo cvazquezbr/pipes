@@ -14,7 +14,18 @@ export interface Lancamento {
 export interface Contracheque {
   ano: number | string;
   lancamentos: Lancamento[];
+  mes?: number | string;
   [key: string]: any; // Permite outros campos como valorLiquido, etc.
+}
+
+export interface Gozo {
+  proventos: number | string;
+  Pagamento: string;
+  descricao?: string;
+}
+
+export interface PeriodoAquisitivo {
+  gozos: Gozo[];
 }
 
 export interface WorkerData {
@@ -22,6 +33,15 @@ export interface WorkerData {
   nome: string;
   cpf: string;
   contracheques: Contracheque[];
+  periodosAquisitivos?: PeriodoAquisitivo[];
+}
+
+export interface DetailLancamento {
+  origem: string;
+  codigo?: string | number;
+  descricao?: string;
+  valor: number;
+  data?: string;
 }
 
 export interface AggregatedWorkerData {
@@ -37,6 +57,7 @@ export interface AggregatedWorkerData {
   'IRRF sobre PLR (Exclusiva)': number;
   'Desconto Plano de Saúde': number;
   'Rendimentos Isentos': number;
+  details: Record<string, DetailLancamento[]>;
 }
 
 /**
@@ -69,10 +90,18 @@ export function parseValue(val: string | number): number {
 export function aggregateWorkerData(workers: WorkerData[], year: string | number): AggregatedWorkerData[] {
   const targetYear = String(year);
 
-  // Filtrar apenas trabalhadores que possuem pelo menos um contracheque no ano alvo
+  // Filtrar trabalhadores que possuem pelo menos um contracheque ou gozo no ano alvo
   const filteredWorkers = workers.filter(worker => {
-    return Array.isArray(worker.contracheques) &&
+    const hasContracheque = Array.isArray(worker.contracheques) &&
            worker.contracheques.some(cc => cc.ano && String(cc.ano) === targetYear);
+
+    const hasGozo = Array.isArray(worker.periodosAquisitivos) &&
+           worker.periodosAquisitivos.some(pa =>
+             Array.isArray(pa.gozos) &&
+             pa.gozos.some(g => g.Pagamento && g.Pagamento.startsWith(targetYear))
+           );
+
+    return hasContracheque || hasGozo;
   });
 
   return filteredWorkers.map(worker => {
@@ -89,6 +118,30 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       'IRRF sobre PLR (Exclusiva)': 0,
       'Desconto Plano de Saúde': 0,
       'Rendimentos Isentos': 0,
+      details: {
+        'Rendimentos Tributáveis': [],
+        'Previdência Oficial': [],
+        'IRRF (Mensal/Férias)': [],
+        '13º Salário (Exclusiva)': [],
+        'IRRF sobre 13º (Exclusiva)': [],
+        'PLR (Exclusiva)': [],
+        'IRRF sobre PLR (Exclusiva)': [],
+        'Desconto Plano de Saúde': [],
+        'Rendimentos Isentos': [],
+      }
+    };
+
+    const rules = {
+      rendimentosTributaveis: ['8781', '8784', '9380', '19', '150', '207', '244', '249', '250', '805', '806', '8125', '8783', '8832', '8870', '9180', '9384', '9661'],
+      previdenciaOficial: ['998', '843', '812', '821', '826', '858', '825'],
+      irrfMensal: ['999', '828', '942', '8128'],
+      salario13: ['12', '8104', '13', '800', '801', '802',  '8216', '8374', '8550'],
+      irrf13: ['804', '827'],
+      plr: ['873', '242'],
+      irrfPlr: ['874'],
+      planoSaude: '8111',
+      reembolsoPlanoSaude: '8917',
+      rendimentosIsentos: ['931', '932', '8169', '28', '29', '64', '830', '9591', '8800']
     };
 
     if (Array.isArray(worker.contracheques)) {
@@ -102,40 +155,67 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
           cc.lancamentos.forEach(item => {
             const codigo = String(item.codigo);
             const valor = parseValue(item.valor);
-
-            const rules = {
-              rendimentosTributaveis: ['8781', '8784', '9380', '19', '150', '207', '244', '249', '250', '805', '806', '8125', '8783', '8832', '8870', '9180', '9384', '9661'],
-              previdenciaOficial: ['998', '843', '812', '821', '826', '858', '825'],
-              irrfMensal: ['999', '828', '942', '8128'],
-              salario13: ['12', '8104', '13', '800', '801', '802',  '8216', '8374', '8550'],
-              irrf13: ['804', '827'],
-              plr: ['873', '242'],
-              irrfPlr: ['874'],
-              planoSaude: '8111',
-              reembolsoPlanoSaude: '8917',
-              rendimentosIsentos: ['931', '932', '8169', '28', '29', '64', '830', '9591', '8800']
+            const detail: DetailLancamento = {
+              origem: `Contracheque ${cc.mes || ''}/${cc.ano}`,
+              codigo: item.codigo,
+              descricao: item.descricao,
+              valor: valor,
             };
 
             if (rules.rendimentosTributaveis.includes(codigo)) {
               aggregated['Rendimentos Tributáveis'] += valor;
+              aggregated.details['Rendimentos Tributáveis'].push(detail);
             } else if (rules.previdenciaOficial.includes(codigo)) {
               aggregated['Previdência Oficial'] += valor;
+              aggregated.details['Previdência Oficial'].push(detail);
             } else if (rules.irrfMensal.includes(codigo)) {
               aggregated['IRRF (Mensal/Férias)'] += valor;
+              aggregated.details['IRRF (Mensal/Férias)'].push(detail);
             } else if (rules.salario13.includes(codigo)) {
               aggregated['13º Salário (Exclusiva)'] += valor;
+              aggregated.details['13º Salário (Exclusiva)'].push(detail);
             } else if (rules.irrf13.includes(codigo)) {
               aggregated['IRRF sobre 13º (Exclusiva)'] += valor;
+              aggregated.details['IRRF sobre 13º (Exclusiva)'].push(detail);
             } else if (rules.plr.includes(codigo)) {
               aggregated['PLR (Exclusiva)'] += valor;
+              aggregated.details['PLR (Exclusiva)'].push(detail);
             } else if (rules.irrfPlr.includes(codigo)) {
               aggregated['IRRF sobre PLR (Exclusiva)'] += valor;
+              aggregated.details['IRRF sobre PLR (Exclusiva)'].push(detail);
             } else if (codigo === rules.planoSaude) {
               aggregated['Desconto Plano de Saúde'] += valor;
+              aggregated.details['Desconto Plano de Saúde'].push(detail);
             } else if (codigo === rules.reembolsoPlanoSaude) {
               aggregated['Desconto Plano de Saúde'] -= valor;
+              aggregated.details['Desconto Plano de Saúde'].push({
+                ...detail,
+                descricao: (detail.descricao || '') + ' (Reembolso)',
+                valor: -valor
+              });
             } else if (rules.rendimentosIsentos.includes(codigo)) {
               aggregated['Rendimentos Isentos'] += valor;
+              aggregated.details['Rendimentos Isentos'].push(detail);
+            }
+          });
+        }
+      });
+    }
+
+    // Processar periodosAquisitivos -> gozos
+    if (Array.isArray(worker.periodosAquisitivos)) {
+      worker.periodosAquisitivos.forEach(pa => {
+        if (Array.isArray(pa.gozos)) {
+          pa.gozos.forEach(g => {
+            if (g.Pagamento && g.Pagamento.startsWith(targetYear)) {
+              const valor = parseValue(g.proventos);
+              aggregated['Rendimentos Tributáveis'] += valor;
+              aggregated.details['Rendimentos Tributáveis'].push({
+                origem: 'Férias/Gozos',
+                descricao: g.descricao || 'Proventos de Férias',
+                valor: valor,
+                data: g.Pagamento
+              });
             }
           });
         }
@@ -150,9 +230,11 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
  * Exporta os dados agregados para uma planilha Excel
  */
 export function exportRendimentosToExcel(data: AggregatedWorkerData[], year: string): void {
-  // Formata os números para o Excel (duas casas decimais)
+  // Formata os números para o Excel (duas casas decimais) e remove detalhes
   const formattedData = data.map(row => ({
-    ...row,
+    matricula: row.matricula,
+    nome: row.nome,
+    cpf: row.cpf,
     'Rendimentos Tributáveis': Number(row['Rendimentos Tributáveis'].toFixed(2)),
     'Previdência Oficial': Number(row['Previdência Oficial'].toFixed(2)),
     'IRRF (Mensal/Férias)': Number(row['IRRF (Mensal/Férias)'].toFixed(2)),

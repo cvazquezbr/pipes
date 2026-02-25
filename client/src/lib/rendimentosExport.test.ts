@@ -49,7 +49,7 @@ describe('rendimentosExport', () => {
       const aggregated = aggregateWorkerData(workers, '2025');
 
       expect(aggregated).toHaveLength(1);
-      expect(aggregated[0]).toEqual({
+      expect(aggregated[0]).toMatchObject({
         matricula: '123',
         nome: 'João Silva',
         cpf: '111.222.333-44',
@@ -87,5 +87,50 @@ describe('rendimentosExport', () => {
         const aggregated = aggregateWorkerData(workers, 2025);
         expect(aggregated[0]['Rendimentos Tributáveis']).toBe(2000);
       });
+
+    it('should correctly include proventos from gozos filtered by payment year', () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: '789',
+          nome: 'Carlos Oliveira',
+          cpf: '999.888.777-66',
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [{ codigo: '8781', valor: 1000 }]
+            }
+          ],
+          periodosAquisitivos: [
+            {
+              gozos: [
+                {
+                  proventos: '500,00',
+                  Pagamento: '2025-05-15',
+                  descricao: 'Ferias Maio'
+                },
+                {
+                  proventos: '600,00',
+                  Pagamento: '2024-12-20',
+                  descricao: 'Ferias Dezembro'
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const aggregated = aggregateWorkerData(workers, '2025');
+
+      expect(aggregated).toHaveLength(1);
+      // 1000 (contracheque) + 500 (gozo 2025) = 1500
+      // 600 (gozo 2024) should be ignored
+      expect(aggregated[0]['Rendimentos Tributáveis']).toBe(1500);
+
+      // Verify details
+      const details = aggregated[0].details['Rendimentos Tributáveis'];
+      expect(details).toHaveLength(2);
+      expect(details.some(d => d.origem === 'Férias/Gozos' && d.valor === 500)).toBe(true);
+      expect(details.some(d => d.origem.startsWith('Contracheque') && d.valor === 1000)).toBe(true);
+    });
   });
 });
