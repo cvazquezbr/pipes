@@ -132,5 +132,52 @@ describe('rendimentosExport', () => {
       expect(details.some(d => d.origem === 'Férias/Gozos' && d.valor === 500)).toBe(true);
       expect(details.some(d => d.origem.startsWith('Contracheque') && d.valor === 1000)).toBe(true);
     });
+
+    it('should correctly include IRRF from gozos based on simplificado flag and round values', () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: '101',
+          nome: 'Juliana Lima',
+          cpf: '222.333.444-55',
+          contracheques: [],
+          periodosAquisitivos: [
+            {
+              gozos: [
+                {
+                  proventos: '1000,00',
+                  Pagamento: '2025-01-10',
+                  simplificado: false,
+                  irSimplificado: 494.44000000000005,
+                  irBaseadoEmDeducoes: 389.69
+                },
+                {
+                  proventos: '1000,00',
+                  Pagamento: '2025-02-10',
+                  simplificado: true,
+                  irSimplificado: 494.44,
+                  irBaseadoEmDeducoes: 389.69000000000005
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const aggregated = aggregateWorkerData(workers, '2025');
+
+      expect(aggregated).toHaveLength(1);
+      // IRRF (Mensal/Férias) should be:
+      // Gozo 1 (simplificado: false) -> irSimplificado (494.44)
+      // Gozo 2 (simplificado: true) -> irBaseadoEmDeducoes (389.69)
+      // Total = 494.44 + 389.69 = 884.13
+      expect(aggregated[0]['IRRF (Mensal/Férias)']).toBeCloseTo(884.13, 2);
+
+      const irDetails = aggregated[0].details['IRRF (Mensal/Férias)'];
+      expect(irDetails).toHaveLength(2);
+      expect(irDetails[0].valor).toBe(494.44);
+      expect(irDetails[0].descricao).toContain('Simplificado');
+      expect(irDetails[1].valor).toBe(389.69);
+      expect(irDetails[1].descricao).toContain('Deduções');
+    });
   });
 });
