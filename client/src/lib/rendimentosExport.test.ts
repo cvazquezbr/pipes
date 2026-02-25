@@ -146,14 +146,14 @@ describe('rendimentosExport', () => {
                 {
                   proventos: '1000,00',
                   Pagamento: '2025-01-10',
-                  simplificado: false,
+                  simplificado: true,
                   irSimplificado: 494.44000000000005,
                   irBaseadoEmDeducoes: 389.69
                 },
                 {
                   proventos: '1000,00',
                   Pagamento: '2025-02-10',
-                  simplificado: true,
+                  simplificado: false,
                   irSimplificado: 494.44,
                   irBaseadoEmDeducoes: 389.69000000000005
                 }
@@ -167,8 +167,8 @@ describe('rendimentosExport', () => {
 
       expect(aggregated).toHaveLength(1);
       // IRRF (Mensal/Férias) should be:
-      // Gozo 1 (simplificado: false) -> irSimplificado (494.44)
-      // Gozo 2 (simplificado: true) -> irBaseadoEmDeducoes (389.69)
+      // Gozo 1 (simplificado: true) -> irSimplificado (494.44)
+      // Gozo 2 (simplificado: false) -> irBaseadoEmDeducoes (389.69)
       // Total = 494.44 + 389.69 = 884.13
       expect(aggregated[0]['IRRF (Mensal/Férias)']).toBeCloseTo(884.13, 2);
 
@@ -178,6 +178,46 @@ describe('rendimentosExport', () => {
       expect(irDetails[0].descricao).toContain('Simplificado');
       expect(irDetails[1].valor).toBe(389.69);
       expect(irDetails[1].descricao).toContain('Deduções');
+    });
+
+    it('should correctly include inss from gozos in Previdência Oficial', () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: '202',
+          nome: 'Roberto Dias',
+          cpf: '333.444.555-66',
+          contracheques: [],
+          periodosAquisitivos: [
+            {
+              gozos: [
+                {
+                  proventos: '1000,00',
+                  Pagamento: '2025-03-10',
+                  inss: '150,50'
+                },
+                {
+                  proventos: '1000,00',
+                  Pagamento: '2025-04-10',
+                  inss: 200.25
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const aggregated = aggregateWorkerData(workers, '2025');
+
+      expect(aggregated).toHaveLength(1);
+      // Previdência Oficial should be: 150.50 + 200.25 = 350.75
+      expect(aggregated[0]['Previdência Oficial']).toBe(350.75);
+
+      const inssDetails = aggregated[0].details['Previdência Oficial'];
+      expect(inssDetails).toHaveLength(2);
+      expect(inssDetails[0].valor).toBe(150.50);
+      expect(inssDetails[0].descricao).toBe('INSS Férias');
+      expect(inssDetails[1].valor).toBe(200.25);
+      expect(inssDetails[1].descricao).toBe('INSS Férias');
     });
   });
 });

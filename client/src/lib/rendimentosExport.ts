@@ -25,6 +25,7 @@ export interface Gozo {
   simplificado?: boolean;
   irSimplificado?: number | string;
   irBaseadoEmDeducoes?: number | string;
+  inss?: number | string;
 }
 
 export interface PeriodoAquisitivo {
@@ -234,6 +235,20 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
                   valor: irValue,
                   data: g.Pagamento
                 });
+              }
+
+              // Acumular INSS dos gozos na Previdência Oficial
+              if (g.inss) {
+                const inssValue = parseValue(g.inss);
+                if (inssValue !== 0) {
+                  aggregated['Previdência Oficial'] += inssValue;
+                  aggregated.details['Previdência Oficial'].push({
+                    origem: 'Férias/Gozos',
+                    descricao: 'INSS Férias',
+                    valor: inssValue,
+                    data: g.Pagamento
+                  });
+                }
               }
             }
           });
