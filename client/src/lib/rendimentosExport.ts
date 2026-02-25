@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 export interface ContrachequeItem {
   codigo: number | string;
   valor: number | string;
+  ano?: number | string;
   descricao?: string;
 }
 
@@ -30,9 +31,35 @@ export interface AggregatedWorkerData {
 }
 
 /**
- * Agrega dados do contracheque para cada trabalhador conforme as regras de códigos
+ * Converte valor monetário (string ou número) para número float.
+ * Trata formatos brasileiros como "1.234,56" ou "R$ 1.234,56"
  */
-export function aggregateWorkerData(workers: WorkerData[]): AggregatedWorkerData[] {
+export function parseValue(val: string | number): number {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+
+  // Remove R$, espaços e outros caracteres não numéricos exceto vírgula e ponto
+  let cleaned = val.replace(/[^\d.,-]/g, '');
+
+  // Se houver tanto ponto quanto vírgula, o ponto é separador de milhar
+  if (cleaned.includes('.') && cleaned.includes(',')) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  }
+  // Se houver apenas vírgula e ela estiver nas últimas 3 posições, é decimal
+  else if (cleaned.includes(',') && (cleaned.indexOf(',') >= cleaned.length - 3)) {
+    cleaned = cleaned.replace(',', '.');
+  }
+
+  const result = parseFloat(cleaned);
+  return isNaN(result) ? 0 : result;
+}
+
+/**
+ * Agrega dados do contracheque para cada trabalhador conforme as regras de códigos e ano
+ */
+export function aggregateWorkerData(workers: WorkerData[], year: string | number): AggregatedWorkerData[] {
+  const targetYear = String(year);
+
   return workers.map(worker => {
     const aggregated: AggregatedWorkerData = {
       matricula: String(worker.matricula || ''),
@@ -48,12 +75,13 @@ export function aggregateWorkerData(workers: WorkerData[]): AggregatedWorkerData
 
     if (Array.isArray(worker.contracheque)) {
       worker.contracheque.forEach(item => {
-        const codigo = Number(item.codigo);
-        const valor = typeof item.valor === 'string'
-          ? parseFloat(item.valor.replace(',', '.'))
-          : Number(item.valor) || 0;
+        // Filtrar por ano
+        if (item.ano && String(item.ano) !== targetYear) {
+          return;
+        }
 
-        if (isNaN(valor)) return;
+        const codigo = Number(item.codigo);
+        const valor = parseValue(item.valor);
 
         if (codigo === 8781 || codigo === 9380) {
           aggregated['Total dos rendimentos (inclusive férias)'] += valor;
