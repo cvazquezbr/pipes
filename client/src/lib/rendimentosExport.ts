@@ -66,7 +66,13 @@ export function parseValue(val: string | number): number {
 export function aggregateWorkerData(workers: WorkerData[], year: string | number): AggregatedWorkerData[] {
   const targetYear = String(year);
 
-  return workers.map(worker => {
+  // Filtrar apenas trabalhadores que possuem pelo menos um contracheque no ano alvo
+  const filteredWorkers = workers.filter(worker => {
+    return Array.isArray(worker.contracheques) &&
+           worker.contracheques.some(cc => cc.ano && String(cc.ano) === targetYear);
+  });
+
+  return filteredWorkers.map(worker => {
     const aggregated: AggregatedWorkerData = {
       matricula: String(worker.matricula || ''),
       nome: String(worker.nome || ''),
