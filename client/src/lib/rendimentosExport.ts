@@ -226,7 +226,9 @@ export function aggregateWorkerData(
             const codigo = String(item.codigo);
             const valor = parseValue(item.valor);
             const detail: DetailLancamento = {
-              origem: `Contracheque ${cc.mes || ""}/${cc.ano}`,
+              origem: `Contracheque ${cc.mes || ""}/${cc.ano}${
+                cc.nomeFolha ? " - " + cc.nomeFolha : ""
+              }`,
               codigo: item.codigo,
               descricao: item.descricao,
               valor: valor,

@@ -113,7 +113,7 @@ describe("rendimentosExport", () => {
       );
     });
 
-    it("should aggregate from multiple paychecks of the same year", () => {
+    it("should aggregate from multiple paychecks of the same year and include nomeFolha in details", () => {
       const workers: WorkerData[] = [
         {
           matricula: "456",
@@ -122,10 +122,14 @@ describe("rendimentosExport", () => {
           contracheques: [
             {
               ano: 2025,
+              mes: 1,
+              nomeFolha: "MENSAL",
               lancamentos: [{ codigo: "8781", valor: 1000 }],
             },
             {
               ano: 2025,
+              mes: 2,
+              nomeFolha: "ADIANTAMENTO",
               lancamentos: [{ codigo: "8781", valor: 1000 }],
             },
           ],
@@ -134,6 +138,12 @@ describe("rendimentosExport", () => {
 
       const aggregated = aggregateWorkerData(workers, 2025);
       expect(aggregated[0]["Rendimentos Tributáveis"]).toBe(2000);
+      expect(aggregated[0].details["Rendimentos Tributáveis"][0].origem).toBe(
+        "Contracheque 1/2025 - MENSAL"
+      );
+      expect(aggregated[0].details["Rendimentos Tributáveis"][1].origem).toBe(
+        "Contracheque 2/2025 - ADIANTAMENTO"
+      );
     });
 
     // Note: The tests below for gozos are currently disabled because the logic is commented out in rendimentosExport.ts
