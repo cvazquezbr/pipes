@@ -43,6 +43,22 @@ describe('informeExtractor', () => {
     expect(result[0].planoSaude[0].valor).toBe(1500);
   });
 
+  it('should parse with different hyphens and colon variations', () => {
+    const texts = [
+      'Nome Completo: JOAO DA SILVA - 12345',
+      'Nome Completo:JOAO DA SILVA-12345',
+      'Nome Completo : JOAO DA SILVA – 12345', // en dash
+      'Nome Completo; JOAO DA SILVA — 12345', // em dash
+    ];
+
+    texts.forEach(t => {
+      const result = parseInformeText(t);
+      expect(result, `Failed for: ${t}`).toHaveLength(1);
+      expect(result[0].matricula).toBe('12345');
+      expect(result[0].nome).toBe('JOAO DA SILVA');
+    });
+  });
+
   it('should parse multiple informes correctly', () => {
     const text = `
       Nome Completo: JOAO DA SILVA - 12345

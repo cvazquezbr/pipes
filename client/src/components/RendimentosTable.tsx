@@ -73,7 +73,7 @@ export function RendimentosTable({
       setIsUploadingPDF(true);
       const informes = await extractInformesFromPDF(file);
       if (informes.length === 0) {
-        toast.warning("Nenhum informe de rendimentos encontrado no PDF");
+        toast.warning("Nenhum informe de rendimentos encontrado. Verifique se o PDF contém o campo 'Nome Completo' seguido de matrícula.");
       } else {
         toast.success(`${informes.length} informes extraídos com sucesso`);
         if (onPDFLoaded) onPDFLoaded(informes);
