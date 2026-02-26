@@ -60,7 +60,7 @@ export interface ExtractedInvoice {
   issqnMunicipio: string; // Município de Incidência
   issqnTributacao: string; // Tributação do ISSQN
   issqnRetido: number; // ISSQN Retido
-  
+
   totalTaxes: number;
   netValue: number;
   isCancelled?: boolean;
@@ -98,29 +98,29 @@ export interface ExtractionPattern {
 }
 
 export interface ZOHOInvoice {
-  'Invoice Date': string;
-  'Due Date'?: string;
-  'Invoice Number': string;
-  'Invoice Status': string;
-  'Customer Name': string;
-  'Template Name': string;
-  'Currency Code': string;
-  'Exchange Rate': number;
-  'SKU': string;
-  'Item Desc': string;
-  'Quantity': number;
-  'Item Price': number;
-  'Adjustment': number;
-  'Adjustment Description': string;
-  'Usage unit': number;
-  'Discount': number;
-  'Is Inclusive Tax': string;
-  'Item Tax1': string;
-  'Item Tax1 Type': string;
-  'Item Tax1 %': string;
-  'Project Name': string;
-  'Equipe': string;
-  'Account': string;
-  'Notes': string;
-  'Terms & Conditions': string;
+  "Invoice Date": string;
+  "Due Date"?: string;
+  "Invoice Number": string;
+  "Invoice Status": string;
+  "Customer Name": string;
+  "Template Name": string;
+  "Currency Code": string;
+  "Exchange Rate": number;
+  SKU: string;
+  "Item Desc": string;
+  Quantity: number;
+  "Item Price": number;
+  Adjustment: number;
+  "Adjustment Description": string;
+  "Usage unit": number;
+  Discount: number;
+  "Is Inclusive Tax": string;
+  "Item Tax1": string;
+  "Item Tax1 Type": string;
+  "Item Tax1 %": string;
+  "Project Name": string;
+  Equipe: string;
+  Account: string;
+  Notes: string;
+  "Terms & Conditions": string;
 }

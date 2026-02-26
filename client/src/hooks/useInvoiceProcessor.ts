@@ -3,17 +3,30 @@
  * Orquestra upload de Excel, processamento de PDFs e exportação de resultados
  */
 
-import { useCallback, useState } from 'react';
-import { processPDFInvoices } from '@/lib/pdfExtractor';
-import { readExcelFile, readExcelFileAllSheets } from '@/lib/excelUtils';
-import type { ExtractedInvoice, ExcelReferenceData, ProcessingResult } from '@/lib/types';
+import { useCallback, useState } from "react";
+import { processPDFInvoices } from "@/lib/pdfExtractor";
+import { readExcelFile, readExcelFileAllSheets } from "@/lib/excelUtils";
+import type {
+  ExtractedInvoice,
+  ExcelReferenceData,
+  ProcessingResult,
+} from "@/lib/types";
 
 export function useInvoiceProcessor() {
   const [invoices, setInvoices] = useState<ExtractedInvoice[]>([]);
-  const [referenceData, setReferenceData] = useState<ExcelReferenceData[] | null>(null);
-  const [allSheets, setAllSheets] = useState<Record<string, Record<string, unknown>[]> | null>(null);
-  const [invoiceSheetData, setInvoiceSheetData] = useState<Record<string, unknown>[]>([]);
-  const [billSheetData, setBillSheetData] = useState<Record<string, unknown>[]>([]);
+  const [referenceData, setReferenceData] = useState<
+    ExcelReferenceData[] | null
+  >(null);
+  const [allSheets, setAllSheets] = useState<Record<
+    string,
+    Record<string, unknown>[]
+  > | null>(null);
+  const [invoiceSheetData, setInvoiceSheetData] = useState<
+    Record<string, unknown>[]
+  >([]);
+  const [billSheetData, setBillSheetData] = useState<Record<string, unknown>[]>(
+    []
+  );
   const [workerData, setWorkerData] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -33,7 +46,8 @@ export function useInvoiceProcessor() {
       setReferenceData(firstSheetData);
       return firstSheetData;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar Excel';
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao carregar Excel";
       setError(errorMessage);
       throw err;
     }
@@ -49,7 +63,8 @@ export function useInvoiceProcessor() {
       setInvoiceSheetData(data);
       return data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar faturamento';
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao carregar faturamento";
       setError(errorMessage);
       throw err;
     }
@@ -65,14 +80,18 @@ export function useInvoiceProcessor() {
       // Filtro: Apenas registros cujo Bill Number contenha " ISS"
       const filteredData = data.filter(row => {
         // Busca a chave 'Bill Number' de forma robusta
-        const billNumberKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'bill number') || 'Bill Number';
-        const billNumber = String(row[billNumberKey] || '');
-        return billNumber.toUpperCase().includes(' ISS');
+        const billNumberKey =
+          Object.keys(row).find(
+            k => k.trim().toLowerCase() === "bill number"
+          ) || "Bill Number";
+        const billNumber = String(row[billNumberKey] || "");
+        return billNumber.toUpperCase().includes(" ISS");
       });
       setBillSheetData(filteredData);
       return filteredData;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar cobrança';
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao carregar cobrança";
       setError(errorMessage);
       throw err;
     }
@@ -102,7 +121,8 @@ export function useInvoiceProcessor() {
       setProgress(100);
       return results;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao processar PDFs';
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao processar PDFs";
       setError(errorMessage);
       throw err;
     } finally {
@@ -119,19 +139,24 @@ export function useInvoiceProcessor() {
       setIsProcessing(true);
       setProgress(0);
 
-      console.log('[NFe] Iniciando processamento de ' + files.length + ' arquivo(s)');
+      console.log(
+        "[NFe] Iniciando processamento de " + files.length + " arquivo(s)"
+      );
       const results = await processPDFInvoices(files, (current, total) => {
         setProgress((current / total) * 100);
       });
-      console.log('[NFe] Processamento concluido com ' + results.length + ' resultado(s)');
-      console.log('[NFe] Resultados:', results);
+      console.log(
+        "[NFe] Processamento concluido com " + results.length + " resultado(s)"
+      );
+      console.log("[NFe] Resultados:", results);
       setInvoices(results);
       setProgress(100);
       return results;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao processar PDFs';
-      console.error('[NFe] ERRO durante processamento:', err);
-      console.error('[NFe] Mensagem:', errorMessage);
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao processar PDFs";
+      console.error("[NFe] ERRO durante processamento:", err);
+      console.error("[NFe] Mensagem:", errorMessage);
       setError(errorMessage);
       throw err;
     } finally {
@@ -142,26 +167,29 @@ export function useInvoiceProcessor() {
   /**
    * Atualiza uma nota fiscal extraída
    */
-  const updateInvoice = useCallback((index: number, updates: Partial<ExtractedInvoice>) => {
-    setInvoices((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], ...updates };
-      return updated;
-    });
-  }, []);
+  const updateInvoice = useCallback(
+    (index: number, updates: Partial<ExtractedInvoice>) => {
+      setInvoices(prev => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], ...updates };
+        return updated;
+      });
+    },
+    []
+  );
 
   /**
    * Adiciona novas notas fiscais ao estado
    */
   const addInvoices = useCallback((newInvoices: ExtractedInvoice[]) => {
-    setInvoices((prev) => [...prev, ...newInvoices]);
+    setInvoices(prev => [...prev, ...newInvoices]);
   }, []);
 
   /**
    * Remove uma nota fiscal da lista
    */
   const removeInvoice = useCallback((index: number) => {
-    setInvoices((prev) => prev.filter((_, i) => i !== index));
+    setInvoices(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   /**
@@ -182,16 +210,18 @@ export function useInvoiceProcessor() {
    * Retorna resultado do processamento
    */
   const getProcessingResult = useCallback((): ProcessingResult => {
-    const errorCount = invoices.filter((inv) => (inv.extractionErrors?.length || 0) > 0).length;
+    const errorCount = invoices.filter(
+      inv => (inv.extractionErrors?.length || 0) > 0
+    ).length;
     return {
       invoices,
       successCount: invoices.length - errorCount,
       errorCount,
       totalProcessed: invoices.length,
       errors: invoices
-        .filter((inv) => (inv.extractionErrors?.length || 0) > 0)
-        .flatMap((inv) =>
-          (inv.extractionErrors || []).map((err) => ({
+        .filter(inv => (inv.extractionErrors?.length || 0) > 0)
+        .flatMap(inv =>
+          (inv.extractionErrors || []).map(err => ({
             filename: inv.filename,
             error: err,
             timestamp: new Date().toISOString(),

@@ -3,14 +3,20 @@
  * Suporta drag-drop, processamento em paralelo e barra de progresso
  */
 
-import { useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, FileText, Loader2, Play, Upload, X } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import type { ExtractedInvoice } from '@/lib/types';
+import { useCallback, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AlertCircle, FileText, Loader2, Play, Upload, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import type { ExtractedInvoice } from "@/lib/types";
 
 interface PDFUploadProps {
   onProcessComplete: (invoices: ExtractedInvoice[]) => void;
@@ -23,7 +29,7 @@ export function PDFUpload({
   onProcessComplete,
   onProcess,
   isProcessing = false,
-  progress = 0
+  progress = 0,
 }: PDFUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -33,19 +39,21 @@ export function PDFUpload({
       setError(null);
 
       // Filtrar apenas PDFs
-      const pdfFiles = acceptedFiles.filter((file) => file.type === 'application/pdf');
+      const pdfFiles = acceptedFiles.filter(
+        file => file.type === "application/pdf"
+      );
 
       if (pdfFiles.length === 0) {
-        setError('Nenhum arquivo PDF válido foi selecionado');
+        setError("Nenhum arquivo PDF válido foi selecionado");
         return;
       }
 
       if (pdfFiles.length + selectedFiles.length > 50) {
-        setError('Máximo de 50 arquivos permitidos');
+        setError("Máximo de 50 arquivos permitidos");
         return;
       }
 
-      setSelectedFiles((prev) => [...prev, ...pdfFiles]);
+      setSelectedFiles(prev => [...prev, ...pdfFiles]);
     },
     [selectedFiles]
   );
@@ -53,13 +61,13 @@ export function PDFUpload({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf'],
+      "application/pdf": [".pdf"],
     },
     disabled: isProcessing,
   });
 
   const handleRemoveFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleClearAll = () => {
@@ -69,7 +77,7 @@ export function PDFUpload({
 
   const handleProcess = async () => {
     if (selectedFiles.length === 0) {
-      setError('Selecione pelo menos um arquivo PDF');
+      setError("Selecione pelo menos um arquivo PDF");
       return;
     }
 
@@ -83,24 +91,31 @@ export function PDFUpload({
         results = await onProcess(selectedFiles);
       } else {
         // Fallback para processamento local
-        console.log('[PDFUpload] Iniciando processamento local de ' + selectedFiles.length + ' arquivo(s)');
-        const { processPDFInvoices } = await import('@/lib/pdfExtractor');
+        console.log(
+          "[PDFUpload] Iniciando processamento local de " +
+            selectedFiles.length +
+            " arquivo(s)"
+        );
+        const { processPDFInvoices } = await import("@/lib/pdfExtractor");
         results = await processPDFInvoices(selectedFiles);
-        console.log('[PDFUpload] Processamento local concluido');
+        console.log("[PDFUpload] Processamento local concluido");
         onProcessComplete(results);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao processar PDFs';
-      console.error('[PDFUpload] ERRO:', err);
-      console.error('[PDFUpload] Mensagem:', errorMessage);
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao processar PDFs";
+      console.error("[PDFUpload] ERRO:", err);
+      console.error("[PDFUpload] Mensagem:", errorMessage);
       setError(errorMessage);
     }
   };
 
   const dragActiveClass = isDragActive
-    ? 'border-primary bg-primary/5'
-    : 'border-muted-foreground/25 hover:border-muted-foreground/50';
-  const disabledClass = isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
+    ? "border-primary bg-primary/5"
+    : "border-muted-foreground/25 hover:border-muted-foreground/50";
+  const disabledClass = isProcessing
+    ? "opacity-50 cursor-not-allowed"
+    : "cursor-pointer";
 
   return (
     <Card className="w-full">
@@ -109,7 +124,9 @@ export function PDFUpload({
           <FileText className="h-5 w-5" />
           Arquivos PDF
         </CardTitle>
-        <CardDescription>Carregue um ou mais arquivos PDF de notas fiscais</CardDescription>
+        <CardDescription>
+          Carregue um ou mais arquivos PDF de notas fiscais
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {selectedFiles.length === 0 ? (
@@ -120,14 +137,20 @@ export function PDFUpload({
             <input {...getInputProps()} />
             <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm font-medium">
-              {isDragActive ? 'Solte os arquivos aqui' : 'Arraste arquivos PDF aqui ou clique para selecionar'}
+              {isDragActive
+                ? "Solte os arquivos aqui"
+                : "Arraste arquivos PDF aqui ou clique para selecionar"}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">Máximo de 50 arquivos</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Máximo de 50 arquivos
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">{selectedFiles.length} arquivo(s) selecionado(s)</p>
+              <p className="text-sm font-medium">
+                {selectedFiles.length} arquivo(s) selecionado(s)
+              </p>
               <Button
                 variant="ghost"
                 size="sm"
@@ -140,7 +163,10 @@ export function PDFUpload({
 
             <div className="max-h-48 overflow-y-auto space-y-2 rounded-lg border bg-muted/50 p-2">
               {selectedFiles.map((file, idx) => (
-                <div key={idx} className="flex items-center justify-between rounded bg-background p-2">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between rounded bg-background p-2"
+                >
                   <div className="flex items-center gap-2 min-w-0">
                     <FileText className="h-4 w-4 text-primary flex-shrink-0" />
                     <span className="text-sm truncate">{file.name}</span>
@@ -160,7 +186,9 @@ export function PDFUpload({
             {isProcessing && progress > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">Processando...</p>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Processando...
+                  </p>
                   <p className="text-xs font-medium">{Math.round(progress)}%</p>
                 </div>
                 <Progress value={progress} className="h-2" />
@@ -176,7 +204,9 @@ export function PDFUpload({
               {isProcessing ? (
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="font-bold tabular-nums">Processando {Math.round(progress)}%</span>
+                  <span className="font-bold tabular-nums">
+                    Processando {Math.round(progress)}%
+                  </span>
                   <div
                     className="absolute bottom-0 left-0 h-1 bg-white/20 transition-all duration-300"
                     style={{ width: `${progress}%` }}

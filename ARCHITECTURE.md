@@ -3,9 +3,11 @@
 ## Análise do PDF de Referência (NFe26-TRE-PI.pdf)
 
 ### Estrutura do Documento
+
 O PDF é uma **DANFSe (Documento Auxiliar da NFS-e)** - documento visual que representa uma Nota Fiscal de Serviço eletrônica. Contém:
 
 #### Seções Principais
+
 1. **Cabeçalho**: Informações da NFS-e
    - Chave de Acesso: `32053092202434797000160000000000262601348692869`
    - Número da NFS-e: `26`
@@ -42,7 +44,9 @@ O PDF é uma **DANFSe (Documento Auxiliar da NFS-e)** - documento visual que rep
    - Estadual: `0,00%`
 
 ### Campos a Extrair
+
 **Essenciais:**
+
 - Número da NFS-e
 - Chave de Acesso
 - Data de Emissão
@@ -55,6 +59,7 @@ O PDF é uma **DANFSe (Documento Auxiliar da NFS-e)** - documento visual que rep
 - Descrição do Serviço
 
 **Adicionais:**
+
 - Série
 - Impostos (IRRF, PIS, COFINS, ISSQN)
 - Endereços
@@ -65,6 +70,7 @@ O PDF é uma **DANFSe (Documento Auxiliar da NFS-e)** - documento visual que rep
 ## Estratégia de Extração
 
 ### Abordagem: PDF Text Extraction + Regex Patterns
+
 Como o PDF é um documento visual estruturado (DANFSe), usaremos:
 
 1. **pdfjs-dist**: Extrai texto do PDF mantendo estrutura
@@ -72,6 +78,7 @@ Como o PDF é um documento visual estruturado (DANFSe), usaremos:
 3. **Fallback Manual**: Interface para correção manual se extração falhar
 
 ### Fluxo de Processamento
+
 ```
 1. Upload Excel de Referência
    ↓
@@ -91,17 +98,18 @@ Como o PDF é um documento visual estruturado (DANFSe), usaremos:
 ## Estrutura de Dados
 
 ### Tipo TypeScript: ExtractedInvoice
+
 ```typescript
 interface ExtractedInvoice {
   // Identificação
   nfsNumber: string;
   accessKey: string;
   seriesNumber: string;
-  
+
   // Datas
   emissionDate: string;
   emissionTime: string;
-  
+
   // Emitente (Prestador)
   issuerName: string;
   issuerCNPJ: string;
@@ -111,7 +119,7 @@ interface ExtractedInvoice {
   issuerCEP: string;
   issuerPhone?: string;
   issuerEmail?: string;
-  
+
   // Tomador (Cliente)
   takerName: string;
   takerCNPJ: string;
@@ -121,11 +129,11 @@ interface ExtractedInvoice {
   takerCEP: string;
   takerPhone?: string;
   takerEmail?: string;
-  
+
   // Serviço
   serviceCode: string;
   serviceDescription: string;
-  
+
   // Valores
   serviceValue: number;
   deductions: number;
@@ -136,7 +144,7 @@ interface ExtractedInvoice {
   issqn: number;
   totalTaxes: number;
   netValue: number;
-  
+
   // Metadados
   filename: string;
   extractionConfidence: number; // 0-1
@@ -147,6 +155,7 @@ interface ExtractedInvoice {
 ---
 
 ## Dependências Necessárias
+
 - `pdfjs-dist`: Extração de texto de PDFs
 - `xlsx`: Leitura de Excel
 - `react-dropzone`: Upload drag-drop
@@ -158,26 +167,31 @@ interface ExtractedInvoice {
 ## Componentes React
 
 ### 1. **InvoiceProcessor** (Componente Principal)
+
 - Gerencia estado global do processamento
 - Orquestra upload de Excel e PDFs
 - Exibe resultados em tabela
 
 ### 2. **ExcelUpload**
+
 - Upload da planilha de referência
 - Validação de formato
 - Preview dos dados
 
 ### 3. **PDFUpload**
+
 - Drag-drop para múltiplos PDFs
 - Processamento em paralelo
 - Barra de progresso
 
 ### 4. **ResultsTable**
+
 - Exibe dados extraídos
 - Permite edição manual
 - Exportação (CSV/JSON/Excel)
 
 ### 5. **ExtractionSettings**
+
 - Configuração de padrões regex
 - Opções de validação
 - Mapeamento de campos customizado
@@ -201,6 +215,7 @@ const patterns = {
 ---
 
 ## Próximos Passos
+
 1. Instalar dependências (pdfjs-dist, xlsx)
 2. Implementar hooks customizados para extração
 3. Criar componentes React

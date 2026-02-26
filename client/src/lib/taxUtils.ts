@@ -10,27 +10,27 @@ export function round2(x: number, digits: number = 2): number {
   if (Math.abs(x) < 0.0000000001) return 0;
   const factor = Math.pow(10, digits);
   // Usamos Math.sign * Math.round(Math.abs) para garantir arredondamento simétrico (away from zero)
-  return Math.sign(x) * Math.round(Math.abs(x) * factor) / factor;
+  return (Math.sign(x) * Math.round(Math.abs(x) * factor)) / factor;
 }
 
 /**
  * Converte valor para número, tratando formatos brasileiros
  */
 export function parseNumber(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value === undefined || value === null || value === '') return 0;
+  if (typeof value === "number") return value;
+  if (value === undefined || value === null || value === "") return 0;
 
   let str = String(value).trim();
-  if (str === '' || str === '-') return 0;
+  if (str === "" || str === "-") return 0;
 
-  if (str.includes(',') && str.includes('.')) {
-    if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
-      str = str.replace(/\./g, '').replace(',', '.');
+  if (str.includes(",") && str.includes(".")) {
+    if (str.lastIndexOf(",") > str.lastIndexOf(".")) {
+      str = str.replace(/\./g, "").replace(",", ".");
     } else {
-      str = str.replace(/,/g, '');
+      str = str.replace(/,/g, "");
     }
-  } else if (str.includes(',')) {
-    str = str.replace(',', '.');
+  } else if (str.includes(",")) {
+    str = str.replace(",", ".");
   }
 
   const num = parseFloat(str);
@@ -42,12 +42,16 @@ export function parseNumber(value: unknown): number {
  */
 export function getVal(row: Record<string, unknown>, ...keys: string[]): any {
   for (const key of keys) {
-    if (row[key] !== undefined && row[key] !== '') return row[key];
+    if (row[key] !== undefined && row[key] !== "") return row[key];
 
-    const normalizedTarget = key.toLowerCase().replace(/[._\s]/g, '');
+    const normalizedTarget = key.toLowerCase().replace(/[._\s]/g, "");
     for (const rowKey of Object.keys(row)) {
-      const normalizedRowKey = rowKey.toLowerCase().replace(/[._\s]/g, '');
-      if (normalizedRowKey === normalizedTarget && row[rowKey] !== undefined && row[rowKey] !== '') {
+      const normalizedRowKey = rowKey.toLowerCase().replace(/[._\s]/g, "");
+      if (
+        normalizedRowKey === normalizedTarget &&
+        row[rowKey] !== undefined &&
+        row[rowKey] !== ""
+      ) {
         return row[rowKey];
       }
     }
@@ -59,19 +63,19 @@ export function getVal(row: Record<string, unknown>, ...keys: string[]): any {
  * Converte valor da planilha de referência para número (porcentagem)
  */
 export function parseReferenceValue(value: unknown): number {
-  if (typeof value === 'number') return value;
-  if (value === undefined || value === null || value === '') return 0;
+  if (typeof value === "number") return value;
+  if (value === undefined || value === null || value === "") return 0;
 
   const str = String(value).trim();
-  const hasPercent = str.includes('%');
-  const cleaned = str.replace('%', '').replace(/\s/g, '');
+  const hasPercent = str.includes("%");
+  const cleaned = str.replace("%", "").replace(/\s/g, "");
 
   let val: number;
-  if (cleaned.includes(',')) {
-    if (cleaned.includes('.')) {
-      val = parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+  if (cleaned.includes(",")) {
+    if (cleaned.includes(".")) {
+      val = parseFloat(cleaned.replace(/\./g, "").replace(",", ".")) || 0;
     } else {
-      val = parseFloat(cleaned.replace(',', '.')) || 0;
+      val = parseFloat(cleaned.replace(",", ".")) || 0;
     }
   } else {
     val = parseFloat(cleaned) || 0;
@@ -86,20 +90,21 @@ export function parseReferenceValue(value: unknown): number {
 export function normalizeString(str: string): string {
   return str
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^a-z0-9]/g, ''); // Mantém apenas alfanuméricos
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/[^a-z0-9]/g, ""); // Mantém apenas alfanuméricos
 }
 
 /**
  * Tenta obter o percentual de uma linha de mapeamento
  */
 export function getMappingPercentage(mapping: any): number {
-  const rawPercent = mapping['Item Tax1 %_1'] !== undefined && mapping['Item Tax1 %_1'] !== ''
-    ? mapping['Item Tax1 %_1']
-    : mapping['Item Tax1 %2'] !== undefined && mapping['Item Tax1 %2'] !== ''
-      ? mapping['Item Tax1 %2']
-      : mapping['Item Tax1 %'];
+  const rawPercent =
+    mapping["Item Tax1 %_1"] !== undefined && mapping["Item Tax1 %_1"] !== ""
+      ? mapping["Item Tax1 %_1"]
+      : mapping["Item Tax1 %2"] !== undefined && mapping["Item Tax1 %2"] !== ""
+        ? mapping["Item Tax1 %2"]
+        : mapping["Item Tax1 %"];
 
   return parseReferenceValue(rawPercent);
 }
@@ -118,7 +123,7 @@ export function findTaxMapping(
 
   // 1. Tenta por nome primeiro (comparação exata após trim)
   let match = taxMappings.find(m => {
-    const mName = String(getVal(m, 'Item Tax', 'Item Tax1') || '').trim();
+    const mName = String(getVal(m, "Item Tax", "Item Tax1") || "").trim();
     return mName.toLowerCase() === itemTaxName.trim().toLowerCase();
   });
 
@@ -126,8 +131,11 @@ export function findTaxMapping(
 
   // 2. Tenta por nome normalizado
   match = taxMappings.find(m => {
-    const mName = String(getVal(m, 'Item Tax', 'Item Tax1') || '').trim();
-    return normalizeString(mName) === normalizedItemTaxName && normalizedItemTaxName !== '';
+    const mName = String(getVal(m, "Item Tax", "Item Tax1") || "").trim();
+    return (
+      normalizeString(mName) === normalizedItemTaxName &&
+      normalizedItemTaxName !== ""
+    );
   });
 
   if (match) return match;
@@ -137,10 +145,13 @@ export function findTaxMapping(
     let currPercent = getMappingPercentage(curr);
     let prevPercent = getMappingPercentage(prev);
 
-    if (currPercent < 1 && retentionPercentage > 1 && currPercent !== 0) currPercent *= 100;
-    if (prevPercent < 1 && retentionPercentage > 1 && prevPercent !== 0) prevPercent *= 100;
+    if (currPercent < 1 && retentionPercentage > 1 && currPercent !== 0)
+      currPercent *= 100;
+    if (prevPercent < 1 && retentionPercentage > 1 && prevPercent !== 0)
+      prevPercent *= 100;
 
-    return Math.abs(currPercent - retentionPercentage) < Math.abs(prevPercent - retentionPercentage)
+    return Math.abs(currPercent - retentionPercentage) <
+      Math.abs(prevPercent - retentionPercentage)
       ? curr
       : prev;
   });
@@ -158,14 +169,14 @@ export function calculateDates() {
 
   const year = targetDate.getFullYear();
   const month = targetDate.getMonth() + 1; // 1-12
-  const monthStr = String(month).padStart(2, '0');
+  const monthStr = String(month).padStart(2, "0");
   const periodD = `${year}-${monthStr}`;
 
   // Datas de pagamento (mês seguinte ao alvo)
   const nextMonthDate = new Date(year, month, 1);
   const nextYear = nextMonthDate.getFullYear();
   const nextMonth = nextMonthDate.getMonth() + 1;
-  const nextMonthStr = String(nextMonth).padStart(2, '0');
+  const nextMonthStr = String(nextMonth).padStart(2, "0");
 
   return {
     periodD,
@@ -175,6 +186,6 @@ export function calculateDates() {
     dataIRPJ: `20/${nextMonthStr}/${nextYear}`, // Exemplo, IRPJ Trimestral pode variar
     dataCSLL: `20/${nextMonthStr}/${nextYear}`,
     year,
-    monthStr
+    monthStr,
   };
 }
