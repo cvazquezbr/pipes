@@ -282,7 +282,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
                     //data: g.Pagamento
                   //});
                 //}
-              }
+              //}
 
               // Dedução de Dependentes (Synthetic) - Aplicar apenas uma vez por ano
               if (!dependentDeductionApplied && Array.isArray(worker.dependentes)) {
