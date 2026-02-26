@@ -250,7 +250,7 @@ describe('rendimentosExport', () => {
       expect(details.some(d => d.valor === -150 && d.descricao?.includes('Dedução'))).toBe(true);
     });
 
-    it('should deduct dependent values and IRRF 13 from 13º Salário during gozos processing', () => {
+    it('should deduct dependent values from 13º Salário during gozos processing', () => {
       const workers: WorkerData[] = [
         {
           matricula: '404',
@@ -259,7 +259,10 @@ describe('rendimentosExport', () => {
           contracheques: [
             {
               ano: 2025,
-              lancamentos: [{ codigo: '12', valor: 3000 }] // Initial 13th
+              lancamentos: [
+                { codigo: '12', valor: 3000 }, // Initial 13th
+                { codigo: '827', valor: 100 }  // IRRF 13 in paycheck
+              ]
             }
           ],
           dependentes: [
@@ -272,10 +275,7 @@ describe('rendimentosExport', () => {
               gozos: [
                 {
                   proventos: 0,
-                  Pagamento: '2025-06-15',
-                  lancamentos: [
-                    { codigo: '827', valor: 100 } // IRRF 13 in gozo
-                  ]
+                  Pagamento: '2025-06-15'
                 }
               ]
             }
@@ -291,7 +291,7 @@ describe('rendimentosExport', () => {
       expect(aggregated[0]['13º Salário (Exclusiva)']).toBeCloseTo(2520.20, 2);
 
       const details = aggregated[0].details['13º Salário (Exclusiva)'];
-      expect(details.some(d => d.valor === -100 && d.origem === 'Férias/Gozos')).toBe(true);
+      expect(details.some(d => d.valor === -100 && d.origem.startsWith('Contracheque'))).toBe(true);
       expect(details.filter(d => d.valor === -189.90 && d.descricao?.includes('Dedução Dependente'))).toHaveLength(2);
     });
 

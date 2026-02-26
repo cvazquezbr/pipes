@@ -33,7 +33,6 @@ export interface Gozo {
   irSimplificado?: number | string;
   irBaseadoEmDeducoes?: number | string;
   inss?: number | string;
-  lancamentos?: Lancamento[];
 }
 
 export interface PeriodoAquisitivo {
@@ -283,55 +282,6 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
                     data: g.Pagamento
                   });
                 }
-              }
-
-              // Processar lançamentos do gozo (se existirem) para dedução de IRRF 13º e CP 13º
-              if (Array.isArray(g.lancamentos)) {
-                g.lancamentos.forEach(item => {
-                  const codigo = String(item.codigo);
-                  const valor = parseValue(item.valor);
-                  if (rules.irrf13.includes(codigo)) {
-                    // Deduzir do 13º Salário (Exclusiva)
-                    aggregated['13º Salário (Exclusiva)'] -= valor;
-                    aggregated.details['13º Salário (Exclusiva)'].push({
-                      origem: 'Férias/Gozos',
-                      codigo: item.codigo,
-                      descricao: `${item.descricao || 'IRRF 13º'} (Dedução)`,
-                      valor: -valor,
-                      data: g.Pagamento
-                    });
-
-                    // Acumular no IRRF sobre 13º (Exclusiva)
-                    aggregated['IRRF sobre 13º (Exclusiva)'] += valor;
-                    aggregated.details['IRRF sobre 13º (Exclusiva)'].push({
-                      origem: 'Férias/Gozos',
-                      codigo: item.codigo,
-                      descricao: item.descricao,
-                      valor: valor,
-                      data: g.Pagamento
-                    });
-                  } else if (rules.cp13.includes(codigo)) {
-                    // Deduzir do 13º Salário (Exclusiva)
-                    aggregated['13º Salário (Exclusiva)'] -= valor;
-                    aggregated.details['13º Salário (Exclusiva)'].push({
-                      origem: 'Férias/Gozos',
-                      codigo: item.codigo,
-                      descricao: `${item.descricao || 'CP 13º'} (Dedução)`,
-                      valor: -valor,
-                      data: g.Pagamento
-                    });
-
-                    // Acumular no CP 13º Salário
-                    aggregated['CP 13º Salário'] += valor;
-                    aggregated.details['CP 13º Salário'].push({
-                      origem: 'Férias/Gozos',
-                      codigo: item.codigo,
-                      descricao: item.descricao,
-                      valor: valor,
-                      data: g.Pagamento
-                    });
-                  }
-                });
               }
 
               // Dedução de Dependentes (Synthetic) - Aplicar apenas uma vez por ano
