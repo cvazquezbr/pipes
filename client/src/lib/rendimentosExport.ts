@@ -72,6 +72,18 @@ export interface AggregatedWorkerData {
   "Desconto Plano de Saúde": number;
   "Rendimentos Isentos": number;
   details: Record<string, DetailLancamento[]>;
+  pdfData?: {
+    totalRendimentos: number;
+    previdenciaOficial: number;
+    irrf: number;
+    decimoTerceiro: number;
+    irrfDecimoTerceiro: number;
+    plr: number;
+    planoSaude: {
+      beneficiario: string;
+      valor: number;
+    }[];
+  };
 }
 
 /**

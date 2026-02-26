@@ -97,6 +97,7 @@ export default function Home() {
     invoiceSheetData,
     billSheetData,
     workerData,
+    extractedInformes,
     isProcessing,
     progress,
     error,
@@ -104,6 +105,7 @@ export default function Home() {
     loadInvoiceSheet,
     loadBillSheet,
     loadWorkerData,
+    setExtractedInformes,
     processPDFsParallel,
     addInvoices,
     updateInvoice,
@@ -216,6 +218,30 @@ export default function Home() {
 
   if (workflow === "rendimentos" && currentStep === 3) {
     aggregatedWorkers = aggregateWorkerData(workerData, processingYear);
+
+    // Mesclar com dados extraídos do PDF
+    if (extractedInformes.length > 0) {
+      aggregatedWorkers = aggregatedWorkers.map(worker => {
+        const informe = extractedInformes.find(
+          inf => inf.matricula === worker.matricula
+        );
+        if (informe) {
+          return {
+            ...worker,
+            pdfData: {
+              totalRendimentos: informe.totalRendimentos,
+              previdenciaOficial: informe.previdenciaOficial,
+              irrf: informe.irrf,
+              decimoTerceiro: informe.decimoTerceiro,
+              irrfDecimoTerceiro: informe.irrfDecimoTerceiro,
+              plr: informe.plr,
+              planoSaude: informe.planoSaude,
+            },
+          };
+        }
+        return worker;
+      });
+    }
   }
 
   if (currentStep === 4) {
@@ -838,6 +864,7 @@ export default function Home() {
                           processingYear
                         )
                       }
+                      onPDFLoaded={informes => setExtractedInformes(informes)}
                     />
                   </div>
                 ) : workflow === "nfse" ? (
@@ -1594,6 +1621,90 @@ export default function Home() {
               Detalhamento dos lançamentos para {selectedDetail?.workerName}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Comparação com PDF se disponível */}
+          {workflow === "rendimentos" &&
+            selectedDetail &&
+            (() => {
+              const worker = aggregatedWorkers.find(
+                w => w.nome === selectedDetail.workerName
+              );
+              if (!worker || !worker.pdfData) return null;
+
+              const pdfMapping: Record<string, number> = {
+                "Rendimentos Tributáveis": worker.pdfData.totalRendimentos,
+                "Previdência Oficial": worker.pdfData.previdenciaOficial,
+                "IRRF (Mensal/Férias)": worker.pdfData.irrf,
+                "13º Salário (Exclusiva)": worker.pdfData.decimoTerceiro,
+                "IRRF sobre 13º (Exclusiva)": worker.pdfData.irrfDecimoTerceiro,
+                "PLR (Exclusiva)": worker.pdfData.plr,
+                "Desconto Plano de Saúde": worker.pdfData.planoSaude.reduce(
+                  (acc: number, ps: any) => acc + ps.valor,
+                  0
+                ),
+              };
+
+              const pdfValue = pdfMapping[selectedDetail.category];
+              if (pdfValue === undefined) return null;
+
+              const jsonValue = selectedDetail.items.reduce(
+                (acc, item) => acc + item.valor,
+                0
+              );
+              const diff = jsonValue - pdfValue;
+              const hasDiff = Math.abs(diff) > 0.01;
+
+              return (
+                <div className="bg-slate-50 p-4 rounded-lg border mb-4 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <FileText className="h-3 w-3" />
+                    Comparação com Informe (PDF)
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <div className="text-[10px] text-slate-500">Calculado (JSON)</div>
+                      <div className="text-sm font-mono font-bold">
+                        {jsonValue.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-500">Extraído (PDF)</div>
+                      <div className="text-sm font-mono font-bold">
+                        {pdfValue.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-500">Diferença</div>
+                      <div
+                        className={`text-sm font-mono font-bold ${hasDiff ? "text-destructive" : "text-green-600"}`}
+                      >
+                        {diff.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedDetail.category === "Desconto Plano de Saúde" && worker.pdfData.planoSaude.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-slate-200">
+                       <div className="text-[10px] font-bold text-slate-500 mb-1">Beneficiários no PDF:</div>
+                       <ul className="text-[10px] space-y-1">
+                          {worker.pdfData.planoSaude.map((ps: any, idx: number) => (
+                            <li key={idx} className="flex justify-between">
+                              <span>{ps.beneficiario}</span>
+                              <span className="font-mono">R$ {ps.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                            </li>
+                          ))}
+                       </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
           <div className="max-h-[400px] overflow-auto rounded-md border">
             <table className="w-full text-[10px]">
               <thead className="bg-muted sticky top-0 z-10">
