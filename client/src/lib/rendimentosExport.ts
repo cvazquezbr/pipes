@@ -159,7 +159,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       irrfPlr: ['874'],
       planoSaude: '8111',
       reembolsoPlanoSaude: '8917',
-      rendimentosIsentos: ['931', '932', '8169', '28', '29', '64', '830', '9591', '8800']
+      rendimentosIsentos: ['932', '8169', '28', '29', '64', '830', '9591', '8800']
     };
 
     if (Array.isArray(worker.contracheques)) {
