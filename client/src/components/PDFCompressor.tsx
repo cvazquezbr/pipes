@@ -17,9 +17,12 @@ import {
   TrendingDown,
   ChevronRight,
   Upload,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePDFCompressor } from "@/hooks/usePDFCompressor";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export function PDFCompressor() {
   const {
@@ -27,6 +30,8 @@ export function PDFCompressor() {
     progress,
     results,
     selectedFiles,
+    level,
+    setLevel,
     setSelectedFiles,
     handleCompress,
     clearResults,
@@ -101,7 +106,54 @@ export function PDFCompressor() {
             Selecione uma pasta ou arquivos PDF para reduzir o tamanho mantendo a capacidade de extração de texto.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Nível de Compactação</Label>
+            <RadioGroup
+              defaultValue="normal"
+              value={level}
+              onValueChange={(v) => setLevel(v as any)}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+              disabled={isProcessing}
+            >
+              <div>
+                <RadioGroupItem
+                  value="normal"
+                  id="level-normal"
+                  className="peer sr-only"
+                />
+                <Label
+                  htmlFor="level-normal"
+                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                >
+                  <TrendingDown className="mb-2 h-6 w-6 text-slate-400 peer-data-[state=checked]:text-primary" />
+                  <span className="text-sm font-bold">Normal</span>
+                  <p className="text-[10px] text-muted-foreground text-center mt-1">
+                    Equilíbrio entre tamanho e qualidade. Ideal para a maioria dos casos.
+                  </p>
+                </Label>
+              </div>
+
+              <div>
+                <RadioGroupItem
+                  value="extreme"
+                  id="level-extreme"
+                  className="peer sr-only"
+                />
+                <Label
+                  htmlFor="level-extreme"
+                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                >
+                  <Zap className="mb-2 h-6 w-6 text-slate-400 peer-data-[state=checked]:text-primary" />
+                  <span className="text-sm font-bold">Extrema</span>
+                  <p className="text-[10px] text-muted-foreground text-center mt-1">
+                    Redução máxima de tamanho através da re-codificação de imagens.
+                  </p>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
               <input
