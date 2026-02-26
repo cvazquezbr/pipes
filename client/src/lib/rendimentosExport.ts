@@ -4,6 +4,8 @@
 
 import * as XLSX from 'xlsx';
 
+const VALOR_DEDUCAO_DEPENDENTE = 189.90;
+
 export interface Lancamento {
   codigo: number | string;
   valor: number | string;
@@ -16,6 +18,11 @@ export interface Contracheque {
   lancamentos: Lancamento[];
   mes?: number | string;
   [key: string]: any; // Permite outros campos como valorLiquido, etc.
+}
+
+export interface Dependente {
+  nome: string;
+  criterioFiscal: boolean;
 }
 
 export interface Gozo {
@@ -38,6 +45,7 @@ export interface WorkerData {
   cpf: string;
   contracheques: Contracheque[];
   periodosAquisitivos?: PeriodoAquisitivo[];
+  dependentes?: Dependente[];
 }
 
 export interface DetailLancamento {
@@ -57,6 +65,7 @@ export interface AggregatedWorkerData {
   'IRRF (Mensal/Férias)': number;
   '13º Salário (Exclusiva)': number;
   'IRRF sobre 13º (Exclusiva)': number;
+  'CP 13º Salário': number;
   'PLR (Exclusiva)': number;
   'IRRF sobre PLR (Exclusiva)': number;
   'Desconto Plano de Saúde': number;
@@ -109,6 +118,8 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
   });
 
   return filteredWorkers.map(worker => {
+    let dependentDeductionApplied = false;
+
     const aggregated: AggregatedWorkerData = {
       matricula: String(worker.matricula || ''),
       nome: String(worker.nome || ''),
@@ -118,6 +129,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       'IRRF (Mensal/Férias)': 0,
       '13º Salário (Exclusiva)': 0,
       'IRRF sobre 13º (Exclusiva)': 0,
+      'CP 13º Salário': 0,
       'PLR (Exclusiva)': 0,
       'IRRF sobre PLR (Exclusiva)': 0,
       'Desconto Plano de Saúde': 0,
@@ -128,6 +140,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
         'IRRF (Mensal/Férias)': [],
         '13º Salário (Exclusiva)': [],
         'IRRF sobre 13º (Exclusiva)': [],
+        'CP 13º Salário': [],
         'PLR (Exclusiva)': [],
         'IRRF sobre PLR (Exclusiva)': [],
         'Desconto Plano de Saúde': [],
@@ -141,6 +154,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       irrfMensal: ['999', '828', '942', '8128'],
       salario13: ['12', '8104', '13', '800', '801', '802',  '8216', '8374', '8550'],
       irrf13: ['804', '827'],
+      cp13: ['825'],
       plr: ['873', '242'],
       irrfPlr: ['874'],
       planoSaude: '8111',
@@ -181,6 +195,25 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
             } else if (rules.irrf13.includes(codigo)) {
               aggregated['IRRF sobre 13º (Exclusiva)'] += valor;
               aggregated.details['IRRF sobre 13º (Exclusiva)'].push(detail);
+
+              // Deduzir do 13º Salário (Exclusiva)
+              aggregated['13º Salário (Exclusiva)'] -= valor;
+              aggregated.details['13º Salário (Exclusiva)'].push({
+                ...detail,
+                descricao: `${detail.descricao || 'IRRF 13º'} (Dedução)`,
+                valor: -valor
+              });
+            } else if (rules.cp13.includes(codigo)) {
+              aggregated['CP 13º Salário'] += valor;
+              aggregated.details['CP 13º Salário'].push(detail);
+
+              // Deduzir do 13º Salário (Exclusiva)
+              aggregated['13º Salário (Exclusiva)'] -= valor;
+              aggregated.details['13º Salário (Exclusiva)'].push({
+                ...detail,
+                descricao: `${detail.descricao || 'CP 13º'} (Dedução)`,
+                valor: -valor
+              });
             } else if (rules.plr.includes(codigo)) {
               aggregated['PLR (Exclusiva)'] += valor;
               aggregated.details['PLR (Exclusiva)'].push(detail);
@@ -250,10 +283,41 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
                   });
                 }
               }
+
+              // Dedução de Dependentes (Synthetic) - Aplicar apenas uma vez por ano
+              if (!dependentDeductionApplied && Array.isArray(worker.dependentes)) {
+                const fiscalDeps = worker.dependentes.filter(d => d.criterioFiscal);
+                if (fiscalDeps.length > 0) {
+                  fiscalDeps.forEach(dep => {
+                    aggregated['13º Salário (Exclusiva)'] -= VALOR_DEDUCAO_DEPENDENTE;
+                    aggregated.details['13º Salário (Exclusiva)'].push({
+                      origem: 'Férias/Gozos',
+                      descricao: `Dedução Dependente 13º - ${dep.nome}`,
+                      valor: -VALOR_DEDUCAO_DEPENDENTE,
+                      data: g.Pagamento
+                    });
+                  });
+                  dependentDeductionApplied = true;
+                }
+              }
             }
           });
         }
       });
+    }
+
+    // Se não houve gozos (ou não foi aplicada a dedução neles) mas tem 13º salário, aplicar a dedução também
+    if (!dependentDeductionApplied && aggregated['13º Salário (Exclusiva)'] !== 0 && Array.isArray(worker.dependentes)) {
+      const fiscalDeps = worker.dependentes.filter(d => d.criterioFiscal);
+      fiscalDeps.forEach(dep => {
+        aggregated['13º Salário (Exclusiva)'] -= VALOR_DEDUCAO_DEPENDENTE;
+        aggregated.details['13º Salário (Exclusiva)'].push({
+          origem: 'Apuração Anual',
+          descricao: `Dedução Dependente 13º - ${dep.nome}`,
+          valor: -VALOR_DEDUCAO_DEPENDENTE,
+        });
+      });
+      dependentDeductionApplied = true;
     }
 
     return aggregated;
@@ -274,6 +338,7 @@ export function exportRendimentosToExcel(data: AggregatedWorkerData[], year: str
     'IRRF (Mensal/Férias)': Number(row['IRRF (Mensal/Férias)'].toFixed(2)),
     '13º Salário (Exclusiva)': Number(row['13º Salário (Exclusiva)'].toFixed(2)),
     'IRRF sobre 13º (Exclusiva)': Number(row['IRRF sobre 13º (Exclusiva)'].toFixed(2)),
+    'CP 13º Salário': Number(row['CP 13º Salário'].toFixed(2)),
     'PLR (Exclusiva)': Number(row['PLR (Exclusiva)'].toFixed(2)),
     'IRRF sobre PLR (Exclusiva)': Number(row['IRRF sobre PLR (Exclusiva)'].toFixed(2)),
     'Desconto Plano de Saúde': Number(row['Desconto Plano de Saúde'].toFixed(2)),
@@ -294,6 +359,7 @@ export function exportRendimentosToExcel(data: AggregatedWorkerData[], year: str
     { wch: 25 }, // IRRF (Mensal/Férias)
     { wch: 25 }, // 13º Salário (Exclusiva)
     { wch: 25 }, // IRRF sobre 13º (Exclusiva)
+    { wch: 25 }, // CP 13º Salário
     { wch: 20 }, // PLR (Exclusiva)
     { wch: 25 }, // IRRF sobre PLR (Exclusiva)
     { wch: 25 }, // Desconto Plano de Saúde

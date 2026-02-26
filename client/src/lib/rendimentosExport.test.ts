@@ -219,5 +219,134 @@ describe('rendimentosExport', () => {
       expect(inssDetails[1].valor).toBe(200.25);
       expect(inssDetails[1].descricao).toBe('INSS Férias');
     });
+
+    it('should deduct IRRF 13 (804, 827) and CP 13 (825) from 13º Salário (Exclusiva) in paychecks', () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: '303',
+          nome: 'Alice Santos',
+          cpf: '111.111.111-11',
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [
+                { codigo: '12', valor: 5000 },    // Gross 13th
+                { codigo: '804', valor: 200 },   // IRRF 13
+                { codigo: '825', valor: 150 },   // CP 13 code
+              ]
+            }
+          ]
+        }
+      ];
+
+      const aggregated = aggregateWorkerData(workers, 2025);
+      // 5000 - 200 - 150 = 4650
+      expect(aggregated[0]['13º Salário (Exclusiva)']).toBe(4650);
+      expect(aggregated[0]['IRRF sobre 13º (Exclusiva)']).toBe(200);
+      expect(aggregated[0]['CP 13º Salário']).toBe(150);
+
+      const details = aggregated[0].details['13º Salário (Exclusiva)'];
+      expect(details.some(d => d.valor === -200 && d.descricao?.includes('Dedução'))).toBe(true);
+      expect(details.some(d => d.valor === -150 && d.descricao?.includes('Dedução'))).toBe(true);
+    });
+
+    it('should deduct dependent values from 13º Salário during gozos processing', () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: '404',
+          nome: 'Bruno Lima',
+          cpf: '222.222.222-22',
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [
+                { codigo: '12', valor: 3000 }, // Initial 13th
+                { codigo: '827', valor: 100 }  // IRRF 13 in paycheck
+              ]
+            }
+          ],
+          dependentes: [
+            { nome: 'Dep 1', criterioFiscal: true },
+            { nome: 'Dep 2', criterioFiscal: true },
+            { nome: 'Dep 3', criterioFiscal: false },
+          ],
+          periodosAquisitivos: [
+            {
+              gozos: [
+                {
+                  proventos: 0,
+                  Pagamento: '2025-06-15'
+                }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const aggregated = aggregateWorkerData(workers, 2025);
+      // Base: 3000
+      // IRRF 13 deduction: -100
+      // Dependents (2 fiscal): -189.90 * 2 = -379.80
+      // Total: 3000 - 100 - 379.80 = 2520.20
+      expect(aggregated[0]['13º Salário (Exclusiva)']).toBeCloseTo(2520.20, 2);
+
+      const details = aggregated[0].details['13º Salário (Exclusiva)'];
+      expect(details.some(d => d.valor === -100 && d.origem.startsWith('Contracheque'))).toBe(true);
+      expect(details.filter(d => d.valor === -189.90 && d.descricao?.includes('Dedução Dependente'))).toHaveLength(2);
+    });
+
+    it('should not duplicate dependent deduction if there are multiple gozos', () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: '505',
+          nome: 'Clara Nunes',
+          cpf: '333.333.333-33',
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [{ codigo: '12', valor: 4000 }]
+            }
+          ],
+          dependentes: [{ nome: 'Filho', criterioFiscal: true }],
+          periodosAquisitivos: [
+            {
+              gozos: [
+                { proventos: 0, Pagamento: '2025-01-10' },
+                { proventos: 0, Pagamento: '2025-07-20' }
+              ]
+            }
+          ]
+        }
+      ];
+
+      const aggregated = aggregateWorkerData(workers, 2025);
+      // 4000 - 189.90 = 3810.10
+      expect(aggregated[0]['13º Salário (Exclusiva)']).toBeCloseTo(3810.10, 2);
+      const details = aggregated[0].details['13º Salário (Exclusiva)'];
+      expect(details.filter(d => d.valor === -189.90)).toHaveLength(1);
+    });
+
+    it('should apply dependent deduction even if there are no gozos but there is 13th salary', () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: '606',
+          nome: 'Daniel Silva',
+          cpf: '444.444.444-44',
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [{ codigo: '12', valor: 2000 }]
+            }
+          ],
+          dependentes: [{ nome: 'Filho', criterioFiscal: true }]
+        }
+      ];
+
+      const aggregated = aggregateWorkerData(workers, 2025);
+      // 2000 - 189.90 = 1810.10
+      expect(aggregated[0]['13º Salário (Exclusiva)']).toBeCloseTo(1810.10, 2);
+      const details = aggregated[0].details['13º Salário (Exclusiva)'];
+      expect(details.some(d => d.valor === -189.90 && d.origem === 'Apuração Anual')).toBe(true);
+    });
   });
 });
