@@ -4,7 +4,7 @@
 
 import * as XLSX from 'xlsx';
 
-const VALOR_DEDUCAO_DEPENDENTE = 189.90;
+const VALOR_DEDUCAO_DEPENDENTE = 189.59;
 
 export interface Lancamento {
   codigo: number | string;
