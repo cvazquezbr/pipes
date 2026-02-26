@@ -79,14 +79,12 @@ describe("rendimentosExport", () => {
           contracheques: [
             {
               ano: 2025,
-              mes: 1,
               nomeFolha: "MENSAL",
               baseCalculoIrrf: "3.726,19",
               lancamentos: [],
             },
             {
               ano: 2025,
-              mes: 2,
               nomeFolha: "EXTRA",
               baseCalculoIrrf: 4000.0,
               lancamentos: [],
@@ -106,10 +104,10 @@ describe("rendimentosExport", () => {
       expect(aggregated[0]["Base Cálculo IRRF"]).toBeCloseTo(7726.19, 2);
       expect(aggregated[0].details["Base Cálculo IRRF"]).toHaveLength(2);
       expect(aggregated[0].details["Base Cálculo IRRF"][0].origem).toBe(
-        "Contracheque 1/2025 - MENSAL"
+        "MENSAL"
       );
       expect(aggregated[0].details["Base Cálculo IRRF"][1].origem).toBe(
-        "Contracheque 2/2025 - EXTRA"
+        "EXTRA"
       );
     });
 
@@ -122,13 +120,11 @@ describe("rendimentosExport", () => {
           contracheques: [
             {
               ano: 2025,
-              mes: 1,
               nomeFolha: "MENSAL",
               lancamentos: [{ codigo: "8781", valor: 1000 }],
             },
             {
               ano: 2025,
-              mes: 2,
               nomeFolha: "ADIANTAMENTO",
               lancamentos: [{ codigo: "8781", valor: 1000 }],
             },
@@ -139,10 +135,10 @@ describe("rendimentosExport", () => {
       const aggregated = aggregateWorkerData(workers, 2025);
       expect(aggregated[0]["Rendimentos Tributáveis"]).toBe(2000);
       expect(aggregated[0].details["Rendimentos Tributáveis"][0].origem).toBe(
-        "Contracheque 1/2025 - MENSAL"
+        "MENSAL"
       );
       expect(aggregated[0].details["Rendimentos Tributáveis"][1].origem).toBe(
-        "Contracheque 2/2025 - ADIANTAMENTO"
+        "ADIANTAMENTO"
       );
     });
 
@@ -203,6 +199,7 @@ describe("rendimentosExport", () => {
           contracheques: [
             {
               ano: 2025,
+              nomeFolha: "13o SALARIO",
               lancamentos: [{ codigo: "12", valor: 2000 }],
             },
           ],

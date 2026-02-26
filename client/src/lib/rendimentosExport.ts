@@ -16,7 +16,7 @@ export interface Lancamento {
 export interface Contracheque {
   ano: number | string;
   lancamentos: Lancamento[];
-  mes?: number | string;
+  nomeFolha?: string;
   [key: string]: any; // Permite outros campos como valorLiquido, etc.
 }
 
@@ -215,7 +215,7 @@ export function aggregateWorkerData(
           const valorBC = parseValue(cc.baseCalculoIrrf);
           aggregated["Base Cálculo IRRF"] += valorBC;
           aggregated.details["Base Cálculo IRRF"].push({
-            origem: `Contracheque ${cc.mes || ""}/${cc.ano}${cc.nomeFolha ? " - " + cc.nomeFolha : ""}`,
+            origem: cc.nomeFolha || String(cc.ano),
             descricao: "Base Cálculo IRRF",
             valor: valorBC,
           });
@@ -226,9 +226,7 @@ export function aggregateWorkerData(
             const codigo = String(item.codigo);
             const valor = parseValue(item.valor);
             const detail: DetailLancamento = {
-              origem: `Contracheque ${cc.mes || ""}/${cc.ano}${
-                cc.nomeFolha ? " - " + cc.nomeFolha : ""
-              }`,
+              origem: cc.nomeFolha || String(cc.ano),
               codigo: item.codigo,
               descricao: item.descricao,
               valor: valor,
