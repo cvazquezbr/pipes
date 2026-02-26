@@ -79,11 +79,13 @@ describe("rendimentosExport", () => {
           contracheques: [
             {
               ano: 2025,
+              nomeFolha: "MENSAL",
               baseCalculoIrrf: "3.726,19",
               lancamentos: [],
             },
             {
               ano: 2025,
+              nomeFolha: "EXTRA",
               baseCalculoIrrf: 4000.0,
               lancamentos: [],
             },
@@ -101,9 +103,15 @@ describe("rendimentosExport", () => {
       // 3726.19 + 4000.00 = 7726.19
       expect(aggregated[0]["Base Cálculo IRRF"]).toBeCloseTo(7726.19, 2);
       expect(aggregated[0].details["Base Cálculo IRRF"]).toHaveLength(2);
+      expect(aggregated[0].details["Base Cálculo IRRF"][0].origem).toBe(
+        "MENSAL"
+      );
+      expect(aggregated[0].details["Base Cálculo IRRF"][1].origem).toBe(
+        "EXTRA"
+      );
     });
 
-    it("should aggregate from multiple paychecks of the same year", () => {
+    it("should aggregate from multiple paychecks of the same year and include nomeFolha in details", () => {
       const workers: WorkerData[] = [
         {
           matricula: "456",
@@ -112,10 +120,12 @@ describe("rendimentosExport", () => {
           contracheques: [
             {
               ano: 2025,
+              nomeFolha: "MENSAL",
               lancamentos: [{ codigo: "8781", valor: 1000 }],
             },
             {
               ano: 2025,
+              nomeFolha: "ADIANTAMENTO",
               lancamentos: [{ codigo: "8781", valor: 1000 }],
             },
           ],
@@ -124,6 +134,12 @@ describe("rendimentosExport", () => {
 
       const aggregated = aggregateWorkerData(workers, 2025);
       expect(aggregated[0]["Rendimentos Tributáveis"]).toBe(2000);
+      expect(aggregated[0].details["Rendimentos Tributáveis"][0].origem).toBe(
+        "MENSAL"
+      );
+      expect(aggregated[0].details["Rendimentos Tributáveis"][1].origem).toBe(
+        "ADIANTAMENTO"
+      );
     });
 
     // Note: The tests below for gozos are currently disabled because the logic is commented out in rendimentosExport.ts
@@ -183,6 +199,7 @@ describe("rendimentosExport", () => {
           contracheques: [
             {
               ano: 2025,
+              nomeFolha: "13o SALARIO",
               lancamentos: [{ codigo: "12", valor: 2000 }],
             },
           ],
