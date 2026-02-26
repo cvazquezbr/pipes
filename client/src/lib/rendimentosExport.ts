@@ -215,7 +215,7 @@ export function aggregateWorkerData(
           const valorBC = parseValue(cc.baseCalculoIrrf);
           aggregated["Base Cálculo IRRF"] += valorBC;
           aggregated.details["Base Cálculo IRRF"].push({
-            origem: cc.nomeFolha || String(cc.ano),
+            origem: `${cc.ano} / ${cc.nomeFolha}`,
             descricao: "Base Cálculo IRRF",
             valor: valorBC,
           });
@@ -226,7 +226,7 @@ export function aggregateWorkerData(
             const codigo = String(item.codigo);
             const valor = parseValue(item.valor);
             const detail: DetailLancamento = {
-              origem: cc.nomeFolha || String(cc.ano),
+              origem: `${cc.ano} / ${cc.nomeFolha}`,
               codigo: item.codigo,
               descricao: item.descricao,
               valor: valor,
