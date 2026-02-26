@@ -1,33 +1,32 @@
+import { describe, it, expect } from "vitest";
+import { processIrpjCsllData } from "./irpjCsllExport";
 
-import { describe, it, expect } from 'vitest';
-import { processIrpjCsllData } from './irpjCsllExport';
-
-describe('irpjCsllExport', () => {
+describe("irpjCsllExport", () => {
   const mockTaxMappings = [
     {
-      'Item Tax': 'Standard',
-      'IRPJ': '1,5%',
-      'CSLL': '1%'
-    }
+      "Item Tax": "Standard",
+      IRPJ: "1,5%",
+      CSLL: "1%",
+    },
   ];
 
   const mockAllSheets = {
-    'Impostos': mockTaxMappings
+    Impostos: mockTaxMappings,
   };
 
   const mockInvoices = [
     {
-      'Invoice Number': '1001',
-      'Invoice Date': '2023-12-01',
-      'Customer Name': 'Cliente A',
-      'Total': '10000,00',
-      'Item Tax': 'Standard',
-      'Item Tax Amount': '150,00',
-      'Invoice Status': 'Sent'
-    }
+      "Invoice Number": "1001",
+      "Invoice Date": "2023-12-01",
+      "Customer Name": "Cliente A",
+      Total: "10000,00",
+      "Item Tax": "Standard",
+      "Item Tax Amount": "150,00",
+      "Invoice Status": "Sent",
+    },
   ];
 
-  it('should calculate IRPJ and CSLL correctly', () => {
+  it("should calculate IRPJ and CSLL correctly", () => {
     const result = processIrpjCsllData(mockInvoices, mockAllSheets, 5000, 1000);
     const { resumo, faturasFinais } = result;
 
@@ -63,14 +62,12 @@ describe('irpjCsllExport', () => {
     expect(resumo.totalCsllDevido).toBe(638);
 
     // Faturas
-    expect(faturasFinais[0]['contribuicao.IRPJ']).toBe(80);
-    expect(faturasFinais[0]['contribuicao.CSLL']).toBe(638);
+    expect(faturasFinais[0]["contribuicao.IRPJ"]).toBe(80);
+    expect(faturasFinais[0]["contribuicao.CSLL"]).toBe(638);
   });
 
-  it('should NOT calculate IR Adicional when all invoices are from 2025 or before', () => {
-    const invoices2025 = [
-      { ...mockInvoices[0], 'Invoice Date': '2025-12-31' }
-    ];
+  it("should NOT calculate IR Adicional when all invoices are from 2025 or before", () => {
+    const invoices2025 = [{ ...mockInvoices[0], "Invoice Date": "2025-12-31" }];
     const result = processIrpjCsllData(invoices2025, mockAllSheets, 100000, 0);
     const { resumo } = result;
 
@@ -79,10 +76,8 @@ describe('irpjCsllExport', () => {
     expect(resumo.irAdicional).toBe(0);
   });
 
-  it('should calculate IR Adicional when there is an invoice after 2025 and base is above 60000', () => {
-    const invoices2026 = [
-      { ...mockInvoices[0], 'Invoice Date': '2026-01-01' }
-    ];
+  it("should calculate IR Adicional when there is an invoice after 2025 and base is above 60000", () => {
+    const invoices2026 = [{ ...mockInvoices[0], "Invoice Date": "2026-01-01" }];
     const result = processIrpjCsllData(invoices2026, mockAllSheets, 100000, 0);
     const { resumo } = result;
 

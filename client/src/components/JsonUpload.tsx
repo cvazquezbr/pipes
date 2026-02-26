@@ -3,12 +3,18 @@
  * Suporta drag-drop e validação de formato
  */
 
-import { useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, FileCode, Loader2, Upload, X } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useCallback, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AlertCircle, FileCode, Loader2, Upload, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface JsonUploadProps {
   onFileLoaded: (data: any, file: File) => void;
@@ -23,7 +29,7 @@ export function JsonUpload({
   isLoading = false,
   title = "Carga de Arquivo JSON",
   description = "Carregue um arquivo JSON com dados dos trabalhadores",
-  onClear
+  onClear,
 }: JsonUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -33,31 +39,31 @@ export function JsonUpload({
       setError(null);
 
       if (acceptedFiles.length === 0) {
-        setError('Nenhum arquivo válido foi selecionado');
+        setError("Nenhum arquivo válido foi selecionado");
         return;
       }
 
       const file = acceptedFiles[0];
 
       // Validar extensão
-      if (!file.name.toLowerCase().endsWith('.json')) {
-        setError('Formato inválido. Use: .json');
+      if (!file.name.toLowerCase().endsWith(".json")) {
+        setError("Formato inválido. Use: .json");
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = event => {
         try {
           const content = event.target?.result as string;
           const data = JSON.parse(content);
           setFileName(file.name);
           onFileLoaded(data, file);
         } catch (err) {
-          setError('Erro ao processar arquivo JSON: Formato inválido');
+          setError("Erro ao processar arquivo JSON: Formato inválido");
         }
       };
       reader.onerror = () => {
-        setError('Erro ao ler arquivo');
+        setError("Erro ao ler arquivo");
       };
       reader.readAsText(file);
     },
@@ -67,7 +73,7 @@ export function JsonUpload({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/json': ['.json'],
+      "application/json": [".json"],
     },
     disabled: isLoading,
     multiple: false,
@@ -80,9 +86,11 @@ export function JsonUpload({
   };
 
   const dragActiveClass = isDragActive
-    ? 'border-primary bg-primary/5'
-    : 'border-muted-foreground/25 hover:border-muted-foreground/50';
-  const disabledClass = isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
+    ? "border-primary bg-primary/5"
+    : "border-muted-foreground/25 hover:border-muted-foreground/50";
+  const disabledClass = isLoading
+    ? "opacity-50 cursor-not-allowed"
+    : "cursor-pointer";
 
   return (
     <Card className="w-full border-slate-200">
@@ -107,12 +115,14 @@ export function JsonUpload({
             )}
             <p className="text-sm font-medium">
               {isLoading
-                ? 'Processando JSON...'
+                ? "Processando JSON..."
                 : isDragActive
-                ? 'Solte o arquivo aqui'
-                : 'Arraste um arquivo JSON aqui ou clique para selecionar'}
+                  ? "Solte o arquivo aqui"
+                  : "Arraste um arquivo JSON aqui ou clique para selecionar"}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">Formato suportado: .json</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Formato suportado: .json
+            </p>
           </div>
         ) : (
           <div className="flex items-center justify-between rounded-lg bg-muted p-3">

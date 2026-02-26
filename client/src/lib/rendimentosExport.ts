@@ -63,6 +63,7 @@ export interface AggregatedWorkerData {
   'Rendimentos Tributáveis': number;
   'Previdência Oficial': number;
   'IRRF (Mensal/Férias)': number;
+  'Base Cálculo IRRF': number;
   '13º Salário (Exclusiva)': number;
   'IRRF sobre 13º (Exclusiva)': number;
   'CP 13º Salário': number;
@@ -127,6 +128,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       'Rendimentos Tributáveis': 0,
       'Previdência Oficial': 0,
       'IRRF (Mensal/Férias)': 0,
+      'Base Cálculo IRRF': 0,
       '13º Salário (Exclusiva)': 0,
       'IRRF sobre 13º (Exclusiva)': 0,
       'CP 13º Salário': 0,
@@ -138,6 +140,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
         'Rendimentos Tributáveis': [],
         'Previdência Oficial': [],
         'IRRF (Mensal/Férias)': [],
+        'Base Cálculo IRRF': [],
         '13º Salário (Exclusiva)': [],
         'IRRF sobre 13º (Exclusiva)': [],
         'CP 13º Salário': [],
@@ -167,6 +170,17 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
         // Filtrar por ano no nível do contracheque
         if (cc.ano && String(cc.ano) !== targetYear) {
           return;
+        }
+
+        // Acumular Base Cálculo IRRF do contracheque
+        if (cc.baseCalculoIrrf) {
+          const valorBC = parseValue(cc.baseCalculoIrrf);
+          aggregated['Base Cálculo IRRF'] += valorBC;
+          aggregated.details['Base Cálculo IRRF'].push({
+            origem: `Contracheque ${cc.mes || ''}/${cc.ano}`,
+            descricao: 'Base Cálculo IRRF',
+            valor: valorBC,
+          });
         }
 
         if (Array.isArray(cc.lancamentos)) {
@@ -336,6 +350,7 @@ export function exportRendimentosToExcel(data: AggregatedWorkerData[], year: str
     'Rendimentos Tributáveis': Number(row['Rendimentos Tributáveis'].toFixed(2)),
     'Previdência Oficial': Number(row['Previdência Oficial'].toFixed(2)),
     'IRRF (Mensal/Férias)': Number(row['IRRF (Mensal/Férias)'].toFixed(2)),
+    'Base Cálculo IRRF': Number(row['Base Cálculo IRRF'].toFixed(2)),
     '13º Salário (Exclusiva)': Number(row['13º Salário (Exclusiva)'].toFixed(2)),
     'IRRF sobre 13º (Exclusiva)': Number(row['IRRF sobre 13º (Exclusiva)'].toFixed(2)),
     'CP 13º Salário': Number(row['CP 13º Salário'].toFixed(2)),
@@ -357,6 +372,7 @@ export function exportRendimentosToExcel(data: AggregatedWorkerData[], year: str
     { wch: 30 }, // Rendimentos Tributáveis
     { wch: 25 }, // Previdência Oficial
     { wch: 25 }, // IRRF (Mensal/Férias)
+    { wch: 25 }, // Base Cálculo IRRF
     { wch: 25 }, // 13º Salário (Exclusiva)
     { wch: 25 }, // IRRF sobre 13º (Exclusiva)
     { wch: 25 }, // CP 13º Salário
