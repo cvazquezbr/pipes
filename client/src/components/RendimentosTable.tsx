@@ -101,6 +101,7 @@ export function RendimentosTable({
     { label: 'IRRF', key: 'IRRF (Mensal/Férias)', align: 'right' },
     { label: '13º Sal.', key: '13º Salário (Exclusiva)', align: 'right' },
     { label: 'IRRF 13º', key: 'IRRF sobre 13º (Exclusiva)', align: 'right' },
+    { label: 'CP 13º', key: 'CP 13º Salário', align: 'right' },
     { label: 'PLR', key: 'PLR (Exclusiva)', align: 'right' },
     { label: 'IRRF PLR', key: 'IRRF sobre PLR (Exclusiva)', align: 'right' },
     { label: 'Plano Saúde', key: 'Desconto Plano de Saúde', align: 'right' },
