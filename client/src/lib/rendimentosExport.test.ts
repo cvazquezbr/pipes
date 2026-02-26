@@ -104,10 +104,10 @@ describe("rendimentosExport", () => {
       expect(aggregated[0]["Base Cálculo IRRF"]).toBeCloseTo(7726.19, 2);
       expect(aggregated[0].details["Base Cálculo IRRF"]).toHaveLength(2);
       expect(aggregated[0].details["Base Cálculo IRRF"][0].origem).toBe(
-        "MENSAL"
+        "2025 / MENSAL"
       );
       expect(aggregated[0].details["Base Cálculo IRRF"][1].origem).toBe(
-        "EXTRA"
+        "2025 / EXTRA"
       );
     });
 
@@ -135,10 +135,10 @@ describe("rendimentosExport", () => {
       const aggregated = aggregateWorkerData(workers, 2025);
       expect(aggregated[0]["Rendimentos Tributáveis"]).toBe(2000);
       expect(aggregated[0].details["Rendimentos Tributáveis"][0].origem).toBe(
-        "MENSAL"
+        "2025 / MENSAL"
       );
       expect(aggregated[0].details["Rendimentos Tributáveis"][1].origem).toBe(
-        "ADIANTAMENTO"
+        "2025 / ADIANTAMENTO"
       );
     });
 
@@ -214,6 +214,38 @@ describe("rendimentosExport", () => {
       expect(
         details.some(d => d.valor === -189.59 && d.origem === "Apuração Anual")
       ).toBe(true);
+    });
+
+    it("should subtract code 836 from Previdência Oficial", () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: "707",
+          nome: "Pedro Souza",
+          cpf: "777.777.777-77",
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [
+                { codigo: "812", valor: 1000 }, // Previdência
+                { codigo: "836", valor: 150 }, // INSS DIF FER DESC A MAIOR
+              ],
+            },
+          ],
+        },
+      ];
+
+      const aggregated = aggregateWorkerData(workers, 2025);
+      // 1000 - 150 = 850
+      expect(aggregated[0]["Previdência Oficial"]).toBe(850);
+
+      const details = aggregated[0].details["Previdência Oficial"];
+      expect(details).toHaveLength(2);
+      expect(details.some(d => d.codigo === "812" && d.valor === 1000)).toBe(
+        true
+      );
+      expect(details.some(d => d.codigo === "836" && d.valor === -150)).toBe(
+        true
+      );
     });
   });
 });

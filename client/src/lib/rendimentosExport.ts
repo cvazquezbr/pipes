@@ -183,6 +183,7 @@ export function aggregateWorkerData(
         "9661",
       ],
       previdenciaOficial: ["812", "821", "998", "843", "826", "858"],
+      inssDifFerDescAMaior: "836",
       irrfMensal: ["999", "942", "828", "8128"],
       salario13: ["12", "8104", "800", "801", "802", "8216", "8374", "8550"],
       irrf13: ["804", "827"],
@@ -238,6 +239,13 @@ export function aggregateWorkerData(
             } else if (rules.previdenciaOficial.includes(codigo)) {
               aggregated["Previdência Oficial"] += valor;
               aggregated.details["Previdência Oficial"].push(detail);
+            } else if (codigo === rules.inssDifFerDescAMaior) {
+              aggregated["Previdência Oficial"] -= valor;
+              aggregated.details["Previdência Oficial"].push({
+                ...detail,
+                descricao: (detail.descricao || "") + " (Dedução)",
+                valor: -valor,
+              });
             } else if (rules.irrfMensal.includes(codigo)) {
               aggregated["IRRF (Mensal/Férias)"] += valor;
               aggregated.details["IRRF (Mensal/Férias)"].push(detail);
