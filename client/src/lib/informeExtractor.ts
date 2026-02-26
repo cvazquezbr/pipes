@@ -52,6 +52,8 @@ function normalizeText(text: string): string {
  * Extrai dados do informe de rendimentos do texto bruto
  */
 export function parseInformeText(text: string): ExtractedInforme[] {
+  console.log("[InformeExtractor] Iniciando parse de texto. Tamanho:", text.length);
+  console.log("[InformeExtractor] Amostra do texto (500 chars):", text.substring(0, 500));
   const normalized = normalizeText(text);
 
   // O PDF pode conter vários informes. Geralmente cada um começa com algo como "Comprovante de Rendimentos"
@@ -60,13 +62,15 @@ export function parseInformeText(text: string): ExtractedInforme[] {
 
   // Padrão para identificar o início de um novo trabalhador e extrair Nome e Matrícula
   // "Nome Completo: NOME - MATRICULA"
-  const workerSplitPattern = /Nome Completo\s*:\s*([^-]+?)\s*-\s*(\d+)/g;
+  // Mais robusto: aceita diferentes tipos de traços e espaços opcionais
+  const workerSplitPattern = /Nome Completo\s*[:;]?\s*([^-–—]+?)\s*[-–—]\s*(\d+)/gi;
 
   const informes: ExtractedInforme[] = [];
   let match;
   const workerIndices: {index: number, nome: string, matricula: string}[] = [];
 
   while ((match = workerSplitPattern.exec(normalized)) !== null) {
+    console.log(`[InformeExtractor] Encontrado trabalhador: ${match[1].trim()} - Matrícula: ${match[2].trim()}`);
     workerIndices.push({
       index: match.index,
       nome: match[1].trim(),
@@ -74,7 +78,15 @@ export function parseInformeText(text: string): ExtractedInforme[] {
     });
   }
 
-  if (workerIndices.length === 0) return [];
+  if (workerIndices.length === 0) {
+    console.warn("[InformeExtractor] Nenhum padrão 'Nome Completo : ... - ...' encontrado no texto");
+    // Debug: procurar por Nome Completo sem o resto
+    const partialMatch = normalized.match(/Nome Completo\s*[:;]?\s*[^\n]+/gi);
+    if (partialMatch) {
+        console.log("[InformeExtractor] Encontrados possíveis cabeçalhos de nome (sem matrícula):", partialMatch);
+    }
+    return [];
+  }
 
   for (let i = 0; i < workerIndices.length; i++) {
     const current = workerIndices[i];
