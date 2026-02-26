@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { compressPDFs } from "@/lib/pdfCompression";
+import { compressPDFs, CompressionLevel } from "@/lib/pdfCompression";
 import { toast } from "sonner";
 
 interface CompressionResult {
@@ -15,6 +15,7 @@ export function usePDFCompressor() {
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<CompressionResult[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [level, setLevel] = useState<CompressionLevel>("normal");
 
   const handleCompress = useCallback(async () => {
     if (selectedFiles.length === 0) return;
@@ -23,7 +24,7 @@ export function usePDFCompressor() {
     setProgress(0);
 
     try {
-      const compressedResults = await compressPDFs(selectedFiles, (current, total) => {
+      const compressedResults = await compressPDFs(selectedFiles, level, (current, total) => {
         setProgress((current / total) * 100);
       });
 
@@ -37,7 +38,7 @@ export function usePDFCompressor() {
     } finally {
       setIsProcessing(false);
     }
-  }, [selectedFiles]);
+  }, [selectedFiles, level]);
 
   const clearResults = useCallback(() => {
     setResults([]);
@@ -55,6 +56,8 @@ export function usePDFCompressor() {
     progress,
     results,
     selectedFiles,
+    level,
+    setLevel,
     setSelectedFiles,
     handleCompress,
     clearResults,
