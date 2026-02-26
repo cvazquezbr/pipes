@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -16,20 +16,28 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
   FileSpreadsheet,
+  FileUp,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
+import { extractInformesFromPDF, type ExtractedInforme } from "@/lib/informeExtractor";
+import { toast } from "sonner";
 
 interface RendimentosTableProps {
   data: AggregatedWorkerData[];
   processingYear: string;
   onCellClick: (worker: any, category: string) => void;
   onExport: () => void;
+  onPDFLoaded?: (informes: ExtractedInforme[]) => void;
 }
 
 type SortConfig = {
@@ -42,12 +50,42 @@ export function RendimentosTable({
   processingYear,
   onCellClick,
   onExport,
+  onPDFLoaded,
 }: RendimentosTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isUploadingPDF, setIsUploadingPDF] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
     direction: "asc",
   });
+
+  const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Por favor, selecione um arquivo PDF");
+      return;
+    }
+
+    try {
+      setIsUploadingPDF(true);
+      const informes = await extractInformesFromPDF(file);
+      if (informes.length === 0) {
+        toast.warning("Nenhum informe de rendimentos encontrado no PDF");
+      } else {
+        toast.success(`${informes.length} informes extraídos com sucesso`);
+        if (onPDFLoaded) onPDFLoaded(informes);
+      }
+    } catch (error) {
+      console.error("Erro ao processar PDF:", error);
+      toast.error("Erro ao processar o arquivo PDF");
+    } finally {
+      setIsUploadingPDF(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSort = (key: keyof AggregatedWorkerData) => {
     let direction: "asc" | "desc" = "asc";
@@ -74,8 +112,9 @@ export function RendimentosTable({
     // Sorting
     if (sortConfig.key) {
       result.sort((a, b) => {
-        const aValue = a[sortConfig.key!];
-        const bValue = b[sortConfig.key!];
+        const key = sortConfig.key!;
+        const aValue = a[key] ?? "";
+        const bValue = b[key] ?? "";
 
         if (aValue < bValue) {
           return sortConfig.direction === "asc" ? -1 : 1;
@@ -106,6 +145,7 @@ export function RendimentosTable({
     key: keyof AggregatedWorkerData;
     align?: "left" | "right";
   }[] = [
+    { label: "Status PDF", key: "pdfData" as any, align: "left" },
     { label: "Matrícula", key: "matricula", align: "left" },
     { label: "Nome", key: "nome", align: "left" },
     { label: "CPF", key: "cpf", align: "left" },
@@ -135,13 +175,35 @@ export function RendimentosTable({
           />
         </div>
 
-        <Button
-          onClick={onExport}
-          className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
-        >
-          <FileSpreadsheet className="mr-2 h-4 w-4" />
-          Exportar para Excel
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".pdf"
+            onChange={handlePDFUpload}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingPDF}
+            className="flex-1 md:flex-none"
+          >
+            {isUploadingPDF ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileUp className="mr-2 h-4 w-4" />
+            )}
+            Carga PDF Informe
+          </Button>
+          <Button
+            onClick={onExport}
+            className="bg-green-600 hover:bg-green-700 flex-1 md:flex-none"
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Exportar para Excel
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -169,7 +231,7 @@ export function RendimentosTable({
                         className={`flex items-center ${col.align === "right" ? "justify-end" : "justify-start"}`}
                       >
                         {col.label}
-                        {renderSortIcon(col.key)}
+                        {col.key !== ("pdfData" as any) && renderSortIcon(col.key)}
                       </div>
                     </TableHead>
                   ))}
@@ -179,6 +241,19 @@ export function RendimentosTable({
                 {filteredAndSortedData.length > 0 ? (
                   filteredAndSortedData.map((w, i) => (
                     <TableRow key={i} className="hover:bg-slate-50">
+                      <TableCell className="p-1">
+                        {w.pdfData ? (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 w-fit">
+                            <CheckCircle2 className="h-3 w-3" />
+                            OK
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-slate-50 text-slate-400 border-slate-200 flex items-center gap-1 w-fit">
+                            <AlertCircle className="h-3 w-3" />
+                            Pendente
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell className="p-1 font-mono">
                         {w.matricula}
                       </TableCell>
@@ -190,7 +265,7 @@ export function RendimentosTable({
                       </TableCell>
                       <TableCell className="p-1">{w.cpf}</TableCell>
 
-                      {columns.slice(3).map(col => (
+                      {columns.slice(4).map(col => (
                         <TableCell
                           key={col.key}
                           className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all"
