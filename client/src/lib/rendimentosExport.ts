@@ -4,6 +4,8 @@
 
 import * as XLSX from 'xlsx';
 
+const VALOR_DEDUCAO_DEPENDENTE = 189.90;
+
 export interface Lancamento {
   codigo: number | string;
   valor: number | string;
@@ -18,6 +20,11 @@ export interface Contracheque {
   [key: string]: any; // Permite outros campos como valorLiquido, etc.
 }
 
+export interface Dependente {
+  nome: string;
+  criterioFiscal: boolean;
+}
+
 export interface Gozo {
   proventos: number | string;
   Pagamento: string;
@@ -26,6 +33,7 @@ export interface Gozo {
   irSimplificado?: number | string;
   irBaseadoEmDeducoes?: number | string;
   inss?: number | string;
+  lancamentos?: Lancamento[];
 }
 
 export interface PeriodoAquisitivo {
@@ -38,6 +46,7 @@ export interface WorkerData {
   cpf: string;
   contracheques: Contracheque[];
   periodosAquisitivos?: PeriodoAquisitivo[];
+  dependentes?: Dependente[];
 }
 
 export interface DetailLancamento {
@@ -109,6 +118,8 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
   });
 
   return filteredWorkers.map(worker => {
+    let dependentDeductionApplied = false;
+
     const aggregated: AggregatedWorkerData = {
       matricula: String(worker.matricula || ''),
       nome: String(worker.nome || ''),
@@ -140,7 +151,7 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       previdenciaOficial: ['998', '843', '812', '826', '858'],
       irrfMensal: ['999', '828', '942', '8128'],
       salario13: ['12', '8104', '13', '800', '801', '802',  '8216', '8374', '8550'],
-      irrf13: ['804', '827'],
+      irrf13: ['804', '827', '825'],
       plr: ['873', '242'],
       irrfPlr: ['874'],
       planoSaude: '8111',
@@ -181,6 +192,14 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
             } else if (rules.irrf13.includes(codigo)) {
               aggregated['IRRF sobre 13º (Exclusiva)'] += valor;
               aggregated.details['IRRF sobre 13º (Exclusiva)'].push(detail);
+
+              // Deduzir do 13º Salário (Exclusiva)
+              aggregated['13º Salário (Exclusiva)'] -= valor;
+              aggregated.details['13º Salário (Exclusiva)'].push({
+                ...detail,
+                descricao: `${detail.descricao || 'IRRF 13º'} (Dedução)`,
+                valor: -valor
+              });
             } else if (rules.plr.includes(codigo)) {
               aggregated['PLR (Exclusiva)'] += valor;
               aggregated.details['PLR (Exclusiva)'].push(detail);
@@ -250,10 +269,70 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
                   });
                 }
               }
+
+              // Processar lançamentos do gozo (se existirem) para dedução de IRRF 13º
+              if (Array.isArray(g.lancamentos)) {
+                g.lancamentos.forEach(item => {
+                  const codigo = String(item.codigo);
+                  const valor = parseValue(item.valor);
+                  if (rules.irrf13.includes(codigo)) {
+                    // Deduzir do 13º Salário (Exclusiva)
+                    aggregated['13º Salário (Exclusiva)'] -= valor;
+                    aggregated.details['13º Salário (Exclusiva)'].push({
+                      origem: 'Férias/Gozos',
+                      codigo: item.codigo,
+                      descricao: `${item.descricao || 'IRRF 13º'} (Dedução)`,
+                      valor: -valor,
+                      data: g.Pagamento
+                    });
+
+                    // Acumular no IRRF sobre 13º (Exclusiva)
+                    aggregated['IRRF sobre 13º (Exclusiva)'] += valor;
+                    aggregated.details['IRRF sobre 13º (Exclusiva)'].push({
+                      origem: 'Férias/Gozos',
+                      codigo: item.codigo,
+                      descricao: item.descricao,
+                      valor: valor,
+                      data: g.Pagamento
+                    });
+                  }
+                });
+              }
+
+              // Dedução de Dependentes (Synthetic) - Aplicar apenas uma vez por ano
+              if (!dependentDeductionApplied && Array.isArray(worker.dependentes)) {
+                const fiscalDeps = worker.dependentes.filter(d => d.criterioFiscal);
+                if (fiscalDeps.length > 0) {
+                  fiscalDeps.forEach(dep => {
+                    aggregated['13º Salário (Exclusiva)'] -= VALOR_DEDUCAO_DEPENDENTE;
+                    aggregated.details['13º Salário (Exclusiva)'].push({
+                      origem: 'Férias/Gozos',
+                      descricao: `Dedução Dependente 13º - ${dep.nome}`,
+                      valor: -VALOR_DEDUCAO_DEPENDENTE,
+                      data: g.Pagamento
+                    });
+                  });
+                  dependentDeductionApplied = true;
+                }
+              }
             }
           });
         }
       });
+    }
+
+    // Se não houve gozos (ou não foi aplicada a dedução neles) mas tem 13º salário, aplicar a dedução também
+    if (!dependentDeductionApplied && aggregated['13º Salário (Exclusiva)'] !== 0 && Array.isArray(worker.dependentes)) {
+      const fiscalDeps = worker.dependentes.filter(d => d.criterioFiscal);
+      fiscalDeps.forEach(dep => {
+        aggregated['13º Salário (Exclusiva)'] -= VALOR_DEDUCAO_DEPENDENTE;
+        aggregated.details['13º Salário (Exclusiva)'].push({
+          origem: 'Apuração Anual',
+          descricao: `Dedução Dependente 13º - ${dep.nome}`,
+          valor: -VALOR_DEDUCAO_DEPENDENTE,
+        });
+      });
+      dependentDeductionApplied = true;
     }
 
     return aggregated;
