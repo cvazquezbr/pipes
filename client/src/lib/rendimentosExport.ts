@@ -149,9 +149,9 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
     };
 
     const rules = {
-      rendimentosTributaveis: ['8781', '8784', '9380', '19', '150', '207', '244', '249', '250', '805', '806', '8125', '8832', '8870', '9180', '9384', '9661'],
-      previdenciaOficial: ['998', '843', '821', '826', '858'],
-      irrfMensal: ['999', '828', '8128'],
+      rendimentosTributaveis: ['8781', '931', '8783', '8784', '9380', '19', '150', '207', '244', '249', '250', '805', '806', '8125', '8832', '8870', '9180', '9384', '9661'],
+      previdenciaOficial: ['812', '821', '998', '843',  '826', '858'],
+      irrfMensal: ['999', '942', '828', '8128'],
       salario13: ['12', '8104', '800', '801', '802',  '8216', '8374', '8550'],
       irrf13: ['804', '827'],
       cp13: ['825'],
@@ -244,44 +244,44 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
       worker.periodosAquisitivos.forEach(pa => {
         if (Array.isArray(pa.gozos)) {
           pa.gozos.forEach(g => {
-            if (g.Pagamento && g.Pagamento.startsWith(targetYear)) {
-              const valor = parseValue(g.proventos);
-              aggregated['Rendimentos Tributáveis'] += valor;
-              aggregated.details['Rendimentos Tributáveis'].push({
-                origem: 'Férias/Gozos',
-                descricao: g.descricao || 'Proventos de Férias',
-                valor: valor,
-                data: g.Pagamento
-              });
+//            if (g.Pagamento && g.Pagamento.startsWith(targetYear)) {
+              //const valor = parseValue(g.proventos);
+              //aggregated['Rendimentos Tributáveis'] += valor;
+              //aggregated.details['Rendimentos Tributáveis'].push({
+//                origem: 'Férias/Gozos',
+                //descricao: g.descricao || 'Proventos de Férias',
+                //valor: valor,
+                //data: g.Pagamento
+              //});
 
               // Acumular IRRF (Mensal/Férias) dos gozos
               const irValueRaw = g.simplificado === true
                 ? parseValue(g.irSimplificado)
                 : parseValue(g.irBaseadoEmDeducoes);
 
-              if (irValueRaw !== 0) {
-                const irValue = Number(irValueRaw.toFixed(2));
-                aggregated['IRRF (Mensal/Férias)'] += irValue;
-                aggregated.details['IRRF (Mensal/Férias)'].push({
-                  origem: 'Férias/Gozos',
-                  descricao: `IRRF Férias (${g.simplificado === true ? 'Simplificado' : 'Deduções'})`,
-                  valor: irValue,
-                  data: g.Pagamento
-                });
-              }
+              //if (irValueRaw !== 0) {
+//                const irValue = Number(irValueRaw.toFixed(2));
+                //aggregated['IRRF (Mensal/Férias)'] += irValue;
+                //aggregated.details['IRRF (Mensal/Férias)'].push({
+//                  origem: 'Férias/Gozos',
+                  //descricao: `IRRF Férias (${g.simplificado === true ? 'Simplificado' : 'Deduções'})`,
+                  //valor: irValue,
+                  //data: g.Pagamento
+                //});
+              //}
 
               // Acumular INSS dos gozos na Previdência Oficial
-              if (g.inss) {
-                const inssValue = parseValue(g.inss);
-                if (inssValue !== 0) {
-                  aggregated['Previdência Oficial'] += inssValue;
-                  aggregated.details['Previdência Oficial'].push({
-                    origem: 'Férias/Gozos',
-                    descricao: 'INSS Férias',
-                    valor: inssValue,
-                    data: g.Pagamento
-                  });
-                }
+              //if (g.inss) {
+//                const inssValue = parseValue(g.inss);
+                //if (inssValue !== 0) {
+//                  aggregated['Previdência Oficial'] += inssValue;
+                  //aggregated.details['Previdência Oficial'].push({
+//                    origem: 'Férias/Gozos',
+                    //descricao: 'INSS Férias',
+                    //valor: inssValue,
+                    //data: g.Pagamento
+                  //});
+                //}
               }
 
               // Dedução de Dependentes (Synthetic) - Aplicar apenas uma vez por ano
