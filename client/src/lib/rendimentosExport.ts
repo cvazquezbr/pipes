@@ -240,11 +240,11 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
     }
 
     // Processar periodosAquisitivos -> gozos
-    if (Array.isArray(worker.periodosAquisitivos)) {
-      worker.periodosAquisitivos.forEach(pa => {
-        if (Array.isArray(pa.gozos)) {
-          pa.gozos.forEach(g => {
-//            if (g.Pagamento && g.Pagamento.startsWith(targetYear)) {
+  //  if (Array.isArray(worker.periodosAquisitivos)) {
+  //    worker.periodosAquisitivos.forEach(pa => {
+  //      if (Array.isArray(pa.gozos)) {
+  //        pa.gozos.forEach(g => {
+   //         if (g.Pagamento && g.Pagamento.startsWith(targetYear)) {
               //const valor = parseValue(g.proventos);
               //aggregated['Rendimentos Tributáveis'] += valor;
               //aggregated.details['Rendimentos Tributáveis'].push({
@@ -255,9 +255,9 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
               //});
 
               // Acumular IRRF (Mensal/Férias) dos gozos
-              const irValueRaw = g.simplificado === true
-                ? parseValue(g.irSimplificado)
-                : parseValue(g.irBaseadoEmDeducoes);
+              //const irValueRaw = g.simplificado === true
+//                ? parseValue(g.irSimplificado)
+                //: parseValue(g.irBaseadoEmDeducoes);
 
               //if (irValueRaw !== 0) {
 //                const irValue = Number(irValueRaw.toFixed(2));
@@ -285,29 +285,29 @@ export function aggregateWorkerData(workers: WorkerData[], year: string | number
               //}
 
               // Dedução de Dependentes (Synthetic) - Aplicar apenas uma vez por ano
-              if (!dependentDeductionApplied && Array.isArray(worker.dependentes)) {
-                const fiscalDeps = worker.dependentes.filter(d => d.criterioFiscal);
-                if (fiscalDeps.length > 0) {
-                  fiscalDeps.forEach(dep => {
-                    aggregated['13º Salário (Exclusiva)'] -= VALOR_DEDUCAO_DEPENDENTE;
-                    aggregated.details['13º Salário (Exclusiva)'].push({
-                      origem: 'Férias/Gozos',
-                      descricao: `Dedução Dependente 13º - ${dep.nome}`,
-                      valor: -VALOR_DEDUCAO_DEPENDENTE,
-                      data: g.Pagamento
-                    });
-                  });
-                  dependentDeductionApplied = true;
-                }
-              }
-            }
-          });
-        }
-      });
-    }
+              //if (!dependentDeductionApplied && Array.isArray(worker.dependentes)) {
+               // const fiscalDeps = worker.dependentes.filter(d => d.criterioFiscal);
+                //if (fiscalDeps.length > 0) {
+                 // fiscalDeps.forEach(dep => {
+                  //  aggregated['13º Salário (Exclusiva)'] -= VALOR_DEDUCAO_DEPENDENTE;
+                   // aggregated.details['13º Salário (Exclusiva)'].push({
+                    //  origem: 'Férias/Gozos',
+                     // descricao: `Dedução Dependente 13º - ${dep.nome}`,
+                     // valor: -VALOR_DEDUCAO_DEPENDENTE,
+                     // data: g.Pagamento
+                   // });
+                 // });
+                //  dependentDeductionApplied = true;
+              //  }
+             // }
+     //       }
+     //     });
+     //   }
+    //  });
+  //  }
 
     // Se não houve gozos (ou não foi aplicada a dedução neles) mas tem 13º salário, aplicar a dedução também
-    if (!dependentDeductionApplied && aggregated['13º Salário (Exclusiva)'] !== 0 && Array.isArray(worker.dependentes)) {
+    if (aggregated['13º Salário (Exclusiva)'] !== 0 && Array.isArray(worker.dependentes)) {
       const fiscalDeps = worker.dependentes.filter(d => d.criterioFiscal);
       fiscalDeps.forEach(dep => {
         aggregated['13º Salário (Exclusiva)'] -= VALOR_DEDUCAO_DEPENDENTE;
