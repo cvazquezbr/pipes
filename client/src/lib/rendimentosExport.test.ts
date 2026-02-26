@@ -79,11 +79,15 @@ describe("rendimentosExport", () => {
           contracheques: [
             {
               ano: 2025,
+              mes: 1,
+              nomeFolha: "MENSAL",
               baseCalculoIrrf: "3.726,19",
               lancamentos: [],
             },
             {
               ano: 2025,
+              mes: 2,
+              nomeFolha: "EXTRA",
               baseCalculoIrrf: 4000.0,
               lancamentos: [],
             },
@@ -101,6 +105,12 @@ describe("rendimentosExport", () => {
       // 3726.19 + 4000.00 = 7726.19
       expect(aggregated[0]["Base Cálculo IRRF"]).toBeCloseTo(7726.19, 2);
       expect(aggregated[0].details["Base Cálculo IRRF"]).toHaveLength(2);
+      expect(aggregated[0].details["Base Cálculo IRRF"][0].origem).toBe(
+        "Contracheque 1/2025 - MENSAL"
+      );
+      expect(aggregated[0].details["Base Cálculo IRRF"][1].origem).toBe(
+        "Contracheque 2/2025 - EXTRA"
+      );
     });
 
     it("should aggregate from multiple paychecks of the same year", () => {
