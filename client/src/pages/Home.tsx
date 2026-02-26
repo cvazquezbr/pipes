@@ -11,6 +11,7 @@
 import { useCallback, useState } from "react";
 import { ExcelUpload } from "@/components/ExcelUpload";
 import { PDFUpload } from "@/components/PDFUpload";
+import { PDFCompressor } from "@/components/PDFCompressor";
 import { ResultsTable } from "@/components/ResultsTable";
 import { RendimentosTable } from "@/components/RendimentosTable";
 import { useInvoiceProcessor } from "@/hooks/useInvoiceProcessor";
@@ -65,6 +66,7 @@ import {
   Receipt,
   Coins,
   TrendingUp,
+  TrendingDown,
   Users,
   FileCode,
 } from "lucide-react";
@@ -72,7 +74,7 @@ import type { ExtractedInvoice } from "@/lib/types";
 
 export default function Home() {
   const [workflow, setWorkflow] = useState<
-    "nfse" | "piscofinsiss" | "irpjcsll" | "rendimentos" | null
+    "nfse" | "piscofinsiss" | "irpjcsll" | "rendimentos" | "compress" | null
   >(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isVerResultadosLoading, setIsVerResultadosLoading] = useState(false);
@@ -298,11 +300,13 @@ export default function Home() {
               { id: 2, name: "Processamento", icon: TrendingUp },
               { id: 3, name: "Resultados e Exportação", icon: LayoutList },
             ]
-          : [
-              { id: 1, name: "Planilha de Referência", icon: FileSpreadsheet },
-              { id: 2, name: "Arquivos PDF", icon: FileText },
-              { id: 3, name: "Resultados e Exportação", icon: LayoutList },
-            ];
+          : workflow === "compress"
+            ? [{ id: 1, name: "Compactação", icon: TrendingDown }]
+            : [
+                { id: 1, name: "Planilha de Referência", icon: FileSpreadsheet },
+                { id: 2, name: "Arquivos PDF", icon: FileText },
+                { id: 3, name: "Resultados e Exportação", icon: LayoutList },
+              ];
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -521,6 +525,39 @@ export default function Home() {
                   </ul>
                 </CardContent>
               </Card>
+
+              <Card
+                className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
+                onClick={() => setWorkflow("compress")}
+              >
+                <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                <CardHeader>
+                  <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <TrendingDown className="text-primary h-6 w-6" />
+                  </div>
+                  <CardTitle>Compactar PDFs</CardTitle>
+                  <CardDescription>
+                    Reduzir o tamanho de arquivos PDF mantendo o texto
+                    extraível.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Seleção de
+                      pasta local
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Compactação
+                      máxima
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Download em
+                      lote
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
@@ -577,14 +614,17 @@ export default function Home() {
 
         {workflow && (
           <div className="space-y-8">
-            {/* Step 1: Excel Upload (Reference) */}
+            {/* Step 1: Excel Upload (Reference) or Compression */}
             {currentStep === 1 && (
               <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-2 mb-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setWorkflow(null)}
+                    onClick={() => {
+                      setWorkflow(null);
+                      setCurrentStep(1);
+                    }}
                     className="-ml-2"
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
@@ -597,6 +637,8 @@ export default function Home() {
                     onFileLoaded={data => loadWorkerData(data)}
                     isLoading={isProcessing}
                   />
+                ) : workflow === "compress" ? (
+                  <PDFCompressor />
                 ) : (
                   <ExcelUpload
                     onFileLoaded={handleExcelLoaded}
@@ -604,22 +646,24 @@ export default function Home() {
                   />
                 )}
 
-                <div className="flex justify-end pt-4">
-                  <Button
-                    onClick={() => setCurrentStep(2)}
-                    disabled={
-                      isProcessing ||
-                      (workflow === "rendimentos"
-                        ? workerData.length === 0
-                        : false)
-                    }
-                    size="lg"
-                    className="min-w-[140px]"
-                  >
-                    Próximo Passo
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
+                {workflow !== "compress" && (
+                  <div className="flex justify-end pt-4">
+                    <Button
+                      onClick={() => setCurrentStep(2)}
+                      disabled={
+                        isProcessing ||
+                        (workflow === "rendimentos"
+                          ? workerData.length === 0
+                          : false)
+                      }
+                      size="lg"
+                      className="min-w-[140px]"
+                    >
+                      Próximo Passo
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
