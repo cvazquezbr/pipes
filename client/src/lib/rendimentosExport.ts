@@ -259,7 +259,6 @@ export function aggregateWorkerData(
           };
           aggregated["Base Cálculo IRRF"] += valorBC;
           aggregated.details["Base Cálculo IRRF"].push(bcDetail);
-          aggregated.allEntries.push(bcDetail);
         }
 
         if (Array.isArray(cc.lancamentos)) {

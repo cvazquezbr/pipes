@@ -15,8 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ListFilter } from "lucide-react";
+import { Search, ListFilter, Copy } from "lucide-react";
 import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface WorkerEntriesDialogProps {
   open: boolean;
@@ -49,11 +51,45 @@ export function WorkerEntriesDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Todos os Lançamentos</DialogTitle>
-          <DialogDescription>
-            Visualizando todos os lançamentos de {worker.nome} ({worker.matricula}) para o ano processado.
-          </DialogDescription>
+        <DialogHeader className="relative">
+          <div className="flex justify-between items-start pr-8">
+            <div>
+              <DialogTitle>Todos os Lançamentos</DialogTitle>
+              <DialogDescription>
+                Visualizando todos os lançamentos de {worker.nome} ({worker.matricula}) para o ano processado.
+              </DialogDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => {
+                if (!worker) return;
+
+                let text = `TRABALHADOR: ${worker.nome} (${worker.matricula})\n`;
+                text += `FILTRO ATUAL: ${searchTerm || "Nenhum"}\n\n`;
+                text += `Origem\tCódigo\tDescrição\tValor\n`;
+
+                filteredEntries.forEach((entry) => {
+                  text += `${entry.origem}\t${entry.codigo || "-"}\t${
+                    entry.descricao || "-"
+                  }\tR$ ${entry.valor.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                  })}\n`;
+                });
+
+                text += `\nTOTAL FILTRADO: R$ ${filteredEntries
+                  .reduce((acc, curr) => acc + curr.valor, 0)
+                  .toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+                navigator.clipboard.writeText(text);
+                toast.success("Dados copiados para a área de transferência");
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copiar
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="relative my-4">

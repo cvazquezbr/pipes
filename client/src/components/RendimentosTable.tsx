@@ -209,7 +209,7 @@ export function RendimentosTable({
     key: keyof AggregatedWorkerData;
     align?: "left" | "right";
   }[] = [
-    { label: "Ações", key: "nome" as any, align: "left" },
+    { label: "Ações", key: "actions" as any, align: "left" },
     { label: "Status PDF", key: "pdfData" as any, align: "left" },
     { label: "Matrícula", key: "matricula", align: "left" },
     { label: "Nome", key: "nome", align: "left" },
