@@ -95,8 +95,13 @@ export async function compressPDF(
                try {
                  const newContents = await recompressImage(obj.contents);
                  if (newContents.length < obj.contents.length) {
+                   const entries: Record<string, any> = {};
+                   dict.entries().forEach(([key, value]) => {
+                     entries[key.toString()] = value;
+                   });
+
                    const newStream = context.flateStream(newContents, {
-                     ...dict.entries(),
+                     ...entries,
                      Filter: PDFName.of("FlateDecode"),
                    });
                    context.assign(ref, newStream);
