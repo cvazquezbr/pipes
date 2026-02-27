@@ -190,7 +190,6 @@ export function aggregateWorkerData(
         "250",
         "805",
         "806",
-        "937",
         "940",
         "8112",
         "8125",
