@@ -45,10 +45,10 @@ describe('informeExtractor', () => {
 
   it('should parse with different hyphens and colon variations', () => {
     const texts = [
-      'Nome Completo: JOAO DA SILVA - 12345',
-      'Nome Completo:JOAO DA SILVA-12345',
-      'Nome Completo : JOAO DA SILVA – 12345', // en dash
-      'Nome Completo; JOAO DA SILVA — 12345', // em dash
+      'Nome Completo: JOAO DA SILVA - 12345\n1. Total dos rendimentos 100,00',
+      'Nome Completo:JOAO DA SILVA-12345\n1. Total dos rendimentos 100,00',
+      'Nome Completo : JOAO DA SILVA – 12345\n1. Total dos rendimentos 100,00', // en dash
+      'Nome Completo; JOAO DA SILVA — 12345\n1. Total dos rendimentos 100,00', // em dash
     ];
 
     texts.forEach(t => {
@@ -56,6 +56,7 @@ describe('informeExtractor', () => {
       expect(result, `Failed for: ${t}`).toHaveLength(1);
       expect(result[0].matricula).toBe('12345');
       expect(result[0].nome).toBe('JOAO DA SILVA');
+      expect(result[0].totalRendimentos).toBe(100);
     });
   });
 
@@ -93,5 +94,21 @@ describe('informeExtractor', () => {
     expect(result[0].totalRendimentos).toBe(78609.11);
     expect(result[0].previdenciaOficial).toBe(8934.37);
     expect(result[0].irrf).toBe(0);
+  });
+
+  it('should filter out workers with no financial data', () => {
+    const text = `
+      Nome Completo: TRABALHADOR SEM DADOS - 02
+      1. Total dos rendimentos 0,00
+      2. Contribuição previdenciária 0,00
+
+      Nome Completo: TRABALHADOR COM DADOS - 03
+      1. Total dos rendimentos 1.000,00
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].matricula).toBe('03');
+    expect(result[0].nome).toBe('TRABALHADOR COM DADOS');
   });
 });
