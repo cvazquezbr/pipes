@@ -221,9 +221,13 @@ export default function Home() {
 
     // Mesclar com dados extraídos do PDF
     if (extractedInformes.length > 0) {
+      // Normalizar matricula para casamento (remover zeros à esquerda e espaços)
+      const normalizeMatricula = (m: string) => m.trim().replace(/^0+/, "");
+
       aggregatedWorkers = aggregatedWorkers.map(worker => {
+        const workerMatricula = normalizeMatricula(worker.matricula);
         const informe = extractedInformes.find(
-          inf => inf.matricula === worker.matricula
+          inf => normalizeMatricula(inf.matricula) === workerMatricula
         );
         if (informe) {
           return {
@@ -856,6 +860,7 @@ export default function Home() {
 
                     <RendimentosTable
                       data={aggregatedWorkers}
+                      extractedInformes={extractedInformes}
                       processingYear={processingYear}
                       onCellClick={handleCellClick}
                       onExport={() =>
