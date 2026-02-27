@@ -63,6 +63,7 @@ import {
   LayoutList,
   Loader2,
   X,
+  Copy,
   Receipt,
   Coins,
   TrendingUp,
@@ -1626,11 +1627,103 @@ export default function Home() {
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedDetail?.category}</DialogTitle>
-            <DialogDescription>
-              Detalhamento dos lançamentos para {selectedDetail?.workerName}
-            </DialogDescription>
+          <DialogHeader className="relative">
+            <div className="flex justify-between items-start pr-8">
+              <div>
+                <DialogTitle>{selectedDetail?.category}</DialogTitle>
+                <DialogDescription>
+                  Detalhamento dos lançamentos para {selectedDetail?.workerName}
+                </DialogDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => {
+                  if (!selectedDetail) return;
+
+                  let text = `DETALHAMENTO: ${selectedDetail.category}\n`;
+                  text += `TRABALHADOR: ${selectedDetail.workerName}\n\n`;
+
+                  // Adicionar comparação com PDF se houver
+                  const worker = aggregatedWorkers.find(
+                    w => w.nome === selectedDetail.workerName
+                  );
+                  if (worker && worker.pdfData) {
+                    const pdfMapping: Record<string, number> = {
+                      "Rendimentos Tributáveis": worker.pdfData.totalRendimentos,
+                      "Previdência Oficial": worker.pdfData.previdenciaOficial,
+                      "IRRF (Mensal/Férias)": worker.pdfData.irrf,
+                      "13º Salário (Exclusiva)": worker.pdfData.decimoTerceiro,
+                      "IRRF sobre 13º (Exclusiva)":
+                        worker.pdfData.irrfDecimoTerceiro,
+                      "PLR (Exclusiva)": worker.pdfData.plr,
+                      "Desconto Plano de Saúde": worker.pdfData.planoSaude.reduce(
+                        (acc: number, ps: any) => acc + ps.valor,
+                        0
+                      ),
+                    };
+
+                    const pdfValue = pdfMapping[selectedDetail.category];
+                    if (pdfValue !== undefined) {
+                      const jsonValue = selectedDetail.items.reduce(
+                        (acc, item) => acc + item.valor,
+                        0
+                      );
+                      const diff = jsonValue - pdfValue;
+
+                      text += `COMPARAÇÃO COM INFORME (PDF):\n`;
+                      text += `Calculado (JSON): R$ ${jsonValue.toLocaleString(
+                        "pt-BR",
+                        { minimumFractionDigits: 2 }
+                      )}\n`;
+                      text += `Extraído (PDF): R$ ${pdfValue.toLocaleString(
+                        "pt-BR",
+                        { minimumFractionDigits: 2 }
+                      )}\n`;
+                      text += `Diferença: R$ ${diff.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}\n\n`;
+
+                      if (
+                        selectedDetail.category === "Desconto Plano de Saúde" &&
+                        worker.pdfData.planoSaude.length > 0
+                      ) {
+                        text += `BENEFICIÁRIOS NO PDF:\n`;
+                        worker.pdfData.planoSaude.forEach((ps: any) => {
+                          text += `- ${ps.beneficiario}: R$ ${ps.valor.toLocaleString(
+                            "pt-BR",
+                            { minimumFractionDigits: 2 }
+                          )}\n`;
+                        });
+                        text += `\n`;
+                      }
+                    }
+                  }
+
+                  text += `LANÇAMENTOS:\n`;
+                  text += `Origem\tCódigo\tDescrição\tData\tValor\n`;
+                  selectedDetail.items.forEach(item => {
+                    text += `${item.origem}\t${item.codigo || "-"}\t${
+                      item.descricao || "-"
+                    }\t${item.data || "-"}\tR$ ${item.valor.toLocaleString(
+                      "pt-BR",
+                      { minimumFractionDigits: 2 }
+                    )}\n`;
+                  });
+
+                  text += `\nTOTAL AGREGADO: R$ ${selectedDetail.items
+                    .reduce((acc, item) => acc + item.valor, 0)
+                    .toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+                  navigator.clipboard.writeText(text);
+                  toast.success("Dados copiados para a área de transferência");
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copiar
+              </Button>
+            </div>
           </DialogHeader>
 
           {/* Comparação com PDF se disponível */}
