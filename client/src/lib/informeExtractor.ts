@@ -184,6 +184,15 @@ export function parseInformeText(text: string): ExtractedInforme[] {
       });
     }
 
+    // Outro formato de Plano de Saúde: DESCONTO PLANO DE SAÚDE [valor]
+    const planoSaudeDescontoPattern = /DESCONTO\s+PLANO\s+DE\s+SAÚDE\s+([\d.,]+)/gi;
+    while ((psMatch = planoSaudeDescontoPattern.exec(workerText)) !== null) {
+      informe.planoSaude.push({
+        beneficiario: "DESCONTO PLANO DE SAÚDE",
+        valor: parseBRLValue(psMatch[1])
+      });
+    }
+
     // Se todos os campos financeiros forem zero, provavelmente é um falso positivo (ex: cabeçalhos, templates)
     const hasData = informe.totalRendimentos !== 0 ||
                     informe.previdenciaOficial !== 0 ||
