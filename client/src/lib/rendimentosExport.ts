@@ -199,7 +199,7 @@ export function aggregateWorkerData(
         "9384",
         "9661",
       ],
-      previdenciaOficial: ["812", "821", "998", "843", "825","826", "858"],
+      previdenciaOficial: ["812", "821", "998", "843", "826", "858"],
       inssDifFerDescAMaior: "836",
       irrfMensal: ["999", "942", "828", "8128"],
       salario13: ["12", "8104", "800", "801", "802", "8216", "8374", "8550"],
