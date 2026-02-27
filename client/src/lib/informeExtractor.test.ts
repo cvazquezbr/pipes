@@ -76,7 +76,7 @@ describe('informeExtractor', () => {
     expect(result[1].totalRendimentos).toBe(20000);
   });
 
-  it('should parse values appearing before rubrics (user snippet)', () => {
+  it('should parse values appearing before rubrics (user snippet 1)', () => {
     const text = `
       1. Fonte Pagadora Pessoa Jurídica ou Pessoa Física Nome Empresarial / Nome Completo CNPJ/CPF 02.434.797/0001-60 FATTO CONSULTORIA E SISTEMAS LTDA
       2. Pessoa Física Beneficiária dos Rendimentos CPF Nome Completo - 000155 935.016.503-10 AGNALDO CORREIA DOS SANTOS
@@ -94,6 +94,38 @@ describe('informeExtractor', () => {
     expect(result[0].totalRendimentos).toBe(78609.11);
     expect(result[0].previdenciaOficial).toBe(8934.37);
     expect(result[0].irrf).toBe(0);
+  });
+
+  it('should parse user snippet with CPF before Name and Matricula after hyphen', () => {
+    const text = `
+      2. Pessoa Física Beneficiária dos Rendimentos
+      CPF Nome Completo
+      935.016.503-10 AGNALDO CORREIA DOS SANTOS - 000155
+      3. Rendimentos Tributáveis...
+      78.609,11 1. Total dos rendimentos (inclusive férias).
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].matricula).toBe('000155');
+    expect(result[0].nome).toBe('AGNALDO CORREIA DOS SANTOS');
+    expect(result[0].totalRendimentos).toBe(78609.11);
+  });
+
+  it('should parse user snippet with Name and Matricula on same line with CPF in between', () => {
+    const text = `
+      2. Pessoa Física Beneficiária dos Rendimentos
+      CPF Nome Completo
+      935.016.503-10 AGNALDO CORREIA DOS SANTOS - 000155
+      3. Rendimentos Tributáveis...
+      1.234,56 1. Total dos rendimentos (inclusive férias).
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].matricula).toBe('000155');
+    expect(result[0].nome).toBe('AGNALDO CORREIA DOS SANTOS');
+    expect(result[0].totalRendimentos).toBe(1234.56);
   });
 
   it('should filter out workers with no financial data', () => {
