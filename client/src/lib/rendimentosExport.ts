@@ -220,7 +220,7 @@ export function aggregateWorkerData(
         [
           "999", 
           "942", 
-          //"828", 
+          "828", // retornado
           "8128"
         ],
       salario13: ["12", "8104", "800", "801", "802", "8216", "8374", "8550"],
