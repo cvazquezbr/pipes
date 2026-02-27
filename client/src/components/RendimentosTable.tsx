@@ -27,8 +27,16 @@ import {
   FileUp,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Loader2,
+  FileText,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
 import { extractInformesFromPDF, type ExtractedInforme } from "@/lib/informeExtractor";
 import { toast } from "sonner";
@@ -59,6 +67,41 @@ export function RendimentosTable({
   onPDFLoaded,
 }: RendimentosTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+
+  const getPDFValueForCategory = (worker: AggregatedWorkerData, category: string): number | undefined => {
+    if (!worker.pdfData) return undefined;
+
+    switch (category) {
+      case "Rendimentos Tributáveis": return worker.pdfData.totalRendimentos;
+      case "Previdência Oficial": return worker.pdfData.previdenciaOficial;
+      case "IRRF (Mensal/Férias)": return worker.pdfData.irrf;
+      case "13º Salário (Exclusiva)": return worker.pdfData.decimoTerceiro;
+      case "IRRF sobre 13º (Exclusiva)": return worker.pdfData.irrfDecimoTerceiro;
+      case "PLR (Exclusiva)": return worker.pdfData.plr;
+      case "Desconto Plano de Saúde": return worker.pdfData.planoSaude.reduce((acc, ps) => acc + ps.valor, 0);
+      default: return undefined;
+    }
+  };
+
+  const hasDivergence = (worker: AggregatedWorkerData): boolean => {
+    if (!worker.pdfData) return false;
+
+    const categories = [
+      "Rendimentos Tributáveis",
+      "Previdência Oficial",
+      "IRRF (Mensal/Férias)",
+      "13º Salário (Exclusiva)",
+      "IRRF sobre 13º (Exclusiva)",
+      "PLR (Exclusiva)",
+      "Desconto Plano de Saúde"
+    ];
+
+    return categories.some(cat => {
+      const jsonVal = worker[cat as keyof AggregatedWorkerData] as number;
+      const pdfVal = getPDFValueForCategory(worker, cat);
+      return pdfVal !== undefined && Math.abs(jsonVal - pdfVal) > 0.01;
+    });
+  };
   const [isUploadingPDF, setIsUploadingPDF] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
@@ -267,13 +310,23 @@ export function RendimentosTable({
                       <TableRow key={i} className="hover:bg-slate-50">
                         <TableCell className="p-1">
                           {w.pdfData ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 w-fit"
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              OK
-                            </Badge>
+                            hasDivergence(w) ? (
+                              <Badge
+                                variant="outline"
+                                className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1 w-fit"
+                              >
+                                <AlertTriangle className="h-3 w-3" />
+                                Divergente
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 w-fit"
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                OK
+                              </Badge>
+                            )
                           ) : (
                             <Badge
                               variant="outline"
@@ -295,17 +348,72 @@ export function RendimentosTable({
                         </TableCell>
                         <TableCell className="p-1">{w.cpf}</TableCell>
 
-                        {columns.slice(4).map(col => (
-                          <TableCell
-                            key={col.key}
-                            className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all"
-                            onClick={() => onCellClick(w, col.key as string)}
-                          >
-                            {(w[col.key] as number).toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </TableCell>
-                        ))}
+                        {columns.slice(4).map(col => {
+                          const jsonVal = w[col.key as keyof AggregatedWorkerData] as number;
+                          const pdfVal = getPDFValueForCategory(w, col.key as string);
+                          const hasDiff = pdfVal !== undefined && Math.abs(jsonVal - pdfVal) > 0.01;
+                          const diff = pdfVal !== undefined ? jsonVal - pdfVal : 0;
+
+                          const content = (
+                            <TableCell
+                              key={col.key}
+                              className={`p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all ${hasDiff ? "text-destructive font-bold" : ""}`}
+                              onClick={() => onCellClick(w, col.key as string)}
+                            >
+                              <div className="flex items-center justify-end gap-1">
+                                {hasDiff && <AlertTriangle className="h-3 w-3" />}
+                                {jsonVal.toLocaleString("pt-BR", {
+                                  minimumFractionDigits: 2,
+                                })}
+                              </div>
+                            </TableCell>
+                          );
+
+                          if (pdfVal !== undefined) {
+                            return (
+                              <TooltipProvider key={col.key}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    {content}
+                                  </TooltipTrigger>
+                                  <TooltipContent className="p-4 w-64 bg-white shadow-xl border-slate-200">
+                                    <div className="space-y-3">
+                                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b pb-1">
+                                        <FileText className="h-3 w-3" />
+                                        Comparação com Informe (PDF)
+                                      </div>
+
+                                      <div className="grid grid-cols-1 gap-2">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-[10px] text-slate-500">Calculado (JSON)</span>
+                                          <span className="text-sm font-mono font-bold">
+                                            {jsonVal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-[10px] text-slate-500">Extraído (PDF)</span>
+                                          <span className="text-sm font-mono font-bold">
+                                            {pdfVal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center border-t pt-2">
+                                          <span className="text-[10px] text-slate-500 font-bold">Diferença</span>
+                                          <span className={`text-sm font-mono font-bold ${hasDiff ? "text-destructive" : "text-green-600"}`}>
+                                            {diff.toLocaleString("pt-BR", { minimumFractionDigits: 2, signDisplay: 'always' })}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          }
+
+                          return content;
+                        })}
                       </TableRow>
                     ))
                   ) : (
