@@ -158,4 +158,43 @@ describe('informeExtractor', () => {
       valor: 1803.23
     });
   });
+
+  it('should parse "DESCONTO PLANO DE SAÚDE" with newline and R$', () => {
+    const text = `
+      Nome Completo: JOAO DA SILVA - 12345
+      1. Total dos rendimentos 1.000,00
+      DESCONTO PLANO DE SAÚDE
+      R$ 16.117,90
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].planoSaude).toHaveLength(1);
+    expect(result[0].planoSaude[0]).toEqual({
+      beneficiario: 'DESCONTO PLANO DE SAÚDE',
+      valor: 16117.90
+    });
+  });
+
+  it('should exclusively keep "DESCONTO PLANO DE SAÚDE" and ignore false positives', () => {
+    const text = `
+      Nome Completo: JOAO DA SILVA - 12345
+      1. Total dos rendimentos 1.000,00
+      Beneficiários no PDF:
+      Tipo CPF Data Nasc.
+      R$ 18,00
+      DESCONTO PLANO DE SAÚDE
+      R$ 16.117,90
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].planoSaude).toHaveLength(1);
+    expect(result[0].planoSaude[0]).toEqual({
+      beneficiario: 'DESCONTO PLANO DE SAÚDE',
+      valor: 16117.90
+    });
+    // Ensure R$ 18,00 was NOT captured as a health plan value
+    expect(result[0].planoSaude.map(p => p.valor)).not.toContain(18);
+  });
 });

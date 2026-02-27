@@ -177,20 +177,31 @@ export function parseInformeText(text: string): ExtractedInforme[] {
     // Plano de Saúde (Geralmente mantém o padrão Label: Value mesmo em layouts "Antes")
     const planoSaudePattern = /Beneficiário\s*do\s*Plano\s*de\s*Saúde\s*[:;]?\s*(.*?)\s*Valor\s*Pago\s*[:;]?\s*([\d.,]+)/gi;
     let psMatch;
+    const extractedPlanoSaude: { beneficiario: string; valor: number }[] = [];
+
     while ((psMatch = planoSaudePattern.exec(workerText)) !== null) {
-      informe.planoSaude.push({
+      extractedPlanoSaude.push({
         beneficiario: psMatch[1].trim(),
         valor: parseBRLValue(psMatch[2])
       });
     }
 
     // Outro formato de Plano de Saúde: DESCONTO PLANO DE SAÚDE [valor]
-    const planoSaudeDescontoPattern = /DESCONTO\s+PLANO\s+DE\s+SAÚDE\s+([\d.,]+)/gi;
+    // O valor pode estar na linha seguinte ou precedido por R$
+    const planoSaudeDescontoPattern = /DESCONTO\s+PLANO\s+DE\s+SAÚDE\s*(?:\n|\r|\s)*(?:R\$\s*)?([\d.,]+)/gi;
+    const extractedDesconto: { beneficiario: string; valor: number }[] = [];
     while ((psMatch = planoSaudeDescontoPattern.exec(workerText)) !== null) {
-      informe.planoSaude.push({
+      extractedDesconto.push({
         beneficiario: "DESCONTO PLANO DE SAÚDE",
         valor: parseBRLValue(psMatch[1])
       });
+    }
+
+    // Se encontramos o formato "DESCONTO PLANO DE SAÚDE", ele tem precedência e deve ser o único considerado
+    if (extractedDesconto.length > 0) {
+      informe.planoSaude = extractedDesconto;
+    } else {
+      informe.planoSaude = extractedPlanoSaude;
     }
 
     // Se todos os campos financeiros forem zero, provavelmente é um falso positivo (ex: cabeçalhos, templates)
