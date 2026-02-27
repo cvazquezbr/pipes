@@ -49,6 +49,7 @@ interface RendimentosTableProps {
   rawText?: string;
   processingYear: string;
   onCellClick: (worker: any, category: string) => void;
+  onViewAllEntries?: (worker: AggregatedWorkerData) => void;
   onExport: () => void;
   onPDFLoaded?: (informes: ExtractedInforme[], rawText: string) => void;
 }
@@ -64,6 +65,7 @@ export function RendimentosTable({
   rawText,
   processingYear,
   onCellClick,
+  onViewAllEntries,
   onExport,
   onPDFLoaded,
 }: RendimentosTableProps) {
@@ -207,6 +209,7 @@ export function RendimentosTable({
     key: keyof AggregatedWorkerData;
     align?: "left" | "right";
   }[] = [
+    { label: "Ações", key: "nome" as any, align: "left" },
     { label: "Status PDF", key: "pdfData" as any, align: "left" },
     { label: "Matrícula", key: "matricula", align: "left" },
     { label: "Nome", key: "nome", align: "left" },
@@ -330,6 +333,25 @@ export function RendimentosTable({
                   {filteredAndSortedData.length > 0 ? (
                     filteredAndSortedData.map((w, i) => (
                       <TableRow key={i} className="hover:bg-slate-50">
+                        <TableCell className="p-1 text-center">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => onViewAllEntries?.(w)}
+                                >
+                                  <LayoutList className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Ver todos os lançamentos
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
                         <TableCell className="p-1">
                           {w.pdfData ? (
                             hasDivergence(w) ? (

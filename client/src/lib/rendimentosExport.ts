@@ -72,6 +72,7 @@ export interface AggregatedWorkerData {
   "Desconto Plano de Saúde": number;
   "Rendimentos Isentos": number;
   allCodes: (string | number)[];
+  allEntries: DetailLancamento[];
   details: Record<string, DetailLancamento[]>;
   pdfData?: {
     totalRendimentos: number;
@@ -159,6 +160,7 @@ export function aggregateWorkerData(
       "Desconto Plano de Saúde": 0,
       "Rendimentos Isentos": 0,
       allCodes: [],
+      allEntries: [],
       details: {
         "Rendimentos Tributáveis": [],
         "Previdência Oficial": [],
@@ -250,12 +252,14 @@ export function aggregateWorkerData(
         // Acumular Base Cálculo IRRF do contracheque
         if (cc.baseCalculoIrrf) {
           const valorBC = parseValue(cc.baseCalculoIrrf);
-          aggregated["Base Cálculo IRRF"] += valorBC;
-          aggregated.details["Base Cálculo IRRF"].push({
+          const bcDetail = {
             origem: `${cc.ano} / ${cc.nomeFolha}`,
             descricao: "Base Cálculo IRRF",
             valor: valorBC,
-          });
+          };
+          aggregated["Base Cálculo IRRF"] += valorBC;
+          aggregated.details["Base Cálculo IRRF"].push(bcDetail);
+          aggregated.allEntries.push(bcDetail);
         }
 
         if (Array.isArray(cc.lancamentos)) {
@@ -274,6 +278,8 @@ export function aggregateWorkerData(
               descricao: item.descricao,
               valor: valor,
             };
+
+            aggregated.allEntries.push(detail);
 
             if (rules.rendimentosTributaveis.includes(codigo)) {
               aggregated["Rendimentos Tributáveis"] += valor;

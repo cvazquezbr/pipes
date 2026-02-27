@@ -14,6 +14,7 @@ import { PDFUpload } from "@/components/PDFUpload";
 import { PDFCompressor } from "@/components/PDFCompressor";
 import { ResultsTable } from "@/components/ResultsTable";
 import { RendimentosTable } from "@/components/RendimentosTable";
+import { WorkerEntriesDialog } from "@/components/WorkerEntriesDialog";
 import { useInvoiceProcessor } from "@/hooks/useInvoiceProcessor";
 import {
   exportToCSV,
@@ -72,6 +73,7 @@ import {
   FileCode,
 } from "lucide-react";
 import type { ExtractedInvoice } from "@/lib/types";
+import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
 
 export default function Home() {
   const [workflow, setWorkflow] = useState<
@@ -90,6 +92,8 @@ export default function Home() {
     category: string;
     items: any[];
   } | null>(null);
+  const [entriesDialogOpen, setEntriesDialogOpen] = useState(false);
+  const [selectedWorkerForEntries, setSelectedWorkerForEntries] = useState<AggregatedWorkerData | null>(null);
 
   const {
     invoices,
@@ -202,6 +206,11 @@ export default function Home() {
       items: worker.details[category] || [],
     });
     setDetailDialogOpen(true);
+  }, []);
+
+  const handleViewAllEntries = useCallback((worker: AggregatedWorkerData) => {
+    setSelectedWorkerForEntries(worker);
+    setEntriesDialogOpen(true);
   }, []);
 
   const handleClearAll = useCallback(() => {
@@ -867,6 +876,7 @@ export default function Home() {
                       rawText={rawInformeText}
                       processingYear={processingYear}
                       onCellClick={handleCellClick}
+                      onViewAllEntries={handleViewAllEntries}
                       onExport={() =>
                         exportRendimentosToExcel(
                           aggregatedWorkers,
@@ -1623,6 +1633,13 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Worker All Entries Dialog */}
+      <WorkerEntriesDialog
+        open={entriesDialogOpen}
+        onOpenChange={setEntriesDialogOpen}
+        worker={selectedWorkerForEntries}
+      />
 
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
