@@ -445,13 +445,11 @@ export function exportRendimentosToExcel(
   const formattedData = data.map(row => ({
     matricula: row.matricula,
     nome: row.nome,
-    cpf: row.cpf,
     "Rendimentos Tributáveis": Number(
       row["Rendimentos Tributáveis"].toFixed(2)
     ),
     "Previdência Oficial": Number(row["Previdência Oficial"].toFixed(2)),
     "IRRF (Mensal/Férias)": Number(row["IRRF (Mensal/Férias)"].toFixed(2)),
-    "Base Cálculo IRRF": Number(row["Base Cálculo IRRF"].toFixed(2)),
     "13º Salário (Exclusiva)": Number(
       row["13º Salário (Exclusiva)"].toFixed(2)
     ),
@@ -460,9 +458,6 @@ export function exportRendimentosToExcel(
     ),
     "CP 13º Salário": Number(row["CP 13º Salário"].toFixed(2)),
     "PLR (Exclusiva)": Number(row["PLR (Exclusiva)"].toFixed(2)),
-    "IRRF sobre PLR (Exclusiva)": Number(
-      row["IRRF sobre PLR (Exclusiva)"].toFixed(2)
-    ),
     "Desconto Plano de Saúde": Number(
       row["Desconto Plano de Saúde"].toFixed(2)
     ),
@@ -481,16 +476,13 @@ export function exportRendimentosToExcel(
   const colWidths = [
     { wch: 15 }, // matricula
     { wch: 40 }, // nome
-    { wch: 15 }, // cpf
     { wch: 30 }, // Rendimentos Tributáveis
     { wch: 25 }, // Previdência Oficial
     { wch: 25 }, // IRRF (Mensal/Férias)
-    { wch: 25 }, // Base Cálculo IRRF
     { wch: 25 }, // 13º Salário (Exclusiva)
     { wch: 25 }, // IRRF sobre 13º (Exclusiva)
     { wch: 25 }, // CP 13º Salário
     { wch: 20 }, // PLR (Exclusiva)
-    { wch: 25 }, // IRRF sobre PLR (Exclusiva)
     { wch: 25 }, // Desconto Plano de Saúde
     { wch: 25 }, // Rendimentos Isentos
   ];
