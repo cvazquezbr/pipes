@@ -71,6 +71,7 @@ export interface AggregatedWorkerData {
   "IRRF sobre PLR (Exclusiva)": number;
   "Desconto Plano de Saúde": number;
   "Rendimentos Isentos": number;
+  allCodes: (string | number)[];
   details: Record<string, DetailLancamento[]>;
   pdfData?: {
     totalRendimentos: number;
@@ -157,6 +158,7 @@ export function aggregateWorkerData(
       "IRRF sobre PLR (Exclusiva)": 0,
       "Desconto Plano de Saúde": 0,
       "Rendimentos Isentos": 0,
+      allCodes: [],
       details: {
         "Rendimentos Tributáveis": [],
         "Previdência Oficial": [],
@@ -259,6 +261,12 @@ export function aggregateWorkerData(
         if (Array.isArray(cc.lancamentos)) {
           cc.lancamentos.forEach(item => {
             const codigo = String(item.codigo);
+
+            if (item.codigo !== undefined && item.codigo !== null) {
+              if (!aggregated.allCodes.includes(item.codigo)) {
+                aggregated.allCodes.push(item.codigo);
+              }
+            }
             const valor = parseValue(item.valor);
             const detail: DetailLancamento = {
               origem: `${cc.ano} / ${cc.nomeFolha}`,

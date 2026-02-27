@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   Loader2,
   FileText,
+  LayoutList,
 } from "lucide-react";
 import {
   Tooltip,
@@ -67,6 +68,7 @@ export function RendimentosTable({
   onPDFLoaded,
 }: RendimentosTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [codeFilter, setCodeFilter] = useState("");
 
   const getPDFValueForCategory = (worker: AggregatedWorkerData, category: string): number | undefined => {
     if (!worker.pdfData) return undefined;
@@ -150,7 +152,7 @@ export function RendimentosTable({
   const filteredAndSortedData = useMemo(() => {
     let result = [...data];
 
-    // Filtering
+    // Filtering by text
     if (searchTerm) {
       const lowSearch = searchTerm.toLowerCase();
       result = result.filter(
@@ -158,6 +160,14 @@ export function RendimentosTable({
           w.nome.toLowerCase().includes(lowSearch) ||
           w.matricula.toLowerCase().includes(lowSearch) ||
           w.cpf.toLowerCase().includes(lowSearch)
+      );
+    }
+
+    // Filtering by code
+    if (codeFilter) {
+      const trimmedCode = codeFilter.trim();
+      result = result.filter(w =>
+        w.allCodes.some(c => String(c) === trimmedCode)
       );
     }
 
@@ -179,7 +189,7 @@ export function RendimentosTable({
     }
 
     return result;
-  }, [data, searchTerm, sortConfig]);
+  }, [data, searchTerm, codeFilter, sortConfig]);
 
   const renderSortIcon = (key: keyof AggregatedWorkerData) => {
     if (sortConfig.key !== key) {
@@ -230,14 +240,26 @@ export function RendimentosTable({
           <TabsTrigger value="raw">Texto Bruto</TabsTrigger>
         </TabsList>
 
-        <div className="relative w-full md:max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-          <Input
-            placeholder="Filtrar por nome, matrícula ou CPF..."
-            className="pl-9"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+        <div className="flex gap-2 w-full md:max-w-xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Input
+              placeholder="Nome, matrícula ou CPF..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="relative w-32">
+            <LayoutList className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <Input
+              placeholder="Cód..."
+              className="pl-9"
+              value={codeFilter}
+              onChange={e => setCodeFilter(e.target.value)}
+              title="Filtrar por código de lançamento"
+            />
+          </div>
         </div>
 
         <div className="flex gap-2 w-full md:w-auto">
