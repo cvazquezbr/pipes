@@ -212,7 +212,13 @@ export function aggregateWorkerData(
           "858",
         ],
       inssDifFerDescAMaior: "836",
-      irrfMensal: ["999", "942", "828", "8128"],
+      irrfMensal: 
+        [
+          "999", 
+          "942", 
+          //"828", 
+          "8128"
+        ],
       salario13: ["12", "8104", "800", "801", "802", "8216", "8374", "8550"],
       irrf13: ["804", "827"],
       cp13: ["825", "989"],
