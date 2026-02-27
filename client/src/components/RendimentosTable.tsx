@@ -18,6 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Search,
   ArrowUpDown,
@@ -71,6 +73,7 @@ export function RendimentosTable({
 }: RendimentosTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [codeFilter, setCodeFilter] = useState("");
+  const [onlyDivergent, setOnlyDivergent] = useState(false);
 
   const getPDFValueForCategory = (worker: AggregatedWorkerData, category: string): number | undefined => {
     if (!worker.pdfData) return undefined;
@@ -154,6 +157,11 @@ export function RendimentosTable({
   const filteredAndSortedData = useMemo(() => {
     let result = [...data];
 
+    // Filter by divergence
+    if (onlyDivergent) {
+      result = result.filter(w => hasDivergence(w));
+    }
+
     // Filtering by text
     if (searchTerm) {
       const lowSearch = searchTerm.toLowerCase();
@@ -213,16 +221,13 @@ export function RendimentosTable({
     { label: "Status PDF", key: "pdfData" as any, align: "left" },
     { label: "Matrícula", key: "matricula", align: "left" },
     { label: "Nome", key: "nome", align: "left" },
-    { label: "CPF", key: "cpf", align: "left" },
     { label: "Rend. Trib.", key: "Rendimentos Tributáveis", align: "right" },
     { label: "Prev. Ofic.", key: "Previdência Oficial", align: "right" },
     { label: "IRRF", key: "IRRF (Mensal/Férias)", align: "right" },
-    { label: "Base Cálc. IRRF", key: "Base Cálculo IRRF", align: "right" },
     { label: "13º Sal.", key: "13º Salário (Exclusiva)", align: "right" },
     { label: "IRRF 13º", key: "IRRF sobre 13º (Exclusiva)", align: "right" },
     { label: "CP 13º", key: "CP 13º Salário", align: "right" },
     { label: "PLR", key: "PLR (Exclusiva)", align: "right" },
-    { label: "IRRF PLR", key: "IRRF sobre PLR (Exclusiva)", align: "right" },
     { label: "Plano Saúde", key: "Desconto Plano de Saúde", align: "right" },
     { label: "Rend. Isentos", key: "Rendimentos Isentos", align: "right" },
   ];
@@ -243,7 +248,17 @@ export function RendimentosTable({
           <TabsTrigger value="raw">Texto Bruto</TabsTrigger>
         </TabsList>
 
-        <div className="flex gap-2 w-full md:max-w-xl">
+        <div className="flex gap-2 w-full md:max-w-2xl items-center">
+          <div className="flex items-center space-x-2 mr-2 min-w-fit">
+            <Switch
+              id="divergent-filter"
+              checked={onlyDivergent}
+              onCheckedChange={setOnlyDivergent}
+            />
+            <Label htmlFor="divergent-filter" className="text-xs font-medium cursor-pointer">
+              Apenas Divergentes
+            </Label>
+          </div>
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
             <Input
@@ -390,9 +405,8 @@ export function RendimentosTable({
                         >
                           {w.nome}
                         </TableCell>
-                        <TableCell className="p-1">{w.cpf}</TableCell>
 
-                        {columns.slice(5).map(col => {
+                        {columns.slice(4).map(col => {
                           const jsonVal = w[col.key as keyof AggregatedWorkerData] as number;
                           const pdfVal = getPDFValueForCategory(w, col.key as string);
                           const hasDiff = pdfVal !== undefined && Math.abs(jsonVal - pdfVal) > 0.01;
