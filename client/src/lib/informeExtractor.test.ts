@@ -74,4 +74,24 @@ describe('informeExtractor', () => {
     expect(result[1].matricula).toBe('67890');
     expect(result[1].totalRendimentos).toBe(20000);
   });
+
+  it('should parse values appearing before rubrics (user snippet)', () => {
+    const text = `
+      1. Fonte Pagadora Pessoa Jurídica ou Pessoa Física Nome Empresarial / Nome Completo CNPJ/CPF 02.434.797/0001-60 FATTO CONSULTORIA E SISTEMAS LTDA
+      2. Pessoa Física Beneficiária dos Rendimentos CPF Nome Completo - 000155 935.016.503-10 AGNALDO CORREIA DOS SANTOS
+      Natureza do Rendimento RENDIMENTO DO TRABALHO ASSALARIADO NO PAÍS
+      3. Rendimentos Tributáveis, Deduções e Imposto sobre a Renda Retido na Fonte Valores em Reais
+      78.609,11 1. Total dos rendimentos (inclusive férias).
+      8.934,37 2. Contribuição previdenciária oficial.
+      0,00 5. Imposto sobre a Renda Retido na Fonte (IRRF).
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].matricula).toBe('000155');
+    expect(result[0].nome).toBe('AGNALDO CORREIA DOS SANTOS');
+    expect(result[0].totalRendimentos).toBe(78609.11);
+    expect(result[0].previdenciaOficial).toBe(8934.37);
+    expect(result[0].irrf).toBe(0);
+  });
 });

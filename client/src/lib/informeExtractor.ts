@@ -47,9 +47,8 @@ function normalizeText(text: string): string {
   // 2. Remover caracteres de controle e marcas invisíveis
   normalized = normalized.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200C\u200D\u200E\u200F\u061C]/g, "");
 
-  // 3. Normalizar espaços múltiplos e quebras de linha
+  // 3. Normalizar espaços múltiplos. Não removemos quebras de linha aqui pois o extrator de PDF já cuidou de organizá-las.
   normalized = normalized.replace(/[ \t]+/g, " ");
-  normalized = normalized.replace(/\n\s*\n/g, "\n");
 
   return normalized.trim();
 }
@@ -59,48 +58,44 @@ function normalizeText(text: string): string {
  */
 export function parseInformeText(text: string): ExtractedInforme[] {
   console.log("[InformeExtractor] Iniciando parse de texto. Tamanho:", text.length);
-  console.log("[InformeExtractor] Amostra do texto (500 chars):", text.substring(0, 500));
   const normalized = normalizeText(text);
 
-  // O PDF pode conter vários informes. Geralmente cada um começa com algo como "Comprovante de Rendimentos"
-  // ou os dados da fonte pagadora.
-  // No entanto, a forma mais segura de dividir é pelo Nome Completo que contém a matrícula.
-
-  // Padrão para identificar o início de um novo trabalhador e extrair Nome e Matrícula
-  // "Nome Completo: NOME - MATRICULA"
-  // Mais robusto: aceita diferentes tipos de traços e espaços opcionais.
-  const workerSplitPattern = /Nome Completo\s*[:;]?\s*([^-–—\n]+?)\s*[-–—]\s*(\d+)/gi;
+  // Padrão para identificar o início de um novo trabalhador e extrair Nome e Matrícula.
+  // O layout pode variar: "Nome Completo: NOME - MATRICULA" ou "Nome Completo - MATRICULA CPF NOME".
+  const workerSplitPattern = /Nome Completo\s*[:;]?\s*(?:([^-–—\n\d]+?)\s*[-–—]\s*)?(\d+)/gi;
 
   const informes: ExtractedInforme[] = [];
   let match;
   const workerIndices: {index: number, nome: string, matricula: string}[] = [];
 
   while ((match = workerSplitPattern.exec(normalized)) !== null) {
-    const nome = match[1].trim();
+    let nome = match[1] ? match[1].trim() : "";
     const matricula = match[2].trim();
 
-    // Filtro para evitar capturar CNPJ/CPF da fonte pagadora que pode estar próximo a "Nome Completo"
-    // Se o nome contiver "CNPJ" ou "CPF", provavelmente é um falso positivo do layout do PDF
-    if (nome.toUpperCase().includes("CNPJ") || nome.toUpperCase().includes("CPF")) {
-      console.log(`[InformeExtractor] Ignorando possível falso positivo (CNPJ/CPF): ${nome} - ${matricula}`);
+    // Se o nome não foi capturado antes do hífen, tentamos capturar depois da matrícula e CPF (na mesma linha)
+    if (!nome) {
+      const afterMatch = normalized.substring(match.index + match[0].length).match(/^[ \t]*(?:[\d.-]+[ \t]+)?([A-ZÀ-Ú ]{3,})/);
+      if (afterMatch) {
+        nome = afterMatch[1].trim();
+      }
+    }
+
+    // Filtro para evitar capturar CNPJ/CPF da fonte pagadora
+    if (nome.toUpperCase().includes("CNPJ") || nome.toUpperCase().includes("FONTE PAGADORA") || (nome === "" && matricula.length > 10)) {
+      console.log(`[InformeExtractor] Ignorando possível falso positivo (Fonte Pagadora): ${nome} - ${matricula}`);
       continue;
     }
 
     console.log(`[InformeExtractor] Encontrado trabalhador: ${nome} - Matrícula: ${matricula}`);
     workerIndices.push({
       index: match.index,
-      nome,
+      nome: nome || `Trabalhador ${matricula}`,
       matricula
     });
   }
 
   if (workerIndices.length === 0) {
-    console.warn("[InformeExtractor] Nenhum padrão 'Nome Completo : ... - ...' encontrado no texto");
-    // Debug: procurar por Nome Completo sem o resto
-    const partialMatch = normalized.match(/Nome Completo\s*[:;]?\s*[^\n]+/gi);
-    if (partialMatch) {
-        console.log("[InformeExtractor] Encontrados possíveis cabeçalhos de nome (sem matrícula):", partialMatch);
-    }
+    console.warn("[InformeExtractor] Nenhum padrão 'Nome Completo' encontrado no texto");
     return [];
   }
 
@@ -122,33 +117,42 @@ export function parseInformeText(text: string): ExtractedInforme[] {
       rawText: workerText
     };
 
-    // 1. Total dos rendimentos (inclusive férias)
-    const totalRendMatch = workerText.match(/1\.\s*Total\s*dos\s*rendimentos\s*\(inclusive\s*férias\)\s*([\d.,]+)/i);
-    if (totalRendMatch) informe.totalRendimentos = parseBRLValue(totalRendMatch[1]);
+    const extract = (labelPattern: string) => {
+      // 1. Procurar na mesma linha (mais confiável)
+      const lines = workerText.split('\n');
+      for (const line of lines) {
+        if (new RegExp(labelPattern, 'i').test(line)) {
+          // Tenta antes: [Valor] [Rubrica]
+          const beforeMatch = line.match(new RegExp(`([\\d.]+,[\\d]{2})\\s*${labelPattern}`, 'i'));
+          if (beforeMatch) return parseBRLValue(beforeMatch[1]);
 
-    // 2. Contribuição previdenciária oficial
-    const prevMatch = workerText.match(/2\.\s*Contribuição\s*previdenciária\s*oficial\s*([\d.,]+)/i);
-    if (prevMatch) informe.previdenciaOficial = parseBRLValue(prevMatch[1]);
+          // Tenta depois: [Rubrica] [opcional qualquer coisa exceto digito] [Valor]
+          const afterMatch = line.match(new RegExp(`${labelPattern}[^\\d]*?([\\d.]+,[\\d]{2})`, 'i'));
+          if (afterMatch) return parseBRLValue(afterMatch[1]);
+        }
+      }
 
-    // 5. Imposto sobre a Renda Retido na Fonte (IRRF)
-    const irrfMatch = workerText.match(/5\.\s*Imposto\s*sobre\s*a\s*Renda\s*Retido\s*na\s*Fonte\s*\(IRRF\)\s*([\d.,]+)/i);
-    if (irrfMatch) informe.irrf = parseBRLValue(irrfMatch[1]);
+      // 2. Se não achou na mesma linha, tenta busca relaxada no texto do trabalhador
+      // Tenta ANTES (valor pode estar na linha anterior se a quebra de linha ocorreu entre valor e rubrica)
+      // Usamos [\\s\\S]{0,100}? para buscar o valor mais próximo da rubrica
+      const relaxedBeforeMatch = workerText.match(new RegExp(`([\\d.]+,[\\d]{2})[\\s\\S]{0,100}?${labelPattern}`, 'i'));
+      if (relaxedBeforeMatch) return parseBRLValue(relaxedBeforeMatch[1]);
 
-    // 1. 13º (décimo terceiro) salário
-    const decimoMatch = workerText.match(/1\.\s*13º\s*\(décimo\s*terceiro\)\s*salário\s*([\d.,]+)/i);
-    if (decimoMatch) informe.decimoTerceiro = parseBRLValue(decimoMatch[1]);
+      // Tenta DEPOIS
+      const relaxedAfterMatch = workerText.match(new RegExp(`${labelPattern}[\\s\\S]{0,100}?([\\d.]+,[\\d]{2})`, 'i'));
+      if (relaxedAfterMatch) return parseBRLValue(relaxedAfterMatch[1]);
 
-    // 2. Imposto sobre a Renda Retido na Fonte sobre 13º (décimo terceiro) salário
-    const irrfDecimoMatch = workerText.match(/2\.\s*Imposto\s*sobre\s*a\s*Renda\s*Retido\s*na\s*Fonte\s*sobre\s*13º\s*\(décimo\s*terceiro\)\s*salário\s*([\d.,]+)/i);
-    if (irrfDecimoMatch) informe.irrfDecimoTerceiro = parseBRLValue(irrfDecimoMatch[1]);
+      return 0;
+    };
 
-    // 3. Outros.Participação de lucros
-    const plrMatch = workerText.match(/3\.\s*Outros\.\s*Participação\s*de\s*lucros\s*([\d.,]+)/i);
-    if (plrMatch) informe.plr = parseBRLValue(plrMatch[1]);
+    informe.totalRendimentos = extract('1\\.\\s*Total\\s*dos\\s*rendimentos');
+    informe.previdenciaOficial = extract('2\\.\\s*Contribuição\\s*previdenciária');
+    informe.irrf = extract('5\\.\\s*Imposto\\s*sobre\\s*a\\s*Renda\\s*Retido\\s*na\\s*Fonte\\s*\\(IRRF\\)');
+    informe.decimoTerceiro = extract('1\\.\\s*13º\\s*\\(décimo\\s*terceiro\\)\\s*salário');
+    informe.irrfDecimoTerceiro = extract('2\\.\\s*Imposto\\s*sobre\\s*a\\s*Renda\\s*Retido\\s*na\\s*Fonte\\s*sobre\\s*13º\\s*\\(décimo\\s*terceiro\\)\\s*salário');
+    informe.plr = extract('3\\.\\s*Outros\\.\\s*Participação\\s*de\\s*lucros');
 
-    // Plano de Saúde
-    // Geralmente em Informações Complementares: "Beneficiário do Plano de Saúde: ... Valor Pago: ..."
-    // Pode haver múltiplos.
+    // Plano de Saúde (Geralmente mantém o padrão Label: Value mesmo em layouts "Antes")
     const planoSaudePattern = /Beneficiário\s*do\s*Plano\s*de\s*Saúde\s*[:;]?\s*(.*?)\s*Valor\s*Pago\s*[:;]?\s*([\d.,]+)/gi;
     let psMatch;
     while ((psMatch = planoSaudePattern.exec(workerText)) !== null) {
@@ -180,7 +184,28 @@ export async function extractInformesFromPDF(file: File): Promise<{
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items.map((item: any) => item.str).join(" ");
+
+    // Agrupar itens por linha baseada na coordenada Y
+    const items = textContent.items as any[];
+    items.sort((a, b) => {
+      // Diferença pequena em Y é considerada mesma linha
+      if (Math.abs(a.transform[5] - b.transform[5]) < 5) {
+        return a.transform[4] - b.transform[4]; // Ordena por X
+      }
+      return b.transform[5] - a.transform[5]; // Ordena por Y decrescente
+    });
+
+    let lastY = -1;
+    let pageText = "";
+    for (const item of items) {
+      if (lastY !== -1 && Math.abs(item.transform[5] - lastY) >= 5) {
+        pageText += "\n";
+      } else if (lastY !== -1) {
+        pageText += " ";
+      }
+      pageText += item.str;
+      lastY = item.transform[5];
+    }
     fullText += pageText + "\n";
   }
 
