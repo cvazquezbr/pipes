@@ -50,7 +50,7 @@ export function WorkerEntriesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] flex flex-col">
         <DialogHeader className="relative">
           <div className="flex justify-between items-start pr-8">
             <div>
@@ -102,24 +102,24 @@ export function WorkerEntriesDialog({
           />
         </div>
 
-        <div className="flex-1 overflow-auto rounded-md border text-[11px]">
+        <div className="flex-1 overflow-auto rounded-md border text-[12px]">
           <Table>
             <TableHeader className="bg-muted sticky top-0 z-10">
               <TableRow>
-                <TableHead className="w-[150px]">Origem</TableHead>
-                <TableHead className="w-[100px]">Código</TableHead>
+                <TableHead className="w-[180px]">Origem</TableHead>
+                <TableHead className="w-[120px]">Código</TableHead>
                 <TableHead>Descrição</TableHead>
-                <TableHead className="text-right w-[120px]">Valor</TableHead>
+                <TableHead className="text-right w-[150px]">Valor</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredEntries.length > 0 ? (
                 filteredEntries.map((entry, idx) => (
                   <TableRow key={idx} className="hover:bg-slate-50">
-                    <TableCell className="font-medium">{entry.origem}</TableCell>
-                    <TableCell className="font-mono">{entry.codigo || "-"}</TableCell>
-                    <TableCell>{entry.descricao || "-"}</TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="font-medium py-3">{entry.origem}</TableCell>
+                    <TableCell className="font-mono py-3">{entry.codigo || "-"}</TableCell>
+                    <TableCell className="py-3">{entry.descricao || "-"}</TableCell>
+                    <TableCell className="text-right font-mono py-3">
                       {entry.valor.toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}
