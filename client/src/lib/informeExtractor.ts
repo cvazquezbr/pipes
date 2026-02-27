@@ -61,14 +61,9 @@ export function parseInformeText(text: string): ExtractedInforme[] {
   const normalized = normalizeText(text);
 
   // Padrão para identificar o início de um novo trabalhador e extrair Nome e Matrícula.
-  // O usuário informou que a Matrícula fica após o hífen na seção com o "Nome Completo".
-  // Formatos comuns:
-  // 1. "Nome Completo: NOME DO TRABALHADOR - 12345"
-  // 2. "Nome Completo - 12345 999.999.999-99 NOME DO TRABALHADOR"
-  // O padrão abaixo busca "Nome Completo", opcionalmente seguido de texto, um hífen e a matrícula.
-  // Restringimos a não capturar quebras de linha entre o rótulo e o hífen para evitar falsos positivos.
-  // Usamos (?![.\d]) para garantir que a matrícula não seja o início de um CPF/CNPJ ou número decimal.
-  const workerSplitPattern = /Nome\s+Completo\s*[:;]?\s*([^-\n\r]*?)\s*[-–—]\s*(\d+)(?![.\d])/gi;
+  // Usamos uma busca que permite quebras de linha entre o rótulo e os dados, mas que para no próximo "Nome Completo".
+  // A matrícula é identificada por um hífen que NÃO seja precedido por um dígito (para evitar o hífen do CPF).
+  const workerSplitPattern = /Nome\s+Completo\s*[:;]?\s*(?:CPF\s*)?((?:(?!Nome\s+Completo)[\s\S])*?)(?<!\d)[-–—]\s*(\d+)(?![.\d])/gi;
 
   const informes: ExtractedInforme[] = [];
   let match;
@@ -86,7 +81,10 @@ export function parseInformeText(text: string): ExtractedInforme[] {
     }
 
     // Limpeza adicional de labels de formulário que podem ter sobrado
-    nome = nome.replace(/^(DO BENEFICIÁRIO|DO TRABALHADOR|NOME|COMPLETO)\s*/i, "").trim();
+    nome = nome.replace(/^(DO BENEFICIÁRIO|DO TRABALHADOR|NOME|COMPLETO|CPF)\s*/i, "").trim();
+
+    // Remover CPF do início do nome se presente (ex: 935.016.503-10 AGNALDO...)
+    nome = nome.replace(/^\d{3}\.\d{3}\.\d{3}-\d{2}\s*/, "").trim();
 
     // Se o nome ficou vazio (Formato 2), tentamos olhar o que vem logo após a matrícula/CPF
     if (!nome) {
