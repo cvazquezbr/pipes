@@ -98,6 +98,7 @@ export default function Home() {
     billSheetData,
     workerData,
     extractedInformes,
+    rawInformeText,
     isProcessing,
     progress,
     error,
@@ -106,6 +107,7 @@ export default function Home() {
     loadBillSheet,
     loadWorkerData,
     setExtractedInformes,
+    setRawInformeText,
     processPDFsParallel,
     addInvoices,
     updateInvoice,
@@ -861,6 +863,7 @@ export default function Home() {
                     <RendimentosTable
                       data={aggregatedWorkers}
                       extractedInformes={extractedInformes}
+                      rawText={rawInformeText}
                       processingYear={processingYear}
                       onCellClick={handleCellClick}
                       onExport={() =>
@@ -869,7 +872,10 @@ export default function Home() {
                           processingYear
                         )
                       }
-                      onPDFLoaded={informes => setExtractedInformes(informes)}
+                      onPDFLoaded={(informes, rawText) => {
+                        setExtractedInformes(informes);
+                        setRawInformeText(rawText);
+                      }}
                     />
                   </div>
                 ) : workflow === "nfse" ? (

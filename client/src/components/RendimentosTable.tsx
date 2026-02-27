@@ -37,10 +37,11 @@ import { PDFInformesTable } from "./PDFInformesTable";
 interface RendimentosTableProps {
   data: AggregatedWorkerData[];
   extractedInformes: ExtractedInforme[];
+  rawText?: string;
   processingYear: string;
   onCellClick: (worker: any, category: string) => void;
   onExport: () => void;
-  onPDFLoaded?: (informes: ExtractedInforme[]) => void;
+  onPDFLoaded?: (informes: ExtractedInforme[], rawText: string) => void;
 }
 
 type SortConfig = {
@@ -51,6 +52,7 @@ type SortConfig = {
 export function RendimentosTable({
   data,
   extractedInformes,
+  rawText,
   processingYear,
   onCellClick,
   onExport,
@@ -75,12 +77,15 @@ export function RendimentosTable({
 
     try {
       setIsUploadingPDF(true);
-      const informes = await extractInformesFromPDF(file);
+      const { informes, rawText: text } = await extractInformesFromPDF(file);
       if (informes.length === 0) {
-        toast.warning("Nenhum informe de rendimentos encontrado. Verifique se o PDF contém o campo 'Nome Completo' seguido de matrícula.");
+        toast.warning(
+          "Nenhum informe de rendimentos encontrado. Verifique se o PDF contém o campo 'Nome Completo' seguido de matrícula."
+        );
+        if (onPDFLoaded) onPDFLoaded(informes, text);
       } else {
         toast.success(`${informes.length} informes extraídos com sucesso`);
-        if (onPDFLoaded) onPDFLoaded(informes);
+        if (onPDFLoaded) onPDFLoaded(informes, text);
       }
     } catch (error) {
       console.error("Erro ao processar PDF:", error);
@@ -179,6 +184,7 @@ export function RendimentosTable({
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="raw">Texto Bruto</TabsTrigger>
         </TabsList>
 
         <div className="relative w-full md:max-w-sm">
@@ -331,6 +337,25 @@ export function RendimentosTable({
 
       <TabsContent value="pdf" className="mt-0">
         <PDFInformesTable data={extractedInformes} />
+      </TabsContent>
+
+      <TabsContent value="raw" className="mt-0">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">
+              Texto Bruto Extraído (Normalizado)
+            </CardTitle>
+            <CardDescription>
+              Visualize o conteúdo textual do PDF para diagnosticar problemas
+              de extração.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <pre className="max-h-[500px] overflow-auto rounded-md border bg-slate-50 p-4 text-[10px] whitespace-pre-wrap font-mono">
+              {rawText || "Nenhum PDF carregado ainda."}
+            </pre>
+          </CardContent>
+        </Card>
       </TabsContent>
     </Tabs>
   );
