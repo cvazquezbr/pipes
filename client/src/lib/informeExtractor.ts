@@ -36,16 +36,22 @@ function parseBRLValue(value: string): number {
 }
 
 /**
- * Normaliza texto do PDF
+ * Normaliza texto do PDF removendo caracteres especiais que parecem espaços
+ * e outros caracteres "exóticos" ou de controle.
  */
 function normalizeText(text: string): string {
-  let normalized = text
-    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ")
-    .replace(/[\u200C\u200D\u200E\u200F]/g, "")
-    .replace(/[\u061C\u180E]/g, " ");
+  // 1. Substituir todos os tipos de espaços Unicode por espaço normal
+  // Abrange non-breaking space, thin space, zero-width space, etc.
+  let normalized = text.replace(/[\u00A0\u1680\u180E\u2000-\u200B\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, " ");
 
-  normalized = normalized.replace(/\s+/g, " ");
-  return normalized;
+  // 2. Remover caracteres de controle e marcas invisíveis
+  normalized = normalized.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200C\u200D\u200E\u200F\u061C]/g, "");
+
+  // 3. Normalizar espaços múltiplos e quebras de linha
+  normalized = normalized.replace(/[ \t]+/g, " ");
+  normalized = normalized.replace(/\n\s*\n/g, "\n");
+
+  return normalized.trim();
 }
 
 /**
@@ -62,19 +68,29 @@ export function parseInformeText(text: string): ExtractedInforme[] {
 
   // Padrão para identificar o início de um novo trabalhador e extrair Nome e Matrícula
   // "Nome Completo: NOME - MATRICULA"
-  // Mais robusto: aceita diferentes tipos de traços e espaços opcionais
-  const workerSplitPattern = /Nome Completo\s*[:;]?\s*([^-–—]+?)\s*[-–—]\s*(\d+)/gi;
+  // Mais robusto: aceita diferentes tipos de traços e espaços opcionais.
+  const workerSplitPattern = /Nome Completo\s*[:;]?\s*([^-–—\n]+?)\s*[-–—]\s*(\d+)/gi;
 
   const informes: ExtractedInforme[] = [];
   let match;
   const workerIndices: {index: number, nome: string, matricula: string}[] = [];
 
   while ((match = workerSplitPattern.exec(normalized)) !== null) {
-    console.log(`[InformeExtractor] Encontrado trabalhador: ${match[1].trim()} - Matrícula: ${match[2].trim()}`);
+    const nome = match[1].trim();
+    const matricula = match[2].trim();
+
+    // Filtro para evitar capturar CNPJ/CPF da fonte pagadora que pode estar próximo a "Nome Completo"
+    // Se o nome contiver "CNPJ" ou "CPF", provavelmente é um falso positivo do layout do PDF
+    if (nome.toUpperCase().includes("CNPJ") || nome.toUpperCase().includes("CPF")) {
+      console.log(`[InformeExtractor] Ignorando possível falso positivo (CNPJ/CPF): ${nome} - ${matricula}`);
+      continue;
+    }
+
+    console.log(`[InformeExtractor] Encontrado trabalhador: ${nome} - Matrícula: ${matricula}`);
     workerIndices.push({
       index: match.index,
-      nome: match[1].trim(),
-      matricula: match[2].trim()
+      nome,
+      matricula
     });
   }
 
@@ -150,8 +166,12 @@ export function parseInformeText(text: string): ExtractedInforme[] {
 
 /**
  * Processa um arquivo PDF de Informe de Rendimentos
+ * Retorna os informes extraídos e o texto bruto normalizado para debug
  */
-export async function extractInformesFromPDF(file: File): Promise<ExtractedInforme[]> {
+export async function extractInformesFromPDF(file: File): Promise<{
+  informes: ExtractedInforme[];
+  rawText: string;
+}> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
@@ -164,5 +184,8 @@ export async function extractInformesFromPDF(file: File): Promise<ExtractedInfor
     fullText += pageText + "\n";
   }
 
-  return parseInformeText(fullText);
+  const normalizedText = normalizeText(fullText);
+  const informes = parseInformeText(normalizedText);
+
+  return { informes, rawText: normalizedText };
 }

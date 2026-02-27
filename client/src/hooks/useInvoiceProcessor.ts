@@ -29,6 +29,7 @@ export function useInvoiceProcessor() {
   );
   const [workerData, setWorkerData] = useState<any[]>([]);
   const [extractedInformes, setExtractedInformes] = useState<any[]>([]);
+  const [rawInformeText, setRawInformeText] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -204,6 +205,7 @@ export function useInvoiceProcessor() {
     setBillSheetData([]);
     setWorkerData([]);
     setExtractedInformes([]);
+    setRawInformeText("");
     setError(null);
     setProgress(0);
   }, []);
@@ -241,6 +243,7 @@ export function useInvoiceProcessor() {
     billSheetData,
     workerData,
     extractedInformes,
+    rawInformeText,
     isProcessing,
     progress,
     error,
@@ -251,6 +254,7 @@ export function useInvoiceProcessor() {
     loadBillSheet,
     loadWorkerData,
     setExtractedInformes,
+    setRawInformeText,
     processPDFs,
     processPDFsParallel,
     addInvoices,
