@@ -168,8 +168,7 @@ export function RendimentosTable({
       result = result.filter(
         w =>
           w.nome.toLowerCase().includes(lowSearch) ||
-          w.matricula.toLowerCase().includes(lowSearch) ||
-          w.cpf.toLowerCase().includes(lowSearch)
+          w.matricula.toLowerCase().includes(lowSearch)
       );
     }
 
@@ -199,7 +198,7 @@ export function RendimentosTable({
     }
 
     return result;
-  }, [data, searchTerm, codeFilter, sortConfig]);
+  }, [data, searchTerm, codeFilter, sortConfig, onlyDivergent]);
 
   const renderSortIcon = (key: keyof AggregatedWorkerData) => {
     if (sortConfig.key !== key) {
@@ -234,8 +233,8 @@ export function RendimentosTable({
 
   return (
     <Tabs defaultValue="conferencia" className="space-y-4">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <TabsList>
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 sticky top-[57px] z-30 bg-slate-50/80 backdrop-blur-sm py-2">
+        <TabsList className="bg-slate-200/50">
           <TabsTrigger value="conferencia">Conferência JSON</TabsTrigger>
           <TabsTrigger value="pdf" className="relative">
             Extraído do PDF
@@ -262,7 +261,7 @@ export function RendimentosTable({
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
             <Input
-              placeholder="Nome, matrícula ou CPF..."
+              placeholder="Nome ou matrícula..."
               className="pl-9"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -311,40 +310,43 @@ export function RendimentosTable({
         </div>
       </div>
 
-      <TabsContent value="conferencia" className="space-y-4 mt-0">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Trabalhadores Processados ({filteredAndSortedData.length})
-            </CardTitle>
-            <CardDescription>
-              Dados acumulados para o ano de {processingYear}
-              {searchTerm && ` • Filtrando por "${searchTerm}"`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="max-h-[500px] overflow-auto rounded-md border text-[10px]">
-              <Table>
-                <TableHeader className="bg-muted sticky top-0 z-10">
-                  <TableRow>
-                    {columns.map(col => (
-                      <TableHead
-                        key={col.key}
-                        className={`p-1 cursor-pointer hover:bg-slate-200 transition-colors ${col.align === "right" ? "text-right" : "text-left"}`}
-                        onClick={() => handleSort(col.key)}
-                      >
-                        <div
-                          className={`flex items-center ${col.align === "right" ? "justify-end" : "justify-start"}`}
+      <TabsContent value="conferencia" className="mt-0">
+        <Card className="border-none shadow-none bg-transparent">
+          <CardContent className="p-0">
+            <div className="flex flex-col h-[calc(100vh-220px)] min-h-[400px] border rounded-md bg-white">
+              <div className="flex-none p-3 border-b bg-slate-50/50 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Trabalhadores Processados ({filteredAndSortedData.length})
+                  </h3>
+                  <p className="text-[10px] text-slate-500">
+                    Dados acumulados para o ano de {processingYear}
+                    {searchTerm && ` • Filtrando por "${searchTerm}"`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto text-[10px]">
+                <Table className="relative border-collapse">
+                  <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
+                    <TableRow>
+                      {columns.map(col => (
+                        <TableHead
+                          key={col.key}
+                          className={`p-1 cursor-pointer hover:bg-slate-200 transition-colors ${col.align === "right" ? "text-right" : "text-left"}`}
+                          onClick={() => handleSort(col.key)}
                         >
-                          {col.label}
-                          {col.key !== ("pdfData" as any) &&
-                            renderSortIcon(col.key)}
-                        </div>
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                          <div
+                            className={`flex items-center ${col.align === "right" ? "justify-end" : "justify-start"}`}
+                          >
+                            {col.label}
+                            {col.key !== ("pdfData" as any) &&
+                              renderSortIcon(col.key)}
+                          </div>
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {filteredAndSortedData.length > 0 ? (
                     filteredAndSortedData.map((w, i) => (
                       <TableRow key={i} className="hover:bg-slate-50">
@@ -484,8 +486,9 @@ export function RendimentosTable({
                       </TableCell>
                     </TableRow>
                   )}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
