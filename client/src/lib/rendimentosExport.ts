@@ -175,7 +175,7 @@ export function aggregateWorkerData(
     const rules = {
       rendimentosTributaveis: [
           "19",
-          "29",
+//          "29",
           "150",
           "207",
           "221",
@@ -188,7 +188,7 @@ export function aggregateWorkerData(
           "940",
           "8112",
           "8125",
-          "8169",
+//          "8169",
           "8490",
           "8781",
           "8783",
