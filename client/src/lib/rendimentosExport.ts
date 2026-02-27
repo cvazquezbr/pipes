@@ -212,7 +212,7 @@ export function aggregateWorkerData(
           "821", 
           "998", 
           "843", 
-          //"826", 
+          "826", // ORA CONTRIBUI, ORA NÃO. ALGUMA QUESTÃO DE DATAS
           "858",
         ],
       inssDifFerDescAMaior: "836",
