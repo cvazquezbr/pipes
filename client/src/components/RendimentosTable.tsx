@@ -392,7 +392,7 @@ export function RendimentosTable({
                         </TableCell>
                         <TableCell className="p-1">{w.cpf}</TableCell>
 
-                        {columns.slice(4).map(col => {
+                        {columns.slice(5).map(col => {
                           const jsonVal = w[col.key as keyof AggregatedWorkerData] as number;
                           const pdfVal = getPDFValueForCategory(w, col.key as string);
                           const hasDiff = pdfVal !== undefined && Math.abs(jsonVal - pdfVal) > 0.01;
