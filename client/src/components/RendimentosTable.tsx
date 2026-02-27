@@ -229,16 +229,6 @@ export function RendimentosTable({
       </div>
 
       <TabsContent value="conferencia" className="space-y-4 mt-0">
-        <div className="relative w-full md:max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-          <Input
-            placeholder="Filtrar por nome, matrícula ou CPF..."
-            className="pl-9"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">

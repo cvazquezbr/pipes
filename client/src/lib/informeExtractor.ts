@@ -61,8 +61,14 @@ export function parseInformeText(text: string): ExtractedInforme[] {
   const normalized = normalizeText(text);
 
   // Padrão para identificar o início de um novo trabalhador e extrair Nome e Matrícula.
-  // O layout pode variar: "Nome Completo: NOME - MATRICULA" ou "Nome Completo - MATRICULA CPF NOME".
-  const workerSplitPattern = /Nome Completo\s*[:;]?\s*(?:([^-–—\n\d]+?)\s*[-–—]\s*)?(\d+)/gi;
+  // O usuário informou que a Matrícula fica após o hífen na seção com o "Nome Completo".
+  // Formatos comuns:
+  // 1. "Nome Completo: NOME DO TRABALHADOR - 12345"
+  // 2. "Nome Completo - 12345 999.999.999-99 NOME DO TRABALHADOR"
+  // O padrão abaixo busca "Nome Completo", opcionalmente seguido de texto, um hífen e a matrícula.
+  // Restringimos a não capturar quebras de linha entre o rótulo e o hífen para evitar falsos positivos.
+  // Usamos (?![.\d]) para garantir que a matrícula não seja o início de um CPF/CNPJ ou número decimal.
+  const workerSplitPattern = /Nome\s+Completo\s*[:;]?\s*([^-\n\r]*?)\s*[-–—]\s*(\d+)(?![.\d])/gi;
 
   const informes: ExtractedInforme[] = [];
   let match;
@@ -70,9 +76,19 @@ export function parseInformeText(text: string): ExtractedInforme[] {
 
   while ((match = workerSplitPattern.exec(normalized)) !== null) {
     let nome = match[1] ? match[1].trim() : "";
-    const matricula = match[2].trim();
+    const matricula = match[2];
 
-    // Se o nome não foi capturado antes do hífen, tentamos capturar depois da matrícula e CPF (na mesma linha)
+    // Se "Fonte Pagadora" aparecer logo antes, ignoramos pois é o cabeçalho do documento
+    const contextBefore = normalized.substring(Math.max(0, match.index - 50), match.index).toUpperCase();
+    if (contextBefore.includes("FONTE PAGADORA") || contextBefore.includes("EMPRESARIAL")) {
+      console.log(`[InformeExtractor] Ignorando seção de Fonte Pagadora: ${matricula}`);
+      continue;
+    }
+
+    // Limpeza adicional de labels de formulário que podem ter sobrado
+    nome = nome.replace(/^(DO BENEFICIÁRIO|DO TRABALHADOR|NOME|COMPLETO)\s*/i, "").trim();
+
+    // Se o nome ficou vazio (Formato 2), tentamos olhar o que vem logo após a matrícula/CPF
     if (!nome) {
       const afterMatch = normalized.substring(match.index + match[0].length).match(/^[ \t]*(?:[\d.-]+[ \t]+)?([A-ZÀ-Ú ]{3,})/);
       if (afterMatch) {
@@ -80,9 +96,17 @@ export function parseInformeText(text: string): ExtractedInforme[] {
       }
     }
 
-    // Filtro para evitar capturar CNPJ/CPF da fonte pagadora
-    if (nome.toUpperCase().includes("CNPJ") || nome.toUpperCase().includes("FONTE PAGADORA") || (nome === "" && matricula.length > 10)) {
-      console.log(`[InformeExtractor] Ignorando possível falso positivo (Fonte Pagadora): ${nome} - ${matricula}`);
+    // Filtro para evitar capturar CNPJ/CPF da fonte pagadora ou rótulos de seção
+    const upperNome = nome.toUpperCase();
+    const isInvalid =
+      upperNome.includes("CNPJ") ||
+      upperNome.includes("FONTE PAGADORA") ||
+      upperNome.includes("NOME EMPRESARIAL") ||
+      (nome === "" && matricula.length > 8) || // Provavelmente um CPF/CNPJ sem nome detectado
+      (nome === "" && matricula.length <= 2); // Provavelmente um número de seção (ex: "2. Nome Completo")
+
+    if (isInvalid) {
+      console.log(`[InformeExtractor] Ignorando possível falso positivo: ${nome} - ${matricula}`);
       continue;
     }
 
@@ -162,7 +186,20 @@ export function parseInformeText(text: string): ExtractedInforme[] {
       });
     }
 
-    informes.push(informe);
+    // Se todos os campos financeiros forem zero, provavelmente é um falso positivo (ex: cabeçalhos, templates)
+    const hasData = informe.totalRendimentos !== 0 ||
+                    informe.previdenciaOficial !== 0 ||
+                    informe.irrf !== 0 ||
+                    informe.decimoTerceiro !== 0 ||
+                    informe.irrfDecimoTerceiro !== 0 ||
+                    informe.plr !== 0 ||
+                    informe.planoSaude.length > 0;
+
+    if (hasData) {
+      informes.push(informe);
+    } else {
+      console.log(`[InformeExtractor] Descartando possível falso positivo (sem dados): ${informe.nome} - ${informe.matricula}`);
+    }
   }
 
   return informes;
