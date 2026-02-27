@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,9 +32,11 @@ import {
 import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
 import { extractInformesFromPDF, type ExtractedInforme } from "@/lib/informeExtractor";
 import { toast } from "sonner";
+import { PDFInformesTable } from "./PDFInformesTable";
 
 interface RendimentosTableProps {
   data: AggregatedWorkerData[];
+  extractedInformes: ExtractedInforme[];
   processingYear: string;
   onCellClick: (worker: any, category: string) => void;
   onExport: () => void;
@@ -47,6 +50,7 @@ type SortConfig = {
 
 export function RendimentosTable({
   data,
+  extractedInformes,
   processingYear,
   onCellClick,
   onExport,
@@ -163,8 +167,20 @@ export function RendimentosTable({
   ];
 
   return (
-    <div className="space-y-4">
+    <Tabs defaultValue="conferencia" className="space-y-4">
       <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <TabsList>
+          <TabsTrigger value="conferencia">Conferência JSON</TabsTrigger>
+          <TabsTrigger value="pdf" className="relative">
+            Extraído do PDF
+            {extractedInformes.length > 0 && (
+              <Badge className="ml-2 bg-primary/20 text-primary border-none text-[8px] h-4 px-1">
+                {extractedInformes.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
         <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input
@@ -206,93 +222,116 @@ export function RendimentosTable({
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Trabalhadores Processados ({filteredAndSortedData.length})
-          </CardTitle>
-          <CardDescription>
-            Dados acumulados para o ano de {processingYear}
-            {searchTerm && ` • Filtrando por "${searchTerm}"`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="max-h-[500px] overflow-auto rounded-md border text-[10px]">
-            <Table>
-              <TableHeader className="bg-muted sticky top-0 z-10">
-                <TableRow>
-                  {columns.map(col => (
-                    <TableHead
-                      key={col.key}
-                      className={`p-1 cursor-pointer hover:bg-slate-200 transition-colors ${col.align === "right" ? "text-right" : "text-left"}`}
-                      onClick={() => handleSort(col.key)}
-                    >
-                      <div
-                        className={`flex items-center ${col.align === "right" ? "justify-end" : "justify-start"}`}
-                      >
-                        {col.label}
-                        {col.key !== ("pdfData" as any) && renderSortIcon(col.key)}
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedData.length > 0 ? (
-                  filteredAndSortedData.map((w, i) => (
-                    <TableRow key={i} className="hover:bg-slate-50">
-                      <TableCell className="p-1">
-                        {w.pdfData ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 w-fit">
-                            <CheckCircle2 className="h-3 w-3" />
-                            OK
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-slate-50 text-slate-400 border-slate-200 flex items-center gap-1 w-fit">
-                            <AlertCircle className="h-3 w-3" />
-                            Pendente
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="p-1 font-mono">
-                        {w.matricula}
-                      </TableCell>
-                      <TableCell
-                        className="p-1 truncate max-w-[100px]"
-                        title={w.nome}
-                      >
-                        {w.nome}
-                      </TableCell>
-                      <TableCell className="p-1">{w.cpf}</TableCell>
+      <TabsContent value="conferencia" className="space-y-4 mt-0">
+        <div className="relative w-full md:max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+          <Input
+            placeholder="Filtrar por nome, matrícula ou CPF..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-                      {columns.slice(4).map(col => (
-                        <TableCell
-                          key={col.key}
-                          className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all"
-                          onClick={() => onCellClick(w, col.key as string)}
-                        >
-                          {(w[col.key] as number).toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">
+              Trabalhadores Processados ({filteredAndSortedData.length})
+            </CardTitle>
+            <CardDescription>
+              Dados acumulados para o ano de {processingYear}
+              {searchTerm && ` • Filtrando por "${searchTerm}"`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-[500px] overflow-auto rounded-md border text-[10px]">
+              <Table>
+                <TableHeader className="bg-muted sticky top-0 z-10">
                   <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      Nenhum resultado encontrado.
-                    </TableCell>
+                    {columns.map(col => (
+                      <TableHead
+                        key={col.key}
+                        className={`p-1 cursor-pointer hover:bg-slate-200 transition-colors ${col.align === "right" ? "text-right" : "text-left"}`}
+                        onClick={() => handleSort(col.key)}
+                      >
+                        <div
+                          className={`flex items-center ${col.align === "right" ? "justify-end" : "justify-start"}`}
+                        >
+                          {col.label}
+                          {col.key !== ("pdfData" as any) &&
+                            renderSortIcon(col.key)}
+                        </div>
+                      </TableHead>
+                    ))}
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedData.length > 0 ? (
+                    filteredAndSortedData.map((w, i) => (
+                      <TableRow key={i} className="hover:bg-slate-50">
+                        <TableCell className="p-1">
+                          {w.pdfData ? (
+                            <Badge
+                              variant="outline"
+                              className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 w-fit"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              OK
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="bg-slate-50 text-slate-400 border-slate-200 flex items-center gap-1 w-fit"
+                            >
+                              <AlertCircle className="h-3 w-3" />
+                              Pendente
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="p-1 font-mono">
+                          {w.matricula}
+                        </TableCell>
+                        <TableCell
+                          className="p-1 truncate max-w-[100px]"
+                          title={w.nome}
+                        >
+                          {w.nome}
+                        </TableCell>
+                        <TableCell className="p-1">{w.cpf}</TableCell>
+
+                        {columns.slice(4).map(col => (
+                          <TableCell
+                            key={col.key}
+                            className="p-1 text-right cursor-pointer hover:bg-primary/10 hover:font-bold transition-all"
+                            onClick={() => onCellClick(w, col.key as string)}
+                          >
+                            {(w[col.key] as number).toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center text-muted-foreground"
+                      >
+                        Nenhum resultado encontrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="pdf" className="mt-0">
+        <PDFInformesTable data={extractedInformes} />
+      </TabsContent>
+    </Tabs>
   );
 }
