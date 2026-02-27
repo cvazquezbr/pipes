@@ -143,4 +143,19 @@ describe('informeExtractor', () => {
     expect(result[0].matricula).toBe('03');
     expect(result[0].nome).toBe('TRABALHADOR COM DADOS');
   });
+
+  it('should parse "DESCONTO PLANO DE SAÚDE" format', () => {
+    const text = `
+      Nome Completo: JOAO DA SILVA - 12345
+      1. Total dos rendimentos 1.000,00
+      DESCONTO PLANO DE SAÚDE 1.803,23
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].planoSaude).toContainEqual({
+      beneficiario: 'DESCONTO PLANO DE SAÚDE',
+      valor: 1803.23
+    });
+  });
 });
