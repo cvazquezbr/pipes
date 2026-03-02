@@ -142,7 +142,10 @@ export function aggregateWorkerData(
       worker.periodosAquisitivos.some(
         pa =>
           Array.isArray(pa.gozos) &&
-          pa.gozos.some(g => g.Pagamento && g.Pagamento.startsWith(targetYear))
+          pa.gozos.some(g =>
+            (g.Pagamento && String(g.Pagamento).startsWith(targetYear)) ||
+            (g.Inicio && String(g.Inicio).startsWith(targetYear))
+          )
       );
 
     return hasContracheque || hasGozo;
