@@ -27,12 +27,18 @@ export interface Dependente {
 
 export interface Gozo {
   proventos: number | string;
+  descontos?: number | string;
   Pagamento: string;
+  Inicio?: string;
   descricao?: string;
   simplificado?: boolean;
   irSimplificado?: number | string;
   irBaseadoEmDeducoes?: number | string;
   inss?: number | string;
+  dias?: number | string;
+  diasAbono?: number | string;
+  numeroDependentes?: number | string;
+  irRateado?: Record<string, string | number>;
 }
 
 export interface PeriodoAquisitivo {
@@ -73,6 +79,7 @@ export interface AggregatedWorkerData {
   "Rendimentos Isentos": number;
   allCodes: (string | number)[];
   allEntries: DetailLancamento[];
+  gozos: Gozo[];
   details: Record<string, DetailLancamento[]>;
   pdfData?: {
     totalRendimentos: number;
@@ -161,6 +168,7 @@ export function aggregateWorkerData(
       "Rendimentos Isentos": 0,
       allCodes: [],
       allEntries: [],
+      gozos: [],
       details: {
         "Rendimentos Tributáveis": [],
         "Previdência Oficial": [],
@@ -412,6 +420,19 @@ export function aggregateWorkerData(
     //   }
     //  });
     //  }
+
+    // Processar periodosAquisitivos -> gozos para listagem (sem afetar cálculos por enquanto)
+    if (Array.isArray(worker.periodosAquisitivos)) {
+      worker.periodosAquisitivos.forEach(pa => {
+        if (Array.isArray(pa.gozos)) {
+          pa.gozos.forEach(g => {
+            if (g.Inicio && g.Inicio.startsWith(targetYear)) {
+              aggregated.gozos.push(g);
+            }
+          });
+        }
+      });
+    }
 
     // Se não houve gozos (ou não foi aplicada a dedução neles) mas tem 13º salário, aplicar a dedução também
     if (

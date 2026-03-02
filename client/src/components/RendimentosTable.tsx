@@ -33,6 +33,7 @@ import {
   Loader2,
   FileText,
   LayoutList,
+  CalendarDays,
 } from "lucide-react";
 import {
   Tooltip,
@@ -52,6 +53,7 @@ interface RendimentosTableProps {
   processingYear: string;
   onCellClick: (worker: any, category: string) => void;
   onViewAllEntries?: (worker: AggregatedWorkerData) => void;
+  onViewGozos?: (worker: AggregatedWorkerData) => void;
   onExport: () => void;
   onPDFLoaded?: (informes: ExtractedInforme[], rawText: string) => void;
 }
@@ -68,6 +70,7 @@ export function RendimentosTable({
   processingYear,
   onCellClick,
   onViewAllEntries,
+  onViewGozos,
   onExport,
   onPDFLoaded,
 }: RendimentosTableProps) {
@@ -350,24 +353,44 @@ export function RendimentosTable({
                   {filteredAndSortedData.length > 0 ? (
                     filteredAndSortedData.map((w, i) => (
                       <TableRow key={i} className="hover:bg-slate-50">
-                        <TableCell className="p-1 text-center">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => onViewAllEntries?.(w)}
-                                >
-                                  <LayoutList className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Ver todos os lançamentos
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        <TableCell className="p-1">
+                          <div className="flex items-center justify-center gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => onViewAllEntries?.(w)}
+                                  >
+                                    <LayoutList className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Ver todos os lançamentos
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => onViewGozos?.(w)}
+                                  >
+                                    <CalendarDays className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Ver períodos de gozo
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         </TableCell>
                         <TableCell className="p-1">
                           {w.pdfData ? (

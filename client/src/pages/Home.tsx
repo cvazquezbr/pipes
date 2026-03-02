@@ -15,6 +15,7 @@ import { PDFCompressor } from "@/components/PDFCompressor";
 import { ResultsTable } from "@/components/ResultsTable";
 import { RendimentosTable } from "@/components/RendimentosTable";
 import { WorkerEntriesDialog } from "@/components/WorkerEntriesDialog";
+import { WorkerGozosDialog } from "@/components/WorkerGozosDialog";
 import { useInvoiceProcessor } from "@/hooks/useInvoiceProcessor";
 import {
   exportToCSV,
@@ -93,7 +94,9 @@ export default function Home() {
     items: any[];
   } | null>(null);
   const [entriesDialogOpen, setEntriesDialogOpen] = useState(false);
+  const [gozosDialogOpen, setGozosDialogOpen] = useState(false);
   const [selectedWorkerForEntries, setSelectedWorkerForEntries] = useState<AggregatedWorkerData | null>(null);
+  const [selectedWorkerForGozos, setSelectedWorkerForGozos] = useState<AggregatedWorkerData | null>(null);
 
   const {
     invoices,
@@ -211,6 +214,11 @@ export default function Home() {
   const handleViewAllEntries = useCallback((worker: AggregatedWorkerData) => {
     setSelectedWorkerForEntries(worker);
     setEntriesDialogOpen(true);
+  }, []);
+
+  const handleViewGozos = useCallback((worker: AggregatedWorkerData) => {
+    setSelectedWorkerForGozos(worker);
+    setGozosDialogOpen(true);
   }, []);
 
   const handleClearAll = useCallback(() => {
@@ -877,6 +885,7 @@ export default function Home() {
                       processingYear={processingYear}
                       onCellClick={handleCellClick}
                       onViewAllEntries={handleViewAllEntries}
+                      onViewGozos={handleViewGozos}
                       onExport={() =>
                         exportRendimentosToExcel(
                           aggregatedWorkers,
@@ -1639,6 +1648,13 @@ export default function Home() {
         open={entriesDialogOpen}
         onOpenChange={setEntriesDialogOpen}
         worker={selectedWorkerForEntries}
+      />
+
+      {/* Worker Gozos Dialog */}
+      <WorkerGozosDialog
+        open={gozosDialogOpen}
+        onOpenChange={setGozosDialogOpen}
+        worker={selectedWorkerForGozos}
       />
 
       {/* Detail Dialog */}
