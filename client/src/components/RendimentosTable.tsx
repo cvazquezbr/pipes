@@ -38,6 +38,7 @@ import {
   ChevronRight,
   Check,
   X,
+  FileWarning,
 } from "lucide-react";
 import {
   Tooltip,
@@ -45,7 +46,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { AggregatedWorkerData, WorkerData, Gozo } from "@/lib/rendimentosExport";
+import {
+  type AggregatedWorkerData,
+  type WorkerData,
+  type Gozo,
+  getPDFValueForCategory,
+  hasDivergence,
+} from "@/lib/rendimentosExport";
 import { extractInformesFromPDF, type ExtractedInforme } from "@/lib/informeExtractor";
 import { toast } from "sonner";
 import { PDFInformesTable } from "./PDFInformesTable";
@@ -60,6 +67,7 @@ interface RendimentosTableProps {
   onViewAllEntries?: (worker: AggregatedWorkerData) => void;
   onViewGozos?: (worker: AggregatedWorkerData) => void;
   onExport: () => void;
+  onExportDivergences: () => void;
   onPDFLoaded?: (informes: ExtractedInforme[], rawText: string) => void;
 }
 
@@ -78,46 +86,12 @@ export function RendimentosTable({
   onViewAllEntries,
   onViewGozos,
   onExport,
+  onExportDivergences,
   onPDFLoaded,
 }: RendimentosTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [codeFilter, setCodeFilter] = useState("");
   const [onlyDivergent, setOnlyDivergent] = useState(false);
-
-  const getPDFValueForCategory = (worker: AggregatedWorkerData, category: string): number | undefined => {
-    if (!worker.pdfData) return undefined;
-
-    switch (category) {
-      case "Rendimentos Tributáveis": return worker.pdfData.totalRendimentos;
-      case "Previdência Oficial": return worker.pdfData.previdenciaOficial;
-      case "IRRF (Mensal/Férias)": return worker.pdfData.irrf;
-      case "13º Salário (Exclusiva)": return worker.pdfData.decimoTerceiro;
-      case "IRRF sobre 13º (Exclusiva)": return worker.pdfData.irrfDecimoTerceiro;
-      case "PLR (Exclusiva)": return worker.pdfData.plr;
-      case "Desconto Plano de Saúde": return worker.pdfData.planoSaude.reduce((acc, ps) => acc + ps.valor, 0);
-      default: return undefined;
-    }
-  };
-
-  const hasDivergence = (worker: AggregatedWorkerData): boolean => {
-    if (!worker.pdfData) return false;
-
-    const categories = [
-      "Rendimentos Tributáveis",
-      "Previdência Oficial",
-      "IRRF (Mensal/Férias)",
-      "13º Salário (Exclusiva)",
-      "IRRF sobre 13º (Exclusiva)",
-      "PLR (Exclusiva)",
-      "Desconto Plano de Saúde"
-    ];
-
-    return categories.some(cat => {
-      const jsonVal = worker[cat as keyof AggregatedWorkerData] as number;
-      const pdfVal = getPDFValueForCategory(worker, cat);
-      return pdfVal !== undefined && Math.abs(jsonVal - pdfVal) > 0.01;
-    });
-  };
   const [isUploadingPDF, setIsUploadingPDF] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
@@ -366,6 +340,14 @@ export function RendimentosTable({
               <FileUp className="mr-2 h-4 w-4" />
             )}
             Carga PDF Informe
+          </Button>
+          <Button
+            onClick={onExportDivergences}
+            variant="outline"
+            className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 flex-1 md:flex-none"
+          >
+            <FileWarning className="mr-2 h-4 w-4" />
+            Exportar Divergências
           </Button>
           <Button
             onClick={onExport}

@@ -521,3 +521,143 @@ export function exportRendimentosToExcel(
   const fileName = `declaracao-rendimentos-${year || "processado"}-${new Date().toISOString().split("T")[0]}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
+
+/**
+ * Categorias utilizadas para comparação entre JSON e PDF
+ */
+export const COMPARISON_CATEGORIES = [
+  "Rendimentos Tributáveis",
+  "Previdência Oficial",
+  "IRRF (Mensal/Férias)",
+  "13º Salário (Exclusiva)",
+  "IRRF sobre 13º (Exclusiva)",
+  "PLR (Exclusiva)",
+  "Desconto Plano de Saúde",
+];
+
+/**
+ * Obtém o valor correspondente no PDF para uma categoria específica
+ */
+export function getPDFValueForCategory(
+  worker: AggregatedWorkerData,
+  category: string
+): number | undefined {
+  if (!worker.pdfData) return undefined;
+
+  switch (category) {
+    case "Rendimentos Tributáveis":
+      return worker.pdfData.totalRendimentos;
+    case "Previdência Oficial":
+      return worker.pdfData.previdenciaOficial;
+    case "IRRF (Mensal/Férias)":
+      return worker.pdfData.irrf;
+    case "13º Salário (Exclusiva)":
+      return worker.pdfData.decimoTerceiro;
+    case "IRRF sobre 13º (Exclusiva)":
+      return worker.pdfData.irrfDecimoTerceiro;
+    case "PLR (Exclusiva)":
+      return worker.pdfData.plr;
+    case "Desconto Plano de Saúde":
+      return worker.pdfData.planoSaude.reduce((acc, ps) => acc + ps.valor, 0);
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Verifica se há divergência significativa entre os dados do JSON e do PDF
+ */
+export function hasDivergence(worker: AggregatedWorkerData): boolean {
+  if (!worker.pdfData) return false;
+
+  return COMPARISON_CATEGORIES.some(cat => {
+    const jsonVal = worker[cat as keyof AggregatedWorkerData] as number;
+    const pdfVal = getPDFValueForCategory(worker, cat);
+    return pdfVal !== undefined && Math.abs(jsonVal - pdfVal) > 0.01;
+  });
+}
+
+/**
+ * Exporta uma planilha Excel com as divergências e pendências
+ */
+export function exportDivergencesToExcel(
+  data: AggregatedWorkerData[],
+  year: string
+): void {
+  // Aba 1 - Conciliação
+  const conciliacaoRows: any[] = [];
+  data.forEach(worker => {
+    if (worker.pdfData) {
+      COMPARISON_CATEGORIES.forEach(cat => {
+        const jsonVal = worker[cat as keyof AggregatedWorkerData] as number;
+        const pdfVal = getPDFValueForCategory(worker, cat);
+        if (pdfVal !== undefined && Math.abs(jsonVal - pdfVal) > 0.01) {
+          conciliacaoRows.push({
+            Nome: worker.nome,
+            Matrícula: worker.matricula,
+            Rúbrica: cat,
+            "Valor da diferença": Number((jsonVal - pdfVal).toFixed(2)),
+          });
+        }
+      });
+    }
+  });
+
+  // Aba 2 - Pendências
+  const pendenciasRows = data
+    .filter(worker => !worker.pdfData)
+    .map(worker => ({
+      Nome: worker.nome,
+      Matrícula: worker.matricula,
+      "Rendimentos Tributáveis": Number(
+        worker["Rendimentos Tributáveis"].toFixed(2)
+      ),
+      "Previdência Oficial": Number(worker["Previdência Oficial"].toFixed(2)),
+      "IRRF (Mensal/Férias)": Number(worker["IRRF (Mensal/Férias)"].toFixed(2)),
+      "13º Salário (Exclusiva)": Number(
+        worker["13º Salário (Exclusiva)"].toFixed(2)
+      ),
+      "IRRF sobre 13º (Exclusiva)": Number(
+        worker["IRRF sobre 13º (Exclusiva)"].toFixed(2)
+      ),
+      "CP 13º Salário": Number(worker["CP 13º Salário"].toFixed(2)),
+      "PLR (Exclusiva)": Number(worker["PLR (Exclusiva)"].toFixed(2)),
+      "Desconto Plano de Saúde": Number(
+        worker["Desconto Plano de Saúde"].toFixed(2)
+      ),
+      "Rendimentos Isentos": Number(worker["Rendimentos Isentos"].toFixed(2)),
+    }));
+
+  const workbook = XLSX.utils.book_new();
+
+  const conciliacaoWs = XLSX.utils.json_to_sheet(conciliacaoRows);
+  XLSX.utils.book_append_sheet(workbook, conciliacaoWs, "Conciliação");
+
+  const pendenciasWs = XLSX.utils.json_to_sheet(pendenciasRows);
+  XLSX.utils.book_append_sheet(workbook, pendenciasWs, "Pendências");
+
+  // Ajustar larguras das colunas
+  conciliacaoWs["!cols"] = [
+    { wch: 40 }, // Nome
+    { wch: 15 }, // Matrícula
+    { wch: 30 }, // Rúbrica
+    { wch: 20 }, // Valor da diferença
+  ];
+
+  pendenciasWs["!cols"] = [
+    { wch: 40 }, // Nome
+    { wch: 15 }, // Matrícula
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+    { wch: 25 },
+  ];
+
+  const fileName = `divergencias-rendimentos-${year || "processado"}-${new Date().toISOString().split("T")[0]}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+}
