@@ -33,6 +33,7 @@ import {
 } from "@/lib/pisCofinsIssExport";
 import { exportIrpjCsllExcel, processIrpjCsllData } from "@/lib/irpjCsllExport";
 import { JsonUpload } from "@/components/JsonUpload";
+import { WorkerComparison } from "@/components/WorkerComparison";
 import {
   aggregateWorkerData,
   exportRendimentosToExcel,
@@ -73,13 +74,14 @@ import {
   TrendingDown,
   Users,
   FileCode,
+  History,
 } from "lucide-react";
 import type { ExtractedInvoice } from "@/lib/types";
 import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
 
 export default function Home() {
   const [workflow, setWorkflow] = useState<
-    "nfse" | "piscofinsiss" | "irpjcsll" | "rendimentos" | "compress" | null
+    "nfse" | "piscofinsiss" | "irpjcsll" | "rendimentos" | "compress" | "worker-comparison" | null
   >(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isVerResultadosLoading, setIsVerResultadosLoading] = useState(false);
@@ -353,7 +355,9 @@ export default function Home() {
             ]
           : workflow === "compress"
             ? [{ id: 1, name: "Compactação", icon: TrendingDown }]
-            : [
+            : workflow === "worker-comparison"
+              ? [{ id: 1, name: "Comparação de Cadastro", icon: History }]
+              : [
                 { id: 1, name: "Planilha de Referência", icon: FileSpreadsheet },
                 { id: 2, name: "Arquivos PDF", icon: FileText },
                 { id: 3, name: "Resultados e Exportação", icon: LayoutList },
@@ -579,6 +583,38 @@ export default function Home() {
 
               <Card
                 className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
+                onClick={() => setWorkflow("worker-comparison")}
+              >
+                <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                <CardHeader>
+                  <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <History className="text-primary h-6 w-6" />
+                  </div>
+                  <CardTitle>Histórico de Alterações</CardTitle>
+                  <CardDescription>
+                    Comparar duas versões do cadastro de trabalhadores para
+                    identificar mudanças.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Comparação de
+                      JSONs
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Relatório de
+                      Mudanças
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Mapeamento RH
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
                 onClick={() => setWorkflow("compress")}
               >
                 <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
@@ -690,6 +726,8 @@ export default function Home() {
                   />
                 ) : workflow === "compress" ? (
                   <PDFCompressor />
+                ) : workflow === "worker-comparison" ? (
+                  <WorkerComparison />
                 ) : (
                   <ExcelUpload
                     onFileLoaded={handleExcelLoaded}
