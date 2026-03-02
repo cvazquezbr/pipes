@@ -84,4 +84,18 @@ describe('workerComparison', () => {
     expect(result.modified).toBe(1);
     expect(result.changes[0].fieldChanges!.some(c => c.label.includes('Alteração no Contracheque'))).toBe(true);
   });
+
+  it('ignores differences in CPF formatting', () => {
+    const oldData: WorkerData[] = [{ ...baseWorker, cpf: '123.456.789-00' }];
+    const newData: WorkerData[] = [{ ...baseWorker, cpf: '12345678900' }];
+    const result = compareWorkers(oldData, newData);
+    expect(result.modified).toBe(0);
+  });
+
+  it('ignores differences in Name casing or whitespace', () => {
+    const oldData: WorkerData[] = [{ ...baseWorker, nome: 'JOAO GABRIEL TAVARES' }];
+    const newData: WorkerData[] = [{ ...baseWorker, nome: ' joao gabriel tavares ' }];
+    const result = compareWorkers(oldData, newData);
+    expect(result.modified).toBe(0);
+  });
 });

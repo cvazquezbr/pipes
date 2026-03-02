@@ -122,14 +122,26 @@ function getFieldChanges(oldWorker: any, newWorker: any): FieldChange[] {
   // Campos básicos (string, number)
   const basicFields = ["nome", "cpf"];
   basicFields.forEach(field => {
-    if (JSON.stringify(oldWorker[field]) !== JSON.stringify(newWorker[field])) {
-      changes.push({
-        field,
-        label: HR_DICTIONARY[field] || field,
-        oldValue: oldWorker[field],
-        newValue: newWorker[field],
-      });
+    let oldVal = oldWorker[field];
+    let newVal = newWorker[field];
+
+    // Normalização para evitar falsos positivos
+    if (field === "cpf") {
+      const normalizeCpf = (v: any) => String(v || "").replace(/\D/g, "");
+      if (normalizeCpf(oldVal) === normalizeCpf(newVal)) return;
+    } else if (field === "nome") {
+      const normalizeName = (v: any) => String(v || "").trim().toUpperCase();
+      if (normalizeName(oldVal) === normalizeName(newVal)) return;
+    } else {
+      if (JSON.stringify(oldVal) === JSON.stringify(newVal)) return;
     }
+
+    changes.push({
+      field,
+      label: HR_DICTIONARY[field] || field,
+      oldValue: oldVal,
+      newValue: newVal,
+    });
   });
 
   // Campos complexos (arrays)
