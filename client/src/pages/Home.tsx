@@ -36,6 +36,7 @@ import { JsonUpload } from "@/components/JsonUpload";
 import {
   aggregateWorkerData,
   exportRendimentosToExcel,
+  exportDivergencesToExcel,
 } from "@/lib/rendimentosExport";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -889,6 +890,12 @@ export default function Home() {
                       onViewGozos={handleViewGozos}
                       onExport={() =>
                         exportRendimentosToExcel(
+                          aggregatedWorkers,
+                          processingYear
+                        )
+                      }
+                      onExportDivergences={() =>
+                        exportDivergencesToExcel(
                           aggregatedWorkers,
                           processingYear
                         )
