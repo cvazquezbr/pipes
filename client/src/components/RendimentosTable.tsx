@@ -34,6 +34,10 @@ import {
   FileText,
   LayoutList,
   CalendarDays,
+  Calendar,
+  ChevronRight,
+  Check,
+  X,
 } from "lucide-react";
 import {
   Tooltip,
@@ -41,13 +45,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
+import type { AggregatedWorkerData, WorkerData, Gozo } from "@/lib/rendimentosExport";
 import { extractInformesFromPDF, type ExtractedInforme } from "@/lib/informeExtractor";
 import { toast } from "sonner";
 import { PDFInformesTable } from "./PDFInformesTable";
 
 interface RendimentosTableProps {
   data: AggregatedWorkerData[];
+  allWorkers: WorkerData[];
   extractedInformes: ExtractedInforme[];
   rawText?: string;
   processingYear: string;
@@ -65,6 +70,7 @@ type SortConfig = {
 
 export function RendimentosTable({
   data,
+  allWorkers,
   extractedInformes,
   rawText,
   processingYear,
@@ -118,6 +124,63 @@ export function RendimentosTable({
     key: null,
     direction: "asc",
   });
+  const [selectedFeriasGroup, setSelectedFeriasGroup] = useState<any>(null);
+
+  const aggregatedGozos = useMemo(() => {
+    const groups: Record<string, {
+      key: string;
+      total: number;
+      assinado: number;
+      realizado: number;
+      semLinkAvisoAssinado: number;
+      semLinkAviso: number;
+      items: { workerName: string; matricula: string; gozo: Gozo }[];
+    }> = {};
+
+    allWorkers.forEach(worker => {
+      worker.periodosAquisitivos?.forEach(pa => {
+        pa.gozos?.forEach(gozo => {
+          let key = "Sem Data de Pagamento";
+          if (gozo.Pagamento) {
+            const parts = gozo.Pagamento.split("-");
+            if (parts.length >= 2) {
+              key = `${parts[0]}-${parts[1]}`;
+            }
+          }
+
+          if (!groups[key]) {
+            groups[key] = {
+              key,
+              total: 0,
+              assinado: 0,
+              realizado: 0,
+              semLinkAvisoAssinado: 0,
+              semLinkAviso: 0,
+              items: [],
+            };
+          }
+
+          const g = groups[key];
+          g.total++;
+          if (gozo.assinado === true) g.assinado++;
+          if (gozo.realizado === true) g.realizado++;
+          if (!gozo.linkAvisoAssinado) g.semLinkAvisoAssinado++;
+          if (!gozo.linkAviso) g.semLinkAviso++;
+          g.items.push({
+            workerName: worker.nome,
+            matricula: worker.matricula,
+            gozo,
+          });
+        });
+      });
+    });
+
+    return Object.values(groups).sort((a, b) => {
+      if (a.key === "Sem Data de Pagamento") return 1;
+      if (b.key === "Sem Data de Pagamento") return -1;
+      return b.key.localeCompare(a.key);
+    });
+  }, [allWorkers]);
 
   const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -247,6 +310,7 @@ export function RendimentosTable({
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="ferias">Férias</TabsTrigger>
           <TabsTrigger value="raw">Texto Bruto</TabsTrigger>
         </TabsList>
 
@@ -519,6 +583,158 @@ export function RendimentosTable({
 
       <TabsContent value="pdf" className="mt-0">
         <PDFInformesTable data={extractedInformes} />
+      </TabsContent>
+
+      <TabsContent value="ferias" className="mt-0">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <Card className="md:col-span-5 lg:col-span-4 border shadow-sm">
+            <CardHeader className="pb-3 bg-slate-50/50 border-b">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Agregado de Férias
+              </CardTitle>
+              <CardDescription className="text-[10px]">
+                Agrupado por Ano/Mês de Pagamento
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+               <div className="max-h-[calc(100vh-320px)] overflow-auto text-[10px]">
+                  <Table className="relative">
+                    <TableHeader className="bg-muted sticky top-0 z-10 shadow-sm">
+                      <TableRow>
+                        <TableHead className="p-2">Período</TableHead>
+                        <TableHead className="p-2 text-right">Total</TableHead>
+                        <TableHead className="p-2 text-right" title="Assinado">Assin.</TableHead>
+                        <TableHead className="p-2 text-right" title="Realizado">Real.</TableHead>
+                        <TableHead className="p-2 text-right" title="Sem Link Aviso Assinado">S/L.Assin</TableHead>
+                        <TableHead className="p-2 text-right" title="Sem Link Aviso">S/Link</TableHead>
+                        <TableHead className="p-2 w-8"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {aggregatedGozos.map((group) => (
+                        <TableRow
+                          key={group.key}
+                          className={`hover:bg-slate-50 cursor-pointer transition-colors ${selectedFeriasGroup?.key === group.key ? 'bg-primary/10 font-bold' : ''}`}
+                          onClick={() => setSelectedFeriasGroup(group)}
+                        >
+                          <TableCell className="p-2 font-medium">{group.key}</TableCell>
+                          <TableCell className="p-2 text-right font-mono">{group.total}</TableCell>
+                          <TableCell className="p-2 text-right font-mono text-green-600">{group.assinado}</TableCell>
+                          <TableCell className="p-2 text-right font-mono text-blue-600">{group.realizado}</TableCell>
+                          <TableCell className="p-2 text-right font-mono text-orange-600">{group.semLinkAvisoAssinado}</TableCell>
+                          <TableCell className="p-2 text-right font-mono text-amber-600">{group.semLinkAviso}</TableCell>
+                          <TableCell className="p-2 text-right">
+                            <ChevronRight className={`h-4 w-4 transition-transform ${selectedFeriasGroup?.key === group.key ? 'translate-x-1 text-primary' : 'opacity-20'}`} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-7 lg:col-span-8 border shadow-sm overflow-hidden">
+             <CardHeader className="pb-3 bg-slate-50/50 border-b flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold">
+                    {selectedFeriasGroup ? `Detalhes: ${selectedFeriasGroup.key}` : "Selecione um período"}
+                  </CardTitle>
+                  {selectedFeriasGroup && (
+                     <CardDescription className="text-[10px]">
+                        {selectedFeriasGroup.total} registros de gozo encontrados
+                     </CardDescription>
+                  )}
+                </div>
+                {selectedFeriasGroup && (
+                  <div className="flex gap-2">
+                     <Badge variant="outline" className="text-[9px] bg-green-50 text-green-700 border-green-200">
+                       Assinados: {selectedFeriasGroup.assinado}
+                     </Badge>
+                     <Badge variant="outline" className="text-[9px] bg-blue-50 text-blue-700 border-blue-200">
+                       Realizados: {selectedFeriasGroup.realizado}
+                     </Badge>
+                  </div>
+                )}
+             </CardHeader>
+             <CardContent className="p-0">
+                {selectedFeriasGroup ? (
+                   <div className="max-h-[calc(100vh-320px)] overflow-auto text-[10px]">
+                      <Table className="relative">
+                         <TableHeader className="bg-muted sticky top-0 z-10 shadow-sm">
+                            <TableRow>
+                               <TableHead className="p-2">Matrícula</TableHead>
+                               <TableHead className="p-2">Nome</TableHead>
+                               <TableHead className="p-2">Início</TableHead>
+                               <TableHead className="p-2">Pagto</TableHead>
+                               <TableHead className="p-2 text-center">Assin.</TableHead>
+                               <TableHead className="p-2 text-center">Realiz.</TableHead>
+                               <TableHead className="p-2 text-center">Status Links</TableHead>
+                            </TableRow>
+                         </TableHeader>
+                         <TableBody>
+                            {selectedFeriasGroup.items.map((item: any, idx: number) => (
+                               <TableRow key={idx} className="hover:bg-slate-50 group">
+                                  <TableCell className="p-2 font-mono">{item.matricula}</TableCell>
+                                  <TableCell className="p-2 truncate max-w-[200px]" title={item.workerName}>
+                                    {item.workerName}
+                                  </TableCell>
+                                  <TableCell className="p-2">{item.gozo.Inicio || '-'}</TableCell>
+                                  <TableCell className="p-2">{item.gozo.Pagamento || '-'}</TableCell>
+                                  <TableCell className="p-2 text-center">
+                                     {item.gozo.assinado ? (
+                                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mx-auto" />
+                                     ) : (
+                                       <X className="h-3.5 w-3.5 text-slate-300 mx-auto" />
+                                     )}
+                                  </TableCell>
+                                  <TableCell className="p-2 text-center">
+                                     {item.gozo.realizado ? (
+                                       <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mx-auto" />
+                                     ) : (
+                                       <X className="h-3.5 w-3.5 text-slate-300 mx-auto" />
+                                     )}
+                                  </TableCell>
+                                  <TableCell className="p-2 text-center">
+                                     <div className="flex items-center justify-center gap-1.5">
+                                        <TooltipProvider>
+                                          {!item.gozo.linkAviso ? (
+                                            <Tooltip>
+                                              <TooltipTrigger>
+                                                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                                              </TooltipTrigger>
+                                              <TooltipContent>Sem linkAviso</TooltipContent>
+                                            </Tooltip>
+                                          ) : null}
+                                          {!item.gozo.linkAvisoAssinado ? (
+                                            <Tooltip>
+                                              <TooltipTrigger>
+                                                <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+                                              </TooltipTrigger>
+                                              <TooltipContent>Sem linkAvisoAssinado</TooltipContent>
+                                            </Tooltip>
+                                          ) : null}
+                                          {item.gozo.linkAviso && item.gozo.linkAvisoAssinado && (
+                                            <Check className="h-3.5 w-3.5 text-green-600" />
+                                          )}
+                                        </TooltipProvider>
+                                     </div>
+                                  </TableCell>
+                               </TableRow>
+                            ))}
+                         </TableBody>
+                      </Table>
+                   </div>
+                ) : (
+                  <div className="h-[400px] flex flex-col items-center justify-center text-slate-400 bg-slate-50/50">
+                     <Calendar className="h-12 w-12 mb-4 opacity-10" />
+                     <p className="text-sm font-medium">Selecione um período à esquerda para ver os detalhes</p>
+                  </div>
+                )}
+             </CardContent>
+          </Card>
+        </div>
       </TabsContent>
 
       <TabsContent value="raw" className="mt-0">

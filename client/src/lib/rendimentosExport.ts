@@ -39,6 +39,10 @@ export interface Gozo {
   diasAbono?: number | string;
   numeroDependentes?: number | string;
   irRateado?: Record<string, string | number>;
+  assinado?: boolean;
+  realizado?: boolean;
+  linkAvisoAssinado?: string;
+  linkAviso?: string;
 }
 
 export interface PeriodoAquisitivo {

@@ -880,6 +880,7 @@ export default function Home() {
 
                     <RendimentosTable
                       data={aggregatedWorkers}
+                      allWorkers={workerData}
                       extractedInformes={extractedInformes}
                       rawText={rawInformeText}
                       processingYear={processingYear}
