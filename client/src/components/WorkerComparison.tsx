@@ -154,13 +154,19 @@ export function WorkerComparison() {
                            {change.fieldChanges.map((f, fIdx) => (
                              <div key={fIdx} className="text-xs grid grid-cols-[1fr,auto,1fr] items-center gap-4 bg-slate-50/50 p-2 rounded-lg">
                                <div className="space-y-1">
-                                 <div className="text-[10px] text-slate-400 font-bold uppercase">{f.label}</div>
+                                 <div className={`text-[10px] font-bold uppercase ${
+                                   f.label.includes('Novo') ? 'text-blue-500' :
+                                   f.label.includes('Removido') ? 'text-red-500' : 'text-slate-400'
+                                 }`}>{f.label}</div>
                                  <div className="text-slate-600 line-through opacity-50">{String(f.oldValue)}</div>
                                </div>
                                <ArrowRight className="h-3 w-3 text-slate-400" />
                                <div className="space-y-1">
                                  <div className="text-[10px] text-transparent font-bold uppercase">.</div>
-                                 <div className="text-slate-900 font-bold">{String(f.newValue)}</div>
+                                 <div className={`text-slate-900 font-bold ${
+                                   f.label.includes('Novo') ? 'text-blue-700' :
+                                   f.label.includes('Removido') ? 'text-red-700 opacity-50' : ''
+                                 }`}>{String(f.newValue)}</div>
                                </div>
                              </div>
                            ))}
