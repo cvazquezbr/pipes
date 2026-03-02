@@ -132,29 +132,146 @@ function getFieldChanges(oldWorker: any, newWorker: any): FieldChange[] {
     }
   });
 
-  // Campos complexos (arrays) - simplificado para detectar mudança bruta
-  const complexFields = ["contracheques", "periodosAquisitivos", "dependentes"];
-  complexFields.forEach(field => {
-    if (JSON.stringify(oldWorker[field]) !== JSON.stringify(newWorker[field])) {
-      const countOld = Array.isArray(oldWorker[field]) ? oldWorker[field].length : 0;
-      const countNew = Array.isArray(newWorker[field]) ? newWorker[field].length : 0;
+  // Campos complexos (arrays)
+  if (JSON.stringify(oldWorker.dependentes) !== JSON.stringify(newWorker.dependentes)) {
+    changes.push(...compareDependentes(oldWorker.dependentes || [], newWorker.dependentes || []));
+  }
 
-      let oldVal = `${countOld} registros`;
-      let newVal = `${countNew} registros`;
+  if (JSON.stringify(oldWorker.contracheques) !== JSON.stringify(newWorker.contracheques)) {
+    changes.push(...compareContracheques(oldWorker.contracheques || [], newWorker.contracheques || []));
+  }
 
-      if (countOld === countNew) {
-        oldVal += " (versão anterior)";
-        newVal += " (dados atualizados)";
-      }
+  if (JSON.stringify(oldWorker.periodosAquisitivos) !== JSON.stringify(newWorker.periodosAquisitivos)) {
+    changes.push(...comparePeriodosAquisitivos(oldWorker.periodosAquisitivos || [], newWorker.periodosAquisitivos || []));
+  }
 
+  return changes;
+}
+
+function compareDependentes(oldDeps: any[], newDeps: any[]): FieldChange[] {
+  const changes: FieldChange[] = [];
+  const oldMap = new Map(oldDeps.map(d => [d.nome, d]));
+  const newMap = new Map(newDeps.map(d => [d.nome, d]));
+
+  newDeps.forEach(nd => {
+    const od = oldMap.get(nd.nome);
+    if (!od) {
       changes.push({
-        field,
-        label: HR_DICTIONARY[field] || field,
-        oldValue: oldVal,
-        newValue: newVal,
+        field: "dependentes",
+        label: "Novo Dependente",
+        oldValue: "-",
+        newValue: `${nd.nome} (Fiscal: ${nd.criterioFiscal ? "Sim" : "Não"})`,
+      });
+    } else if (od.criterioFiscal !== nd.criterioFiscal) {
+      changes.push({
+        field: "dependentes",
+        label: `Dependente: ${nd.nome}`,
+        oldValue: `Criterio Fiscal: ${od.criterioFiscal ? "Sim" : "Não"}`,
+        newValue: `Criterio Fiscal: ${nd.criterioFiscal ? "Sim" : "Não"}`,
       });
     }
   });
+
+  oldDeps.forEach(od => {
+    if (!newMap.has(od.nome)) {
+      changes.push({
+        field: "dependentes",
+        label: "Dependente Removido",
+        oldValue: od.nome,
+        newValue: "-",
+      });
+    }
+  });
+
+  return changes;
+}
+
+function compareContracheques(oldCCs: any[], newCCs: any[]): FieldChange[] {
+  const changes: FieldChange[] = [];
+  const getCCKey = (cc: any) => `${cc.ano}-${cc.nomeFolha}-${cc.dataPagamento}`;
+
+  const oldMap = new Map(oldCCs.map(cc => [getCCKey(cc), cc]));
+  const newMap = new Map(newCCs.map(cc => [getCCKey(cc), cc]));
+
+  newCCs.forEach(ncc => {
+    const key = getCCKey(ncc);
+    const occ = oldMap.get(key);
+    const label = `${ncc.nomeFolha} (${ncc.ano})`;
+
+    if (!occ) {
+      changes.push({
+        field: "contracheques",
+        label: `Novo Contracheque: ${label}`,
+        oldValue: "-",
+        newValue: `Pago em ${ncc.dataPagamento}`,
+      });
+    } else if (JSON.stringify(occ.lancamentos) !== JSON.stringify(ncc.lancamentos)) {
+      const oldVal = occ.lancamentos?.length || 0;
+      const newVal = ncc.lancamentos?.length || 0;
+
+      let oldDesc = `${oldVal} lançamentos`;
+      let newDesc = `${newVal} lançamentos`;
+
+      if (oldVal === newVal) {
+        oldDesc += " (versão anterior)";
+        newDesc += " (dados atualizados)";
+
+        // Tentar identificar se mudou algum valor específico
+        const oldTotal = (occ.lancamentos || []).reduce((acc: number, l: any) => acc + (Number(l.valor) || 0), 0);
+        const newTotal = (ncc.lancamentos || []).reduce((acc: number, l: any) => acc + (Number(l.valor) || 0), 0);
+
+        if (oldTotal !== newTotal) {
+          oldDesc = `Total: R$ ${oldTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+          newDesc = `Total: R$ ${newTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        }
+      }
+
+      changes.push({
+        field: "contracheques",
+        label: `Alteração no Contracheque: ${label}`,
+        oldValue: oldDesc,
+        newValue: newDesc,
+      });
+    }
+  });
+
+  oldCCs.forEach(occ => {
+    if (!newMap.has(getCCKey(occ))) {
+      changes.push({
+        field: "contracheques",
+        label: "Contracheque Removido",
+        oldValue: `${occ.nomeFolha} (${occ.ano})`,
+        newValue: "-",
+      });
+    }
+  });
+
+  return changes;
+}
+
+function comparePeriodosAquisitivos(oldPAs: any[], newPAs: any[]): FieldChange[] {
+  const changes: FieldChange[] = [];
+
+  // Períodos aquisitivos são complexos pois não tem ID óbvio além do conteúdo dos gozos
+  // Vamos comparar pela contagem total de gozos em todos os períodos
+  const oldGozosCount = oldPAs.reduce((acc, pa) => acc + (pa.gozos?.length || 0), 0);
+  const newGozosCount = newPAs.reduce((acc, pa) => acc + (pa.gozos?.length || 0), 0);
+
+  if (oldGozosCount !== newGozosCount) {
+    changes.push({
+      field: "periodosAquisitivos",
+      label: HR_DICTIONARY.periodosAquisitivos,
+      oldValue: `${oldGozosCount} períodos de gozo`,
+      newValue: `${newGozosCount} períodos de gozo`,
+    });
+  } else if (JSON.stringify(oldPAs) !== JSON.stringify(newPAs)) {
+    changes.push({
+      field: "periodosAquisitivos",
+      label: HR_DICTIONARY.periodosAquisitivos,
+      oldValue: "Dados de férias anteriores",
+      newValue: "Dados de férias atualizados",
+    });
+  }
 
   return changes;
 }
