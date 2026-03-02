@@ -142,12 +142,9 @@ export function aggregateWorkerData(
       worker.periodosAquisitivos.some(
         pa =>
           Array.isArray(pa.gozos) &&
-          pa.gozos.some(g => {
-            const hasPagamentoMatch = g.Pagamento && String(g.Pagamento).startsWith(targetYear);
-            const hasInicioMatch = g.Inicio && String(g.Inicio).startsWith(targetYear);
-            const hasIrRateadoMatch = g.irRateado && Object.keys(g.irRateado).some(key => key.startsWith(targetYear));
-            return hasPagamentoMatch || hasInicioMatch || hasIrRateadoMatch;
-          })
+          pa.gozos.some(g =>
+            g.irRateado && Object.keys(g.irRateado).some(key => key.startsWith(targetYear))
+          )
       );
 
     return hasContracheque || hasGozo;
@@ -431,11 +428,9 @@ export function aggregateWorkerData(
       worker.periodosAquisitivos.forEach(pa => {
         if (Array.isArray(pa.gozos)) {
           pa.gozos.forEach(g => {
-            const hasPagamentoMatch = g.Pagamento && String(g.Pagamento).startsWith(targetYear);
-            const hasInicioMatch = g.Inicio && String(g.Inicio).startsWith(targetYear);
             const hasIrRateadoMatch = g.irRateado && Object.keys(g.irRateado).some(key => key.startsWith(targetYear));
 
-            if (hasPagamentoMatch || hasInicioMatch || hasIrRateadoMatch) {
+            if (hasIrRateadoMatch) {
               aggregated.gozos.push(g);
             }
           });
