@@ -355,11 +355,13 @@ export function aggregateWorkerData(
               aggregated.details["Desconto Plano de Saúde"].push(detail);
             } else if (rules.reembolsoPlanoSaude.includes(codigo)) {
               // Subtrair reembolso do total de desconto de plano de saúde
-              aggregated["Desconto Plano de Saúde"] -= valor;
+              // Garantimos que o valor seja subtraído (usando o valor absoluto)
+              const valorAbs = Math.abs(valor);
+              aggregated["Desconto Plano de Saúde"] -= valorAbs;
               aggregated.details["Desconto Plano de Saúde"].push({
                 ...detail,
                 descricao: (detail.descricao || "") + " (Reembolso)",
-                valor: -valor,
+                valor: -valorAbs,
               });
             } else if (rules.rendimentosIsentos.includes(codigo)) {
               aggregated["Rendimentos Isentos"] += valor;

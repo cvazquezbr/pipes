@@ -284,6 +284,34 @@ describe("rendimentosExport", () => {
       );
     });
 
+    it("should correctly handle code 8917 (reimbursement) regardless of sign", () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: "reemb-1",
+          nome: "Worker Reemb",
+          cpf: "123",
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [
+                { codigo: "8111", valor: 1000 },
+                { codigo: "8917", valor: 100 },  // Positive input
+                { codigo: "8917", valor: -50 },  // Negative input
+              ],
+            },
+          ],
+        },
+      ];
+
+      const aggregated = aggregateWorkerData(workers, 2025);
+      // 1000 - 100 - 50 = 850
+      expect(aggregated[0]["Desconto Plano de Saúde"]).toBe(850);
+      const details = aggregated[0].details["Desconto Plano de Saúde"];
+      expect(details.filter(d => d.codigo === "8917")).toHaveLength(2);
+      expect(details.find(d => d.valor === -100)).toBeDefined();
+      expect(details.find(d => d.valor === -50)).toBeDefined();
+    });
+
     it("should include code 8374 in Rendimentos Tributáveis, not in 13º Salário", () => {
       const workers: WorkerData[] = [
         {
