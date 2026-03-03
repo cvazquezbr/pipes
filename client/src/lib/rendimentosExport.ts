@@ -244,8 +244,8 @@ export function aggregateWorkerData(
       cp13: ["825", "989"],
       plr: ["873", "242"],
       irrfPlr: ["874"],
-      planoSaude: "8111",
-      reembolsoPlanoSaude: "8917",
+      planoSaude: ["8111"],
+      reembolsoPlanoSaude: ["8917"],
       rendimentosIsentos: [
         "932",
         "28",
@@ -350,10 +350,11 @@ export function aggregateWorkerData(
             } else if (rules.irrfPlr.includes(codigo)) {
               aggregated["IRRF sobre PLR (Exclusiva)"] += valor;
               aggregated.details["IRRF sobre PLR (Exclusiva)"].push(detail);
-            } else if (codigo === rules.planoSaude) {
+            } else if (rules.planoSaude.includes(codigo)) {
               aggregated["Desconto Plano de Saúde"] += valor;
               aggregated.details["Desconto Plano de Saúde"].push(detail);
-            } else if (codigo === rules.reembolsoPlanoSaude) {
+            } else if (rules.reembolsoPlanoSaude.includes(codigo)) {
+              // Subtrair reembolso do total de desconto de plano de saúde
               aggregated["Desconto Plano de Saúde"] -= valor;
               aggregated.details["Desconto Plano de Saúde"].push({
                 ...detail,
