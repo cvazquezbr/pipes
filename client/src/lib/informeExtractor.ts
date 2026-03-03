@@ -180,9 +180,17 @@ export function parseInformeText(text: string): ExtractedInforme[] {
     const extractedPlanoSaude: { beneficiario: string; valor: number }[] = [];
 
     while ((psMatch = planoSaudePattern.exec(workerText)) !== null) {
+      const beneficiario = psMatch[1].trim();
+      let valor = parseBRLValue(psMatch[2]);
+
+      // Se o beneficiário indicar que é um reembolso, o valor deve ser negativo
+      if (/REEMBOLSO/i.test(beneficiario)) {
+        valor = -Math.abs(valor);
+      }
+
       extractedPlanoSaude.push({
-        beneficiario: psMatch[1].trim(),
-        valor: parseBRLValue(psMatch[2])
+        beneficiario,
+        valor
       });
     }
 
@@ -204,14 +212,22 @@ export function parseInformeText(text: string): ExtractedInforme[] {
       informe.planoSaude = extractedPlanoSaude;
     }
 
-    // Identificar Reembolsos de Plano de Saúde no PDF para dedução
-    const reembolsoPattern = /REEMBOLSO\s+PLANO\s+DE\s+SAÚDE\s*(?:\n|\r|\s)*(?:R\$\s*)?([\d.,]+)/gi;
+    // Identificar Reembolsos de Plano de Saúde no PDF para dedução (formatos variados)
+    // Regex flexível para capturar REEMBOLSO [opcional DE] PLANO [opcional DE] SAU[D]E
+    const reembolsoPattern = /REEMBOLSO\s+(?:DE\s+)?PLANO\s+(?:DE\s+)?SAÚ?DE\s*(?:\n|\r|\s)*(?:R\$\s*)?([\d.,]+)/gi;
     while ((psMatch = reembolsoPattern.exec(workerText)) !== null) {
       const valorReembolso = parseBRLValue(psMatch[1]);
-      if (valorReembolso !== 0) {
+
+      // Evitar duplicidade se já foi capturado pelo loop de Beneficiário
+      // Usamos Math.abs em ambos para comparar o valor absoluto, pois ps.valor pode ser negativo
+      const jaExiste = informe.planoSaude.some(ps =>
+        /REEMBOLSO/i.test(ps.beneficiario) && Math.abs(Math.abs(ps.valor) - Math.abs(valorReembolso)) < 0.01
+      );
+
+      if (valorReembolso !== 0 && !jaExiste) {
         informe.planoSaude.push({
           beneficiario: "REEMBOLSO PLANO DE SAÚDE",
-          valor: -valorReembolso
+          valor: -Math.abs(valorReembolso)
         });
       }
     }

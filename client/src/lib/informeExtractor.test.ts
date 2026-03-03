@@ -221,4 +221,36 @@ describe('informeExtractor', () => {
     const totalPS = result[0].planoSaude.reduce((acc, ps) => acc + ps.valor, 0);
     expect(totalPS).toBe(400);
   });
+
+  it('should not double-subtract reimbursement if it matches both patterns', () => {
+    const text = `
+      Nome Completo: JOAO DA SILVA - 12345
+      1. Total dos rendimentos 1.000,00
+      Beneficiário do Plano de Saúde: REEMBOLSO PLANO DE SAÚDE Valor Pago: 100,00
+      REEMBOLSO PLANO DE SAÚDE 100,00
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    // Should have only one entry for reimbursement
+    const reembEntries = result[0].planoSaude.filter(ps => /REEMBOLSO/i.test(ps.beneficiario));
+    expect(reembEntries).toHaveLength(1);
+    expect(reembEntries[0].valor).toBe(-100);
+  });
+
+  it('should subtract reimbursement when it appears as a Beneficiário with different label', () => {
+    const text = `
+      Nome Completo: TESTE REEMBOLSO - 123
+      1. Total dos rendimentos 1.000,00
+      Beneficiário do Plano de Saúde: UNIMED Valor Pago: 6.674,20
+      Beneficiário do Plano de Saúde: REEMBOLSO PLANO SAUDE Valor Pago: 614,37
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+
+    // Total should be 6674.20 - 614.37 = 6059.83
+    const totalPS = result[0].planoSaude.reduce((acc, ps) => acc + ps.valor, 0);
+    expect(totalPS).toBeCloseTo(6059.83, 2);
+  });
 });
