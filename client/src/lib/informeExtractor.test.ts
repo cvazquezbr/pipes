@@ -197,4 +197,28 @@ describe('informeExtractor', () => {
     // Ensure R$ 18,00 was NOT captured as a health plan value
     expect(result[0].planoSaude.map(p => p.valor)).not.toContain(18);
   });
+
+  it('should parse "REEMBOLSO PLANO DE SAÚDE" and subtract it', () => {
+    const text = `
+      Nome Completo: JOAO DA SILVA - 12345
+      1. Total dos rendimentos 1.000,00
+      DESCONTO PLANO DE SAÚDE 500,00
+      REEMBOLSO PLANO DE SAÚDE 100,00
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].planoSaude).toContainEqual({
+      beneficiario: 'DESCONTO PLANO DE SAÚDE',
+      valor: 500
+    });
+    expect(result[0].planoSaude).toContainEqual({
+      beneficiario: 'REEMBOLSO PLANO DE SAÚDE',
+      valor: -100
+    });
+
+    // The sum should be 400
+    const totalPS = result[0].planoSaude.reduce((acc, ps) => acc + ps.valor, 0);
+    expect(totalPS).toBe(400);
+  });
 });
