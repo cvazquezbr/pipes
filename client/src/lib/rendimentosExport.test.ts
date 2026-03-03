@@ -247,5 +247,37 @@ describe("rendimentosExport", () => {
         true
       );
     });
+
+    it("should subtract code 8467 from Rendimentos Tributáveis", () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: "808",
+          nome: "Juliana Lima",
+          cpf: "888.888.888-88",
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [
+                { codigo: "8781", valor: 5000 }, // Rendimentos Tributáveis
+                { codigo: "8467", valor: 1000 }, // Desconto Adiantamento Antecipação Salarial
+              ],
+            },
+          ],
+        },
+      ];
+
+      const aggregated = aggregateWorkerData(workers, 2025);
+      // 5000 - 1000 = 4000
+      expect(aggregated[0]["Rendimentos Tributáveis"]).toBe(4000);
+
+      const details = aggregated[0].details["Rendimentos Tributáveis"];
+      expect(details).toHaveLength(2);
+      expect(details.some(d => d.codigo === "8781" && d.valor === 5000)).toBe(
+        true
+      );
+      expect(details.some(d => d.codigo === "8467" && d.valor === -1000)).toBe(
+        true
+      );
+    });
   });
 });
