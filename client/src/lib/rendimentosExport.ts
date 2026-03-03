@@ -604,7 +604,7 @@ export function exportDivergencesToExcel(
             Nome: worker.nome,
             Matrícula: worker.matricula,
             Rúbrica: cat,
-            "Valor da diferença": Number((jsonVal - pdfVal).toFixed(2)),
+            "Valor da diferença": Number((pdfVal - jsonVal).toFixed(2)),
           });
         }
       });

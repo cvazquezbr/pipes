@@ -75,7 +75,14 @@ import {
   Users,
   FileCode,
   History,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { ExtractedInvoice } from "@/lib/types";
 import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
 
@@ -1749,7 +1756,7 @@ export default function Home() {
                         (acc, item) => acc + item.valor,
                         0
                       );
-                      const diff = jsonValue - pdfValue;
+                      const diff = pdfValue - jsonValue;
 
                       text += `COMPARAÇÃO COM INFORME (PDF):\n`;
                       text += `Calculado (JSON): R$ ${jsonValue.toLocaleString(
@@ -1760,7 +1767,7 @@ export default function Home() {
                         "pt-BR",
                         { minimumFractionDigits: 2 }
                       )}\n`;
-                      text += `Diferença: R$ ${diff.toLocaleString("pt-BR", {
+                      text += `Diferença (PDF - JSON): R$ ${diff.toLocaleString("pt-BR", {
                         minimumFractionDigits: 2,
                       })}\n\n`;
 
@@ -1834,7 +1841,7 @@ export default function Home() {
                 (acc, item) => acc + item.valor,
                 0
               );
-              const diff = jsonValue - pdfValue;
+              const diff = pdfValue - jsonValue;
               const hasDiff = Math.abs(diff) > 0.01;
 
               return (
@@ -1861,12 +1868,43 @@ export default function Home() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-slate-500">Diferença</div>
+                      <div className="flex items-center gap-1">
+                        <div className="text-[10px] text-slate-500">Diferença</div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3 w-3 text-slate-400 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="p-4 w-80 bg-white shadow-xl border-slate-200 text-slate-900">
+                              {diff > 0.01 ? (
+                                <div className="space-y-2">
+                                  <p className="font-bold text-amber-600">Extraído (PDF) {'>'} Calculado (JSON)</p>
+                                  <ul className="list-disc ml-4 text-xs space-y-1">
+                                    <li>Faltam lançamentos, que deveriam ser incluídos?</li>
+                                    <li>Há algum lançamento de estorno, que não deveria ser incluído?</li>
+                                  </ul>
+                                </div>
+                              ) : diff < -0.01 ? (
+                                <div className="space-y-2">
+                                  <p className="font-bold text-destructive">Extraído (PDF) {'<'} Calculado (JSON)</p>
+                                  <ul className="list-disc ml-4 text-xs space-y-1">
+                                    <li>Há lançamentos incluídos no cômputo indevidamente?</li>
+                                    <li>Há lançamentos de estorno (negativos) que deixaram de ser incluídos?</li>
+                                  </ul>
+                                </div>
+                              ) : (
+                                <p className="text-xs">Os valores são equivalentes (diferença desprezível).</p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <div
                         className={`text-sm font-mono font-bold ${hasDiff ? "text-destructive" : "text-green-600"}`}
                       >
                         {diff.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
+                          signDisplay: 'always'
                         })}
                       </div>
                     </div>
