@@ -196,7 +196,8 @@ export function parseInformeText(text: string): ExtractedInforme[] {
 
     // Outro formato de Plano de Saúde: DESCONTO PLANO DE SAÚDE [valor]
     // O valor pode estar na linha seguinte ou precedido por R$
-    const planoSaudeDescontoPattern = /DESCONTO\s+PLANO\s+DE\s+SAÚDE\s*(?:\n|\r|\s)*(?:R\$\s*)?([\d.,]+)/gi;
+    // Usamos [UÚ] para aceitar com ou sem acento
+    const planoSaudeDescontoPattern = /DESCONTO\s+PLANO\s+DE\s+SA[UÚ]DE\s*(?:\n|\r|\s)*(?:R\$\s*)?([\d.,]+)/gi;
     const extractedDesconto: { beneficiario: string; valor: number }[] = [];
     while ((psMatch = planoSaudeDescontoPattern.exec(workerText)) !== null) {
       extractedDesconto.push({
@@ -214,7 +215,8 @@ export function parseInformeText(text: string): ExtractedInforme[] {
 
     // Identificar Reembolsos de Plano de Saúde no PDF para dedução (formatos variados)
     // Regex flexível para capturar REEMBOLSO [opcional DE] PLANO [opcional DE] SAU[D]E
-    const reembolsoPattern = /REEMBOLSO\s+(?:DE\s+)?PLANO\s+(?:DE\s+)?SAÚ?DE\s*(?:\n|\r|\s)*(?:R\$\s*)?([\d.,]+)/gi;
+    // Usamos [UÚ] para aceitar com ou sem acento
+    const reembolsoPattern = /REEMBOLSO\s+(?:DE\s+)?PLANO\s+(?:DE\s+)?SA[UÚ]DE\s*(?:\n|\r|\s)*(?:R\$\s*)?([\d.,]+)/gi;
     while ((psMatch = reembolsoPattern.exec(workerText)) !== null) {
       const valorReembolso = parseBRLValue(psMatch[1]);
 
