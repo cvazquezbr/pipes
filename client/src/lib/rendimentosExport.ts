@@ -221,7 +221,7 @@ export function aggregateWorkerData(
           "9661",
           "8374",
         ],
-      deducoesRendimentosTributaveis: ["8467", "254"],
+      deducoesRendimentosTributaveis: ["8467", "254", "981"],
       previdenciaOficial: 
         [
           "812", 
