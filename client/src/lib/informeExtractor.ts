@@ -204,6 +204,18 @@ export function parseInformeText(text: string): ExtractedInforme[] {
       informe.planoSaude = extractedPlanoSaude;
     }
 
+    // Identificar Reembolsos de Plano de Saúde no PDF para dedução
+    const reembolsoPattern = /REEMBOLSO\s+PLANO\s+DE\s+SAÚDE\s*(?:\n|\r|\s)*(?:R\$\s*)?([\d.,]+)/gi;
+    while ((psMatch = reembolsoPattern.exec(workerText)) !== null) {
+      const valorReembolso = parseBRLValue(psMatch[1]);
+      if (valorReembolso !== 0) {
+        informe.planoSaude.push({
+          beneficiario: "REEMBOLSO PLANO DE SAÚDE",
+          valor: -valorReembolso
+        });
+      }
+    }
+
     // Se todos os campos financeiros forem zero, provavelmente é um falso positivo (ex: cabeçalhos, templates)
     const hasData = informe.totalRendimentos !== 0 ||
                     informe.previdenciaOficial !== 0 ||
