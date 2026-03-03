@@ -481,7 +481,7 @@ export function RendimentosTable({
                           const jsonVal = w[col.key as keyof AggregatedWorkerData] as number;
                           const pdfVal = getPDFValueForCategory(w, col.key as string);
                           const hasDiff = pdfVal !== undefined && Math.abs(jsonVal - pdfVal) > 0.01;
-                          const diff = pdfVal !== undefined ? jsonVal - pdfVal : 0;
+                          const diff = pdfVal !== undefined ? pdfVal - jsonVal : 0;
 
                           const content = (
                             <TableCell
