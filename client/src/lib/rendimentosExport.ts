@@ -219,6 +219,7 @@ export function aggregateWorkerData(
           "9380",
           "9384",
           "9661",
+          "8374",
         ],
       deducoesRendimentosTributaveis: ["8467", "254"],
       previdenciaOficial: 
@@ -238,7 +239,7 @@ export function aggregateWorkerData(
           "828", // retornado
           "8128"
         ],
-      salario13: ["12", "8104", "800", "801", "802", "8216", "8374", "8550"],
+      salario13: ["12", "8104", "800", "801", "802", "8216", "8550"],
       irrf13: ["804", "827"],
       cp13: ["825", "989"],
       plr: ["873", "242"],

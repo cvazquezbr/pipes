@@ -283,5 +283,29 @@ describe("rendimentosExport", () => {
         true
       );
     });
+
+    it("should include code 8374 in Rendimentos Tributáveis, not in 13º Salário", () => {
+      const workers: WorkerData[] = [
+        {
+          matricula: "909",
+          nome: "Lucas Pereira",
+          cpf: "999.999.999-99",
+          contracheques: [
+            {
+              ano: 2025,
+              lancamentos: [
+                { codigo: "8374", valor: 1200 }, // Moved to Tributáveis
+              ],
+            },
+          ],
+        },
+      ];
+
+      const aggregated = aggregateWorkerData(workers, 2025);
+      expect(aggregated[0]["Rendimentos Tributáveis"]).toBe(1200);
+      expect(aggregated[0]["13º Salário (Exclusiva)"]).toBe(0);
+      expect(aggregated[0].details["Rendimentos Tributáveis"]).toHaveLength(1);
+      expect(aggregated[0].details["13º Salário (Exclusiva)"]).toHaveLength(0);
+    });
   });
 });
