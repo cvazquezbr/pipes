@@ -220,7 +220,7 @@ export function aggregateWorkerData(
           "9384",
           "9661",
         ],
-      antecipacaoSalarial: "8467",
+      deducoesRendimentosTributaveis: ["8467", "254"],
       previdenciaOficial: 
         [
           "812", 
@@ -298,7 +298,7 @@ export function aggregateWorkerData(
             if (rules.rendimentosTributaveis.includes(codigo)) {
               aggregated["Rendimentos Tributáveis"] += valor;
               aggregated.details["Rendimentos Tributáveis"].push(detail);
-            } else if (codigo === rules.antecipacaoSalarial) {
+            } else if (rules.deducoesRendimentosTributaveis.includes(codigo)) {
               aggregated["Rendimentos Tributáveis"] -= valor;
               aggregated.details["Rendimentos Tributáveis"].push({
                 ...detail,

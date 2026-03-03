@@ -248,7 +248,7 @@ describe("rendimentosExport", () => {
       );
     });
 
-    it("should subtract code 8467 from Rendimentos Tributáveis", () => {
+    it("should subtract codes 8467 and 254 from Rendimentos Tributáveis", () => {
       const workers: WorkerData[] = [
         {
           matricula: "808",
@@ -260,6 +260,7 @@ describe("rendimentosExport", () => {
               lancamentos: [
                 { codigo: "8781", valor: 5000 }, // Rendimentos Tributáveis
                 { codigo: "8467", valor: 1000 }, // Desconto Adiantamento Antecipação Salarial
+                { codigo: "254", valor: 500 }, // Horas de Falta em Estágio
               ],
             },
           ],
@@ -267,15 +268,18 @@ describe("rendimentosExport", () => {
       ];
 
       const aggregated = aggregateWorkerData(workers, 2025);
-      // 5000 - 1000 = 4000
-      expect(aggregated[0]["Rendimentos Tributáveis"]).toBe(4000);
+      // 5000 - 1000 - 500 = 3500
+      expect(aggregated[0]["Rendimentos Tributáveis"]).toBe(3500);
 
       const details = aggregated[0].details["Rendimentos Tributáveis"];
-      expect(details).toHaveLength(2);
+      expect(details).toHaveLength(3);
       expect(details.some(d => d.codigo === "8781" && d.valor === 5000)).toBe(
         true
       );
       expect(details.some(d => d.codigo === "8467" && d.valor === -1000)).toBe(
+        true
+      );
+      expect(details.some(d => d.codigo === "254" && d.valor === -500)).toBe(
         true
       );
     });
