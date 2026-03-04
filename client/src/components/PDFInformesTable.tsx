@@ -147,8 +147,11 @@ export function PDFInformesTable({ data }: PDFInformesTableProps) {
         </CardHeader>
         <CardContent className="p-0">
           <div className="flex flex-col h-[calc(100vh-320px)] min-h-[400px] border rounded-md bg-white overflow-hidden">
-            <div className="flex-1 overflow-auto text-[10px]">
-              <Table className="relative border-collapse w-full">
+            <div className="flex-1 text-[10px] overflow-hidden">
+              <Table
+                className="relative border-collapse w-full"
+                containerClassName="h-full overflow-auto"
+              >
                 <TableHeader className="bg-muted sticky top-0 z-30 shadow-sm">
                   <TableRow>
                     {columns.map((col, idx) => {
