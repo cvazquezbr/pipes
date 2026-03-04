@@ -253,4 +253,21 @@ describe('informeExtractor', () => {
     const totalPS = result[0].planoSaude.reduce((acc, ps) => acc + ps.valor, 0);
     expect(totalPS).toBeCloseTo(6059.83, 2);
   });
+
+  it('should parse "4. Rendimentos Isentos e Não Tributáveis" section correctly', () => {
+    const text = `
+      Nome Completo: JOAO DA SILVA - 12345
+      4. Rendimentos Isentos e Não Tributáveis Valores em Reais
+      1. Parcela isenta 0,00
+      2. Parcela isenta 0,00
+      7. Indenizações por rescisão de contrato de trabalho. 7.931,16
+      9. Outros (especificar). 1.000,00
+      5. Rendimentos Sujeitos à Tributação Exclusiva
+    `;
+
+    const result = parseInformeText(text);
+    expect(result).toHaveLength(1);
+    // 7931.16 + 1000.00 = 8931.16
+    expect(result[0].rendimentosIsentos).toBe(8931.16);
+  });
 });
