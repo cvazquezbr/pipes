@@ -45,6 +45,18 @@ export interface Gozo {
   linkAviso?: string;
 }
 
+export interface ExtratoEntry {
+  matricula: string;
+  salarioLiquido: string | number;
+  [key: string]: any;
+}
+
+export interface Folha {
+  ano: number | string;
+  nomeFolha: string;
+  extrato: ExtratoEntry[];
+}
+
 export interface PeriodoAquisitivo {
   gozos: Gozo[];
 }
