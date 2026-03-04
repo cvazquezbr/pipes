@@ -17,6 +17,7 @@ export interface ExtractedInforme {
   decimoTerceiro: number;
   irrfDecimoTerceiro: number;
   plr: number;
+  rendimentosIsentos: number;
   planoSaude: {
     beneficiario: string;
     valor: number;
@@ -135,6 +136,7 @@ export function parseInformeText(text: string): ExtractedInforme[] {
       decimoTerceiro: 0,
       irrfDecimoTerceiro: 0,
       plr: 0,
+      rendimentosIsentos: 0,
       planoSaude: [],
       rawText: workerText
     };
@@ -173,6 +175,21 @@ export function parseInformeText(text: string): ExtractedInforme[] {
     informe.decimoTerceiro = extract('1\\.\\s*13º\\s*\\(décimo\\s*terceiro\\)\\s*salário');
     informe.irrfDecimoTerceiro = extract('2\\.\\s*Imposto\\s*sobre\\s*a\\s*Renda\\s*Retido\\s*na\\s*Fonte\\s*sobre\\s*13º\\s*\\(décimo\\s*terceiro\\)\\s*salário');
     informe.plr = extract('3\\.\\s*Outros\\.\\s*Participação\\s*de\\s*lucros');
+
+    // 4. Rendimentos Isentos e Não Tributáveis
+    // Sum all values in this section (usually items 1 to 9)
+    const isentosSectionMatch = workerText.match(/4\.\s*Rendimentos\s*Isentos\s*e\s*Não\s*Tributáveis([\s\S]*?)(?:5\.\s*Rendimentos\s*Sujeitos|$)/i);
+    if (isentosSectionMatch) {
+      const isentosText = isentosSectionMatch[1];
+      // Captura valores no formato 1.234,56 ou 0,00
+      const valuePattern = /(\d{1,3}(?:\.\d{3})*,\d{2})/g;
+      let valMatch;
+      let sumIsentos = 0;
+      while ((valMatch = valuePattern.exec(isentosText)) !== null) {
+        sumIsentos += parseBRLValue(valMatch[1]);
+      }
+      informe.rendimentosIsentos = sumIsentos;
+    }
 
     // Plano de Saúde (Geralmente mantém o padrão Label: Value mesmo em layouts "Antes")
     const planoSaudePattern = /Beneficiário\s*do\s*Plano\s*de\s*Saúde\s*[:;]?\s*(.*?)\s*Valor\s*Pago\s*[:;]?\s*([\d.,]+)/gi;
@@ -241,6 +258,7 @@ export function parseInformeText(text: string): ExtractedInforme[] {
                     informe.decimoTerceiro !== 0 ||
                     informe.irrfDecimoTerceiro !== 0 ||
                     informe.plr !== 0 ||
+                    informe.rendimentosIsentos !== 0 ||
                     informe.planoSaude.length > 0;
 
     if (hasData) {

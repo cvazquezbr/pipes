@@ -269,6 +269,7 @@ export default function Home() {
               decimoTerceiro: informe.decimoTerceiro,
               irrfDecimoTerceiro: informe.irrfDecimoTerceiro,
               plr: informe.plr,
+              rendimentosIsentos: informe.rendimentosIsentos,
               planoSaude: informe.planoSaude,
             },
           };
@@ -1744,6 +1745,7 @@ export default function Home() {
                       "IRRF sobre 13º (Exclusiva)":
                         worker.pdfData.irrfDecimoTerceiro,
                       "PLR (Exclusiva)": worker.pdfData.plr,
+                      "Rendimentos Isentos": worker.pdfData.rendimentosIsentos,
                       "Desconto Plano de Saúde": worker.pdfData.planoSaude.reduce(
                         (acc: number, ps: any) => acc + ps.valor,
                         0
@@ -1828,6 +1830,7 @@ export default function Home() {
                 "13º Salário (Exclusiva)": worker.pdfData.decimoTerceiro,
                 "IRRF sobre 13º (Exclusiva)": worker.pdfData.irrfDecimoTerceiro,
                 "PLR (Exclusiva)": worker.pdfData.plr,
+                "Rendimentos Isentos": worker.pdfData.rendimentosIsentos,
                 "Desconto Plano de Saúde": worker.pdfData.planoSaude.reduce(
                   (acc: number, ps: any) => acc + ps.valor,
                   0

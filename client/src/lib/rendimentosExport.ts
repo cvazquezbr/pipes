@@ -92,6 +92,7 @@ export interface AggregatedWorkerData {
     decimoTerceiro: number;
     irrfDecimoTerceiro: number;
     plr: number;
+    rendimentosIsentos: number;
     planoSaude: {
       beneficiario: string;
       valor: number;
@@ -547,6 +548,7 @@ export const COMPARISON_CATEGORIES = [
   "IRRF sobre 13º (Exclusiva)",
   "PLR (Exclusiva)",
   "Desconto Plano de Saúde",
+  "Rendimentos Isentos",
 ];
 
 /**
@@ -573,6 +575,8 @@ export function getPDFValueForCategory(
       return worker.pdfData.plr;
     case "Desconto Plano de Saúde":
       return worker.pdfData.planoSaude.reduce((acc, ps) => acc + ps.valor, 0);
+    case "Rendimentos Isentos":
+      return worker.pdfData.rendimentosIsentos;
     default:
       return undefined;
   }
