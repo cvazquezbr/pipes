@@ -444,7 +444,7 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
+      <main className={`container mx-auto px-4 py-8 transition-all duration-500 ${workflow === 'rendimentos' && currentStep === 3 ? 'max-w-[98vw]' : 'max-w-5xl'}`}>
         {/* Workflow Selection */}
         {!workflow && !isProcessing && (
           <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
