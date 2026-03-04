@@ -364,7 +364,7 @@ export function RendimentosTable({
       <TabsContent value="conferencia" className="mt-0">
         <Card className="border-none shadow-none bg-transparent">
           <CardContent className="p-0">
-            <div className="flex flex-col h-[calc(100vh-220px)] min-h-[400px] border rounded-md bg-white">
+            <div className="flex flex-col h-[calc(100vh-320px)] min-h-[400px] border rounded-md bg-white overflow-hidden">
               <div className="flex-none p-3 border-b bg-slate-50/50 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
@@ -377,31 +377,39 @@ export function RendimentosTable({
                 </div>
               </div>
               <div className="flex-1 overflow-auto text-[10px]">
-                <Table className="relative border-collapse">
-                  <TableHeader className="bg-muted sticky top-0 z-20 shadow-sm">
+                <Table className="relative border-collapse w-full">
+                  <TableHeader className="bg-muted sticky top-0 z-30 shadow-sm">
                     <TableRow>
-                      {columns.map(col => (
-                        <TableHead
-                          key={col.key}
-                          className={`p-1 cursor-pointer hover:bg-slate-200 transition-colors ${col.align === "right" ? "text-right" : "text-left"}`}
-                          onClick={() => handleSort(col.key)}
-                        >
-                          <div
-                            className={`flex items-center ${col.align === "right" ? "justify-end" : "justify-start"}`}
+                      {columns.map((col, idx) => {
+                        let stickyClass = "";
+                        if (idx === 0) stickyClass = "sticky left-0 z-40 bg-muted shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[60px]";
+                        if (idx === 1) stickyClass = "sticky left-[60px] z-40 bg-muted shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[100px]";
+                        if (idx === 2) stickyClass = "sticky left-[160px] z-40 bg-muted shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[80px]";
+                        if (idx === 3) stickyClass = "sticky left-[240px] z-40 bg-muted border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[150px]";
+
+                        return (
+                          <TableHead
+                            key={col.key}
+                            className={`p-1 cursor-pointer hover:bg-slate-200 transition-colors whitespace-nowrap ${col.align === "right" ? "text-right" : "text-left"} ${stickyClass}`}
+                            onClick={() => handleSort(col.key)}
                           >
-                            {col.label}
-                            {col.key !== ("pdfData" as any) &&
-                              renderSortIcon(col.key)}
-                          </div>
-                        </TableHead>
-                      ))}
+                            <div
+                              className={`flex items-center ${col.align === "right" ? "justify-end" : "justify-start"}`}
+                            >
+                              {col.label}
+                              {col.key !== ("pdfData" as any) &&
+                                renderSortIcon(col.key)}
+                            </div>
+                          </TableHead>
+                        );
+                      })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                   {filteredAndSortedData.length > 0 ? (
                     filteredAndSortedData.map((w, i) => (
-                      <TableRow key={i} className="hover:bg-slate-50">
-                        <TableCell className="p-1">
+                      <TableRow key={i} className="hover:bg-slate-50 group">
+                        <TableCell className="p-1 sticky left-0 z-20 bg-white group-hover:bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[60px]">
                           <div className="flex items-center justify-center gap-1">
                             <TooltipProvider>
                               <Tooltip>
@@ -440,7 +448,7 @@ export function RendimentosTable({
                             </TooltipProvider>
                           </div>
                         </TableCell>
-                        <TableCell className="p-1">
+                        <TableCell className="p-1 sticky left-[60px] z-20 bg-white group-hover:bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[100px]">
                           {w.pdfData ? (
                             hasDivergence(w) ? (
                               <Badge
@@ -469,11 +477,11 @@ export function RendimentosTable({
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="p-1 font-mono">
+                        <TableCell className="p-1 font-mono sticky left-[160px] z-20 bg-white group-hover:bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[80px]">
                           {w.matricula}
                         </TableCell>
                         <TableCell
-                          className="p-1 truncate max-w-[100px]"
+                          className="p-1 truncate sticky left-[240px] z-20 bg-white group-hover:bg-slate-50 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[150px] max-w-[200px]"
                           title={w.nome}
                         >
                           {w.nome}
