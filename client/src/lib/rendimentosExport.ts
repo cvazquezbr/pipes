@@ -252,10 +252,12 @@ export function aggregateWorkerData(
       rendimentosIsentos: [
         //"932",
         "28",
+        "29",
         "64",
         "830",
         "846",
         //"8417",
+        "8169",
         "9591",
         "8800",
       ],
