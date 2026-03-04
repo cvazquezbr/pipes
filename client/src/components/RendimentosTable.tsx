@@ -56,6 +56,7 @@ import {
 import { extractInformesFromPDF, type ExtractedInforme } from "@/lib/informeExtractor";
 import { toast } from "sonner";
 import { PDFInformesTable } from "./PDFInformesTable";
+import { FolhaCCComparison } from "./FolhaCCComparison";
 
 interface RendimentosTableProps {
   data: AggregatedWorkerData[];
@@ -285,6 +286,7 @@ export function RendimentosTable({
             )}
           </TabsTrigger>
           <TabsTrigger value="ferias">Férias</TabsTrigger>
+          <TabsTrigger value="folhacc">Folha x CC</TabsTrigger>
           <TabsTrigger value="raw">Texto Bruto</TabsTrigger>
         </TabsList>
 
@@ -565,6 +567,10 @@ export function RendimentosTable({
 
       <TabsContent value="pdf" className="mt-0">
         <PDFInformesTable data={extractedInformes} />
+      </TabsContent>
+
+      <TabsContent value="folhacc" className="mt-0">
+        <FolhaCCComparison workerData={allWorkers} processingYear={processingYear} />
       </TabsContent>
 
       <TabsContent value="ferias" className="mt-0">
