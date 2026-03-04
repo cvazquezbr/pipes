@@ -376,8 +376,11 @@ export function RendimentosTable({
                   </p>
                 </div>
               </div>
-              <div className="flex-1 overflow-auto text-[10px]">
-                <Table className="relative border-collapse w-full">
+              <div className="flex-1 text-[10px] overflow-hidden">
+                <Table
+                  className="relative border-collapse w-full"
+                  containerClassName="h-full overflow-auto"
+                >
                   <TableHeader className="bg-muted sticky top-0 z-30 shadow-sm">
                     <TableRow>
                       {columns.map((col, idx) => {
