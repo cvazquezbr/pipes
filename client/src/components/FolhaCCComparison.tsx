@@ -141,9 +141,9 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
           />
         </div>
       ) : (
-        <Card className="border-none shadow-none bg-transparent">
+        <Card className="border-none shadow-none bg-transparent w-full">
           <CardHeader className="px-0 pt-0">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-lg font-bold">Conciliação Folha x Contracheque</CardTitle>
                 <CardDescription>
@@ -167,15 +167,15 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="border rounded-md bg-white overflow-hidden">
-              <div className="max-h-[calc(100vh-350px)] overflow-auto text-[11px]">
-                <Table>
-                  <TableHeader className="bg-muted sticky top-0 z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead className="p-2 w-24">Matrícula</TableHead>
-                      <TableHead className="p-2 min-w-[200px]">Nome</TableHead>
+            <div className="border rounded-md bg-white">
+              <div className="max-h-[calc(100vh-280px)] overflow-auto text-[11px] scrollbar-thin scrollbar-thumb-slate-200">
+                <Table className="border-collapse w-full">
+                  <TableHeader className="sticky top-0 z-30 shadow-sm">
+                    <TableRow className="bg-muted hover:bg-muted border-b-2">
+                      <TableHead className="p-2 w-24 sticky left-0 z-40 bg-muted border-r-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Matrícula</TableHead>
+                      <TableHead className="p-2 min-w-[250px] sticky left-24 z-40 bg-muted border-r-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Nome</TableHead>
                       {payrollNames.map(name => (
-                        <TableHead key={name} className="p-2 text-right">{name}</TableHead>
+                        <TableHead key={name} className="p-2 text-right min-w-[80px]">{name}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -184,10 +184,10 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
                       filteredData.map((worker, i) => (
                         <TableRow
                           key={i}
-                          className="hover:bg-slate-50"
+                          className="hover:bg-slate-50 group"
                         >
-                          <TableCell className="p-2 font-mono">{worker.matricula}</TableCell>
-                          <TableCell className="p-2 font-medium">{worker.nome}</TableCell>
+                          <TableCell className="p-2 font-mono sticky left-0 z-20 bg-white group-hover:bg-slate-50 border-r-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{worker.matricula}</TableCell>
+                          <TableCell className="p-2 font-medium sticky left-24 z-20 bg-white group-hover:bg-slate-50 border-r-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{worker.nome}</TableCell>
                           {payrollNames.map(name => {
                             const match = worker.matches[name];
                             if (!match) return <TableCell key={name} className="p-2 text-right text-slate-300">-</TableCell>;
