@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, FileCode, Info } from "lucide-react";
+import { Search, FileCode, Info, AlertTriangle } from "lucide-react";
 import { JsonUpload } from "./JsonUpload";
 import {
   Dialog,
@@ -26,6 +26,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { parseValue, type WorkerData, type Folha, type ExtratoEntry, type Contracheque } from "@/lib/rendimentosExport";
+import { Badge } from "@/components/ui/badge";
 
 interface FolhaCCComparisonProps {
   workerData: WorkerData[];
@@ -43,16 +44,33 @@ interface ComparisonResult {
   contracheque: Contracheque;
 }
 
+interface WorkerGroup {
+  matricula: string;
+  nome: string;
+  matches: Record<string, ComparisonResult>;
+}
+
 export function FolhaCCComparison({ workerData, processingYear }: FolhaCCComparisonProps) {
   const [folhas, setFolhas] = useState<Folha[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMatch, setSelectedMatch] = useState<ComparisonResult | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const comparisonData = useMemo(() => {
+  // Get all unique payroll names for columns
+  const payrollNames = useMemo(() => {
+    const names = new Set<string>();
+    folhas.forEach(f => {
+      if (String(f.ano) === processingYear) {
+        names.add(f.nomeFolha);
+      }
+    });
+    return Array.from(names).sort();
+  }, [folhas, processingYear]);
+
+  const groupedData = useMemo(() => {
     if (folhas.length === 0) return [];
 
-    const results: ComparisonResult[] = [];
+    const groups: Record<string, WorkerGroup> = {};
 
     workerData.forEach(worker => {
       worker.contracheques?.forEach(cc => {
@@ -71,7 +89,15 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
           );
 
           if (extratoEntry) {
-            results.push({
+            if (!groups[worker.matricula]) {
+              groups[worker.matricula] = {
+                matricula: worker.matricula,
+                nome: worker.nome,
+                matches: {}
+              };
+            }
+
+            groups[worker.matricula].matches[cc.nomeFolha || ""] = {
               matricula: worker.matricula,
               nome: worker.nome,
               ano: cc.ano,
@@ -80,27 +106,26 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
               valorLiquidoFolha: parseValue(extratoEntry.salarioLiquido || 0),
               extratoEntry,
               contracheque: cc
-            });
+            };
           }
         }
       });
     });
 
-    return results;
+    return Object.values(groups);
   }, [workerData, folhas, processingYear]);
 
   const filteredData = useMemo(() => {
-    if (!searchTerm) return comparisonData;
+    if (!searchTerm) return groupedData;
     const lowSearch = searchTerm.toLowerCase();
-    return comparisonData.filter(
+    return groupedData.filter(
       d =>
         d.nome.toLowerCase().includes(lowSearch) ||
-        d.matricula.toLowerCase().includes(lowSearch) ||
-        d.nomeFolha.toLowerCase().includes(lowSearch)
+        d.matricula.toLowerCase().includes(lowSearch)
     );
-  }, [comparisonData, searchTerm]);
+  }, [groupedData, searchTerm]);
 
-  const handleRowClick = (match: ComparisonResult) => {
+  const handleCellClick = (match: ComparisonResult) => {
     setSelectedMatch(match);
     setIsDialogOpen(true);
   };
@@ -122,7 +147,7 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
               <div>
                 <CardTitle className="text-lg font-bold">Conciliação Folha x Contracheque</CardTitle>
                 <CardDescription>
-                  Comparativo de valores líquidos entre a folha e o contracheque para o ano {processingYear}
+                  Comparativo de diferenças líquidas (Folha - CC) por tipo de folha para o ano {processingYear}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -147,47 +172,47 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
                 <Table>
                   <TableHeader className="bg-muted sticky top-0 z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="p-2">Matrícula</TableHead>
-                      <TableHead className="p-2">Nome</TableHead>
-                      <TableHead className="p-2">Folha</TableHead>
-                      <TableHead className="p-2 text-right">Líquido CC</TableHead>
-                      <TableHead className="p-2 text-right">Líquido Folha</TableHead>
-                      <TableHead className="p-2 text-right">Diferença</TableHead>
-                      <TableHead className="p-2 w-10"></TableHead>
+                      <TableHead className="p-2 w-24">Matrícula</TableHead>
+                      <TableHead className="p-2 min-w-[200px]">Nome</TableHead>
+                      {payrollNames.map(name => (
+                        <TableHead key={name} className="p-2 text-right">{name}</TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredData.length > 0 ? (
-                      filteredData.map((d, i) => {
-                        const diff = d.valorLiquidoFolha - d.valorLiquidoCC;
-                        const hasDiff = Math.abs(diff) > 0.01;
-                        return (
-                          <TableRow
-                            key={i}
-                            className="hover:bg-slate-50 cursor-pointer"
-                            onClick={() => handleRowClick(d)}
-                          >
-                            <TableCell className="p-2 font-mono">{d.matricula}</TableCell>
-                            <TableCell className="p-2 font-medium">{d.nome}</TableCell>
-                            <TableCell className="p-2">{d.nomeFolha}</TableCell>
-                            <TableCell className="p-2 text-right font-mono">
-                              {d.valorLiquidoCC.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell className="p-2 text-right font-mono">
-                              {d.valorLiquidoFolha.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell className={`p-2 text-right font-mono font-bold ${hasDiff ? "text-destructive" : "text-green-600"}`}>
-                              {diff.toLocaleString("pt-BR", { minimumFractionDigits: 2, signDisplay: 'always' })}
-                            </TableCell>
-                            <TableCell className="p-2">
-                              <Info className="h-4 w-4 text-slate-400" />
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
+                      filteredData.map((worker, i) => (
+                        <TableRow
+                          key={i}
+                          className="hover:bg-slate-50"
+                        >
+                          <TableCell className="p-2 font-mono">{worker.matricula}</TableCell>
+                          <TableCell className="p-2 font-medium">{worker.nome}</TableCell>
+                          {payrollNames.map(name => {
+                            const match = worker.matches[name];
+                            if (!match) return <TableCell key={name} className="p-2 text-right text-slate-300">-</TableCell>;
+
+                            const diff = match.valorLiquidoFolha - match.valorLiquidoCC;
+                            const hasDiff = Math.abs(diff) > 0.01;
+
+                            return (
+                              <TableCell
+                                key={name}
+                                className={`p-2 text-right font-mono cursor-pointer hover:bg-slate-200 transition-colors ${hasDiff ? "text-destructive font-bold" : "text-green-600"}`}
+                                onClick={() => handleCellClick(match)}
+                              >
+                                <div className="flex items-center justify-end gap-1">
+                                  {hasDiff && <AlertTriangle className="h-3 w-3" />}
+                                  {diff.toLocaleString("pt-BR", { minimumFractionDigits: 2, signDisplay: 'always' })}
+                                </div>
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                        <TableCell colSpan={payrollNames.length + 2} className="h-24 text-center text-muted-foreground">
                           Nenhum registro encontrado.
                         </TableCell>
                       </TableRow>
@@ -202,12 +227,37 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
 
       {/* Detail Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col p-6">
           <DialogHeader>
-            <DialogTitle>Detalhamento: {selectedMatch?.nome}</DialogTitle>
-            <DialogDescription>
-              Comparação detalhada entre Extrato da Folha e Lançamentos do Contracheque ({selectedMatch?.nomeFolha})
-            </DialogDescription>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b pb-4">
+              <div className="space-y-1">
+                <DialogTitle className="text-xl">Detalhamento: {selectedMatch?.nome}</DialogTitle>
+                <DialogDescription>
+                  Conciliação para a folha <Badge variant="outline" className="font-bold">{selectedMatch?.nomeFolha}</Badge> ({selectedMatch?.ano})
+                </DialogDescription>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="bg-slate-100 rounded-lg px-4 py-2 border">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Líquido Folha</div>
+                  <div className="text-lg font-mono font-bold text-blue-700">
+                    {selectedMatch?.valorLiquidoFolha.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="bg-slate-100 rounded-lg px-4 py-2 border">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Líquido CC</div>
+                  <div className="text-lg font-mono font-bold text-primary">
+                    {selectedMatch?.valorLiquidoCC.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className={`rounded-lg px-4 py-2 border ${(selectedMatch?.valorLiquidoFolha || 0) - (selectedMatch?.valorLiquidoCC || 0) !== 0 ? "bg-destructive/10 border-destructive/20" : "bg-green-50 border-green-200"}`}>
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Diferença</div>
+                  <div className={`text-lg font-mono font-bold ${Math.abs((selectedMatch?.valorLiquidoFolha || 0) - (selectedMatch?.valorLiquidoCC || 0)) > 0.01 ? "text-destructive" : "text-green-600"}`}>
+                    {((selectedMatch?.valorLiquidoFolha || 0) - (selectedMatch?.valorLiquidoCC || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2, signDisplay: 'always' })}
+                  </div>
+                </div>
+              </div>
+            </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -260,12 +310,6 @@ export function FolhaCCComparison({ workerData, processingYear }: FolhaCCCompari
                     ))}
                   </TableBody>
                 </Table>
-              </div>
-              <div className="p-2 bg-muted/50 border-t flex justify-between items-center text-xs font-bold">
-                <span>Líquido Informado:</span>
-                <span className="font-mono">
-                  {selectedMatch?.valorLiquidoCC.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </span>
               </div>
             </div>
           </div>
