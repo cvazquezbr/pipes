@@ -52,4 +52,18 @@ describe('folhaPonto analyzePageCriticas', () => {
     // Should still have data for 01/03 (if valid, here it's 4 punches so likely no error)
     expect(criticas.length).toBe(0);
   });
+
+  it('should correctly process Fatto layout (Agnaldo case)', () => {
+    // Texto simulando domingo (01/03) e segunda (02/03) no layout Fatto
+    // domingo 01/03 -
+    // 07:34 13:32 14:06 17:20 segunda-feira 08:00 02/03 01:12 09:12
+    const text = 'domingo 01/03 - \n 07:34 13:32 14:06 17:20 segunda-feira 08:00 02/03 01:12 09:12';
+    const criticas = analyzePageCriticas(text, options);
+
+    // Should not flag 01/03 (Sunday)
+    expect(criticas.some(c => c.dia === '01/03')).toBe(false);
+    // Should not flag 02/03 (Monday) - 4 punches: 07:34, 13:32, 14:06, 17:20.
+    // 08:00 is expected, 01:12 is balance, 09:12 is total.
+    expect(criticas.some(c => c.dia === '02/03')).toBe(false);
+  });
 });
