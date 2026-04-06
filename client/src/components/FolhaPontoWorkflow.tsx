@@ -116,7 +116,7 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
               onFileLoaded={handleExcelLoaded}
               isLoading={false}
               title="Upload da Base de Funcionários"
-              description="Anexe a planilha Excel contendo Matrícula, Nome e E-mail"
+              description="Anexe a planilha Excel contendo CPF, Nome e E-mail"
             />
           </div>
         )}
