@@ -33,6 +33,7 @@ export interface FolhaPontoResult {
 
 export interface ProcessingOptions {
   horasAdicionaisLimite: number;
+  horasDebitoLimite: number;
 }
 
 /**
@@ -190,7 +191,15 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
     if (!dateMatch) continue;
 
     const dia = dateMatch[1];
-    if (line.includes("Admissão:") || line.includes("Emissão:") || line.includes("DIA / MÊS") || line.includes("DADOS DO EMPREGADOR")) continue;
+    // Ignorar linhas de cabeçalho, rodapé ou metadados
+    if (
+      line.includes("Admissão:") ||
+      line.includes("Emissão:") ||
+      line.includes("DIA / MÊS") ||
+      line.includes("DADOS DO EMPREGADOR") ||
+      line.includes("Página") ||
+      /\d{2}\/\d{2}\/\d{4}/.test(line) // Datas com ano (comum em rodapés)
+    ) continue;
 
     const weekdayMatch = line.toLowerCase().match(/domingo|segunda|terça|quarta|quinta|sexta|sabado|sábado|seg|ter|qua|qui|sex|dom|sab/);
     const isWeekend = weekdayMatch && ["domingo", "dom", "sabado", "sábado", "sab"].includes(weekdayMatch[0]);
@@ -229,19 +238,55 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
     }
 
     const saldoMin = timeToMinutes(saldoStr);
-    if (saldoMin < 0) {
-      criticas.push({ tipo: "alerta", mensagem: `Atraso/Débito de horas registrado no dia ${dia} (${saldoStr})`, dia });
+    const debitLimitMin = options.horasDebitoLimite * 60;
+    const extraLimitMin = options.horasAdicionaisLimite * 60;
+
+    if (saldoMin < -debitLimitMin) {
+      const limitStr = String(options.horasDebitoLimite).padStart(2, '0') + ':00';
+      criticas.push({ tipo: "alerta", mensagem: `Atenção: Mais de ${limitStr}h de débito registradas no dia ${dia} (${saldoStr})`, dia });
     }
 
-    if (saldoMin > options.horasAdicionaisLimite * 60) {
-      criticas.push({ tipo: "alerta", mensagem: `Atenção: Mais de ${options.horasAdicionaisLimite}h adicionais realizadas no dia ${dia} (${saldoStr})`, dia });
+    if (saldoMin > extraLimitMin) {
+      const limitStr = String(options.horasAdicionaisLimite).padStart(2, '0') + ':00';
+      criticas.push({ tipo: "alerta", mensagem: `Atenção: Mais de ${limitStr}h adicionais realizadas no dia ${dia} (${saldoStr})`, dia });
     }
 
-    if (isWorkingDay && batidas.length === 2) {
-       const tMin = Math.abs(timeToMinutes(totalStr));
-       if (tMin > 300) {
-          criticas.push({ tipo: "alerta", mensagem: `Possível falta de intervalo de almoço no dia ${dia}`, dia });
-       }
+    if (isWorkingDay && batidas.length >= 2) {
+      const workedMin = Math.abs(timeToMinutes(totalStr));
+
+      // Cálculo de intervalos (pausas)
+      let pauseMin = 0;
+      if (batidas.length >= 4) {
+        for (let j = 1; j < batidas.length - 1; j += 2) {
+          const exit = timeToMinutes(batidas[j]);
+          const entry = timeToMinutes(batidas[j + 1]);
+          if (entry > exit) {
+            pauseMin += (entry - exit);
+          }
+        }
+      }
+
+      // Regras de Intervalo:
+      // Acima de 6 horas diárias: Mínimo de 1 hora e máximo de 2 horas.
+      if (workedMin > 360) {
+        if (pauseMin < 60) {
+          criticas.push({ tipo: "alerta", mensagem: `Intervalo insuficiente no dia ${dia} (${pauseMin}min). Mínimo de 1h para jornada > 6h.`, dia });
+        } else if (pauseMin > 120) {
+          criticas.push({ tipo: "alerta", mensagem: `Intervalo excedente no dia ${dia} (${pauseMin}min). Máximo de 2h para jornada > 6h.`, dia });
+        }
+      }
+      // 4 a 6 horas diárias: 15 minutos obrigatórios.
+      else if (workedMin > 240) {
+        if (pauseMin < 15) {
+          criticas.push({ tipo: "alerta", mensagem: `Intervalo insuficiente no dia ${dia} (${pauseMin}min). Mínimo de 15min para jornada entre 4h e 6h.`, dia });
+        }
+      }
+      // Até 4 horas diárias: Sem intervalo obrigatório. (Nada a fazer)
+
+      // Legado: Alerta simples para 2 batidas e jornada longa
+      if (batidas.length === 2 && workedMin > 300 && !criticas.some(c => c.dia === dia && c.mensagem.includes("Intervalo"))) {
+        criticas.push({ tipo: "alerta", mensagem: `Possível falta de intervalo de almoço no dia ${dia}`, dia });
+      }
     }
   }
 

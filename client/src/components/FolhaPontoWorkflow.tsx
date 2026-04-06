@@ -37,6 +37,7 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [horasAdicionaisLimite, setHorasAdicionaisLimite] = useState(2);
+  const [horasDebitoLimite, setHorasDebitoLimite] = useState(2);
 
   const handleExcelLoaded = async (data: any, file: File) => {
     try {
@@ -57,7 +58,7 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
      setProgress(0);
      try {
        const pdfFile = files[0];
-       const results = await processFolhaPonto(pdfFile, workers, { horasAdicionaisLimite }, (p) => setProgress(p));
+       const results = await processFolhaPonto(pdfFile, workers, { horasAdicionaisLimite, horasDebitoLimite }, (p) => setProgress(p));
        setResults(results);
        toast.success("Processamento concluído!");
        setStep(4);
@@ -140,6 +141,19 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
                         type="number"
                         value={horasAdicionaisLimite}
                         onChange={e => setHorasAdicionaisLimite(Number(e.target.value))}
+                        className="w-24"
+                      />
+                      <span className="text-sm text-slate-500">horas por dia</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Limite de Débito de horas</Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        value={horasDebitoLimite}
+                        onChange={e => setHorasDebitoLimite(Number(e.target.value))}
                         className="w-24"
                       />
                       <span className="text-sm text-slate-500">horas por dia</span>
