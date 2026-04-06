@@ -14,6 +14,7 @@ export interface SMTPConfig {
   user: string;
   pass: string;
   fromName: string;
+  ccEmail?: string;
 }
 
 const DEFAULT_CONFIG: SMTPConfig = {
@@ -23,6 +24,7 @@ const DEFAULT_CONFIG: SMTPConfig = {
   user: "",
   pass: "",
   fromName: "RH - Folha de Ponto",
+  ccEmail: "",
 };
 
 export function SMTPConfigForm() {
@@ -112,6 +114,16 @@ export function SMTPConfigForm() {
             value={config.fromName}
             onChange={e => setConfig({...config, fromName: e.target.value})}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>E-mail em Cópia (CC)</Label>
+          <Input
+            placeholder="copia-rh@empresa.com"
+            value={config.ccEmail}
+            onChange={e => setConfig({...config, ccEmail: e.target.value})}
+          />
+          <p className="text-[10px] text-slate-500">Este e-mail receberá uma cópia de todos os envios.</p>
         </div>
 
         <Button onClick={handleSave} className="w-full">
