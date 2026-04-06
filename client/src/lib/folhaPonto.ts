@@ -167,120 +167,67 @@ export async function processFolhaPonto(
 
 export function analyzePageCriticas(text: string, options: ProcessingOptions): Critica[] {
   const criticas: Critica[] = [];
+  const lines = text.split('\n');
 
-  const dateRegex = /(\d{2}\/\d{2})/g;
-  const matches = Array.from(text.matchAll(dateRegex));
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) continue;
 
-  if (matches.length === 0) return [];
+    const dateMatch = line.match(/\b(\d{2}\/\d{2})\b/);
+    if (!dateMatch) continue;
 
-  for (let i = 0; i < matches.length; i++) {
-    const match = matches[i];
-    const dia = match[1];
-    const startIdx = match.index!;
-    const nextMatch = matches[i+1];
-    const endIdx = nextMatch ? nextMatch.index! : text.length;
+    const dia = dateMatch[1];
+    if (line.includes("Admissão:") || line.includes("Emissão:") || line.includes("DIA / MÊS") || line.includes("DADOS DO EMPREGADOR")) continue;
 
-    const lookback = 80;
-    const contextStart = Math.max(0, startIdx - lookback);
-    const dayBlock = text.substring(contextStart, endIdx);
-    const beforeDate = text.substring(contextStart, startIdx);
+    const weekdayMatch = line.toLowerCase().match(/domingo|segunda|terça|quarta|quinta|sexta|sabado|sábado|seg|ter|qua|qui|sex|dom|sab/);
+    const isWeekend = weekdayMatch && ["domingo", "dom", "sabado", "sábado", "sab"].includes(weekdayMatch[0]);
+    const isWorkingDay = weekdayMatch && !isWeekend;
 
-    // Ignorar datas que fazem parte de cabeçalhos ou metadados
-    if (
-      beforeDate.includes("Admissão:") ||
-      beforeDate.includes("Emissão:") ||
-      dayBlock.includes("DIA / MÊS") ||
-      dayBlock.includes("DADOS DO EMPREGADOR") ||
-      dayBlock.includes("Quadro de Horários") ||
-      dayBlock.includes("Página")
-    ) {
-      continue;
-    }
-
-    if (dayBlock.includes("FALTA NAO JUSTIFICADA") || dayBlock.includes("FALTA")) {
-       criticas.push({
-         tipo: "erro",
-         mensagem: `Falta não justificada identificada no dia ${dia}`,
-         dia
-       });
+    if (line.includes("FALTA NAO JUSTIFICADA") || line.includes("FALTA")) {
+       criticas.push({ tipo: "erro", mensagem: `Falta não justificada identificada no dia ${dia}`, dia });
        continue;
     }
 
-    const rawTimes = dayBlock.match(/[+-]?\s*\d{1,2}:\d{2}/g) || [];
-    const times = rawTimes.map(t => t.replace(/\s+/g, ""));
+    const allTimes = (line.match(/[+-]?\s*\d{1,2}:\d{2}/g) || []).map(t => t.replace(/\s+/g, ""));
+    if (allTimes.length === 0) continue;
 
-    if (times.length === 0) continue;
-
-    const isDiaUtil = dayBlock.toLowerCase().match(/segunda|terça|quarta|quinta|sexta|seg|ter|qua|qui|sex/);
-
+    let batidas: string[] = [];
     let saldoStr = "00:00";
     let totalStr = "00:00";
-    let batidas: string[] = [];
 
-    if (isDiaUtil) {
-       let saldoIdx = times.findIndex(t => t.startsWith('+') || t.startsWith('-'));
+    if (isWorkingDay) {
+       let sIdx = allTimes.findIndex(t => t.startsWith('+') || t.startsWith('-'));
 
-       if (saldoIdx !== -1) {
-         saldoStr = times[saldoIdx];
-         totalStr = times[saldoIdx + 1] || "00:00";
-
-         batidas = times.filter((t, idx) => {
-            if (idx === saldoIdx) return false;
-            if (idx === 0) return false;
-            if (idx === (saldoIdx + 1)) return false;
-            if (t === dia) return false;
-            return true;
-         });
-       } else if (times.length >= 3) {
-         saldoStr = times[1];
-         totalStr = times[2];
-         batidas = times.slice(3);
+       if (sIdx !== -1) {
+         saldoStr = allTimes[sIdx];
+         totalStr = allTimes[sIdx + 1] || "00:00";
+         batidas = allTimes.filter((t, idx) => idx !== sIdx && idx !== sIdx + 1 && idx !== 0);
        } else {
-         batidas = times.slice(1);
+         batidas = allTimes.slice(1);
        }
     } else {
-       let saldoIdx = times.findIndex(t => t.startsWith('+') || t.startsWith('-'));
-       if (saldoIdx !== -1) {
-          saldoStr = times[saldoIdx];
-          batidas = times.filter((_, idx) => idx !== saldoIdx);
-       } else {
-          batidas = times;
-       }
+       batidas = allTimes.filter(t => !t.startsWith('+') && !t.startsWith('-'));
     }
+
+    if (isWeekend && batidas.length === 0) continue;
 
     if (batidas.length > 0 && batidas.length % 2 !== 0) {
-      criticas.push({
-        tipo: "alerta",
-        mensagem: `Inconsistência de batida (marcação ímpar) no dia ${dia}`,
-        dia
-      });
+      criticas.push({ tipo: "alerta", mensagem: `Inconsistência de batida (marcação ímpar) no dia ${dia}`, dia });
     }
 
-    const saldoMinutos = timeToMinutes(saldoStr);
-    if (saldoMinutos < 0) {
-      criticas.push({
-        tipo: "alerta",
-        mensagem: `Atraso/Débito de horas registrado no dia ${dia} (${saldoStr})`,
-        dia
-      });
+    const saldoMin = timeToMinutes(saldoStr);
+    if (saldoMin < 0) {
+      criticas.push({ tipo: "alerta", mensagem: `Atraso/Débito de horas registrado no dia ${dia} (${saldoStr})`, dia });
     }
 
-    if (saldoMinutos > options.horasAdicionaisLimite * 60) {
-      criticas.push({
-        tipo: "alerta",
-        mensagem: `Atenção: Mais de ${options.horasAdicionaisLimite}h adicionais realizadas no dia ${dia} (${saldoStr})`,
-        dia
-      });
+    if (saldoMin > options.horasAdicionaisLimite * 60) {
+      criticas.push({ tipo: "alerta", mensagem: `Atenção: Mais de ${options.horasAdicionaisLimite}h adicionais realizadas no dia ${dia} (${saldoStr})`, dia });
     }
 
-    if (isDiaUtil && batidas.length === 2) {
-       const totalWorkedMin = Math.abs(timeToMinutes(totalStr));
-       if (totalWorkedMin > 300) {
-          criticas.push({
-            tipo: "alerta",
-            mensagem: `Possível falta de intervalo de almoço no dia ${dia}`,
-            dia
-          });
+    if (isWorkingDay && batidas.length === 2) {
+       const tMin = Math.abs(timeToMinutes(totalStr));
+       if (tMin > 300) {
+          criticas.push({ tipo: "alerta", mensagem: `Possível falta de intervalo de almoço no dia ${dia}`, dia });
        }
     }
   }
