@@ -36,12 +36,13 @@ export interface ProcessingOptions {
 }
 
 /**
- * Normaliza texto do PDF
+ * Normaliza texto do PDF mantendo quebras de linha para análise por dia
  */
 function normalizeText(text: string): string {
   return text
     .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ")
-    .replace(/\s+/g, " ")
+    // Mantém quebras de linha (\n ou \r\n), mas colapsa múltiplos espaços em um só
+    .replace(/[^\S\r\n]+/g, " ")
     .trim();
 }
 
@@ -65,18 +66,23 @@ export async function parseWorkersExcel(file: File): Promise<WorkerData[]> {
   const worksheet = workbook.Sheets[firstSheetName];
   const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-  return jsonData.map(row => {
-    // Tenta encontrar colunas por nome ou posição
-    const nome = row["Nome"] || row["NOME"] || Object.values(row)[0];
-    const email = row["E-mail"] || row["Email"] || row["EMAIL"] || Object.values(row)[1];
-    const cpf = String(row["CPF"] || row["Cpf"] || row["cpf"] || Object.values(row).slice(-1)[0]);
+  return jsonData
+    .filter(row => {
+      const vinculo = String(row["Vínculo"] || row["Vinculo"] || row["VINCULO"] || "");
+      return !["X", "D"].includes(vinculo.toUpperCase().trim());
+    })
+    .map(row => {
+      // Tenta encontrar colunas por nome ou posição
+      const nome = row["Nome"] || row["NOME"] || Object.values(row)[0];
+      const email = row["E-mail"] || row["Email"] || row["EMAIL"] || Object.values(row)[1];
+      const cpf = String(row["CPF"] || row["Cpf"] || row["cpf"] || Object.values(row).slice(-1)[0]);
 
-    return {
-      nome: String(nome || ""),
-      email: String(email || ""),
-      cpf: cpf.replace(/\D/g, ""), // Normaliza apenas números
-    };
-  });
+      return {
+        nome: String(nome || ""),
+        email: String(email || ""),
+        cpf: cpf.replace(/\D/g, ""), // Normaliza apenas números
+      };
+    });
 }
 
 /**
@@ -169,8 +175,8 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
   const criticas: Critica[] = [];
   // Regex melhorado para capturar linhas de dias: DD/MM [dia-da-semana] [pontos] ... [saldo]
   // Ex: 02/02 segunda-feira 07:38 12:05 | 12:53 16:04 | ... -00:22
-  // Considera também FERIADO ou folgas que podem estar entre a data e o saldo
-  const dayRegex = /(\d{2}\/\d{2})\s+\w+(?:-feira)?\s+(.*?)\s+([+-]?\d{2}:\d{2})$/gm;
+  // Considera caracteres acentuados (ex: terça) e garante match por linha
+  const dayRegex = /^(\d{2}\/\d{2})\s+[a-z-ç]+(?:-feira)?\s+(.*?)\s+([+-]?\d{2}:\d{2})$/gim;
 
   let match;
   while ((match = dayRegex.exec(text)) !== null) {
