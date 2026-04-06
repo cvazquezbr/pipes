@@ -41,9 +41,55 @@ export function SMTPConfigForm() {
     }
   }, []);
 
+  const [isTesting, setIsTesting] = useState(false);
+
   const handleSave = () => {
     localStorage.setItem("smtp_config", JSON.stringify(config));
     toast.success("Configurações de SMTP salvas localmente");
+  };
+
+  const handleTest = async () => {
+    if (!config.user || !config.host) {
+      toast.error("Preencha o e-mail e o host para testar.");
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          smtpConfig: config,
+          emailData: {
+            to: config.user,
+            cc: config.ccEmail,
+            subject: "Teste de Configuração SMTP - Sistema de Ponto",
+            html: `
+              <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h2 style="color: #2563eb;">Teste de Conexão Bem-sucedido!</h2>
+                <p>Olá, este é um e-mail de teste enviado pelo Sistema de Ponto.</p>
+                <p>Se você recebeu esta mensagem no e-mail <strong>${config.user}</strong>, suas configurações de SMTP estão funcionando corretamente.</p>
+                ${config.ccEmail ? `<p>Uma cópia também foi enviada para o e-mail em CC: <strong>${config.ccEmail}</strong>.</p>` : ""}
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 0.8em; color: #94a3b8;">Data do teste: ${new Date().toLocaleString('pt-BR')}</p>
+              </div>
+            `
+          }
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        toast.success("E-mail de teste enviado com sucesso! Verifique sua caixa de entrada e spam.");
+      } else {
+        toast.error("Erro ao enviar teste: " + (res.error || "Verifique as configurações."));
+      }
+    } catch (e: any) {
+      toast.error("Erro de conexão: " + e.message);
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -126,9 +172,15 @@ export function SMTPConfigForm() {
           <p className="text-[10px] text-slate-500">Este e-mail receberá uma cópia de todos os envios.</p>
         </div>
 
-        <Button onClick={handleSave} className="w-full">
-          Salvar Configurações
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleTest} disabled={isTesting} className="flex-1">
+            {isTesting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
+            Testar Conexão
+          </Button>
+          <Button onClick={handleSave} className="flex-1">
+            Salvar Configurações
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
