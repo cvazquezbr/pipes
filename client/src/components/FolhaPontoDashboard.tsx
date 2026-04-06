@@ -12,12 +12,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   AlertCircle,
   CheckCircle2,
   Mail,
   FileWarning,
   Loader2,
-  Trash2
+  Trash2,
+  Search
 } from "lucide-react";
 import { toast } from "sonner";
 import type { FolhaPontoResult } from "@/lib/folhaPonto";
@@ -31,13 +40,13 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [sendProgress, setSendProgress] = useState(0);
-  const [logs, setLogs] = useState<{ matricula: string; status: "success" | "error"; message: string }[]>([]);
+  const [logs, setLogs] = useState<{ cpf: string; status: "success" | "error"; message: string }[]>([]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === results.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(results.map(r => r.matricula));
+      setSelectedIds(results.map(r => r.cpf));
     }
   };
 
@@ -55,7 +64,7 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
     }
     const smtpConfig = JSON.parse(smtpConfigStr);
 
-    const toSend = results.filter(r => selectedIds.includes(r.matricula) && r.email);
+    const toSend = results.filter(r => selectedIds.includes(r.cpf) && r.email);
     if (toSend.length === 0) {
       toast.error("Selecione funcionários com e-mail cadastrado.");
       return;
@@ -76,7 +85,7 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
                .reduce((data, byte) => data + String.fromCharCode(byte), '')
            );
            attachments.push({
-             filename: `Espelho_Ponto_${worker.matricula}.pdf`,
+             filename: `Espelho_Ponto_${worker.cpf}.pdf`,
              content: base64Content
            });
         }
@@ -123,12 +132,12 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
 
         const res = await response.json();
         if (res.success) {
-          setLogs(prev => [...prev, { matricula: worker.matricula, status: "success", message: "Enviado com sucesso" }]);
+          setLogs(prev => [...prev, { cpf: worker.cpf, status: "success", message: "Enviado com sucesso" }]);
         } else {
-          setLogs(prev => [...prev, { matricula: worker.matricula, status: "error", message: res.error || "Erro desconhecido" }]);
+          setLogs(prev => [...prev, { cpf: worker.cpf, status: "error", message: res.error || "Erro desconhecido" }]);
         }
       } catch (e: any) {
-        setLogs(prev => [...prev, { matricula: worker.matricula, status: "error", message: e.message }]);
+        setLogs(prev => [...prev, { cpf: worker.cpf, status: "error", message: e.message }]);
       }
       setSendProgress(Math.round(((i + 1) / toSend.length) * 100));
     }
@@ -187,29 +196,29 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
                 />
               </TableHead>
               <TableHead>Funcionário</TableHead>
-              <TableHead>Matrícula</TableHead>
+              <TableHead>CPF</TableHead>
               <TableHead>Status Casamento</TableHead>
               <TableHead>Críticas</TableHead>
-              <TableHead className="w-[100px]">Ação</TableHead>
+              <TableHead className="w-[150px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {results.map((res) => {
-              const log = logs.find(l => l.matricula === res.matricula);
+              const log = logs.find(l => l.cpf === res.cpf);
 
               return (
-                <TableRow key={res.matricula} className="hover:bg-slate-50/50 transition-colors">
+                <TableRow key={res.cpf} className="hover:bg-slate-50/50 transition-colors">
                   <TableCell>
                     <Checkbox
-                      checked={selectedIds.includes(res.matricula)}
-                      onCheckedChange={() => toggleSelect(res.matricula)}
+                      checked={selectedIds.includes(res.cpf)}
+                      onCheckedChange={() => toggleSelect(res.cpf)}
                     />
                   </TableCell>
                   <TableCell>
                     <div className="font-medium text-slate-900">{res.nome}</div>
                     <div className="text-xs text-slate-500">{res.email || "Sem e-mail"}</div>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{res.matricula}</TableCell>
+                  <TableCell className="font-mono text-xs">{res.cpf}</TableCell>
                   <TableCell>
                     {res.matchStatus === "encontrado" ? (
                       <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 gap-1">
@@ -221,7 +230,7 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1">
-                        <AlertCircle className="h-3 w-3" /> Matrícula Extra
+                        <AlertCircle className="h-3 w-3" /> CPF Extra
                       </Badge>
                     )}
                   </TableCell>
@@ -241,11 +250,30 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
                     </div>
                   </TableCell>
                   <TableCell>
-                    {log && (
-                      <div className={`text-[10px] font-bold ${log.status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                        {log.message}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                       <Dialog>
+                          <DialogTrigger asChild>
+                             <Button variant="ghost" size="icon" className="h-8 w-8" title="Ver texto bruto">
+                                <Search className="h-4 w-4" />
+                             </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+                             <DialogHeader>
+                                <DialogTitle>Texto Extraído - {res.nome || res.cpf}</DialogTitle>
+                                <DialogDescription>Conteúdo bruto obtido do PDF para análise.</DialogDescription>
+                             </DialogHeader>
+                             <div className="flex-1 overflow-y-auto bg-slate-50 p-4 rounded-md font-mono text-[10px] whitespace-pre-wrap border">
+                                {res.rawText || "Nenhum texto extraído."}
+                             </div>
+                          </DialogContent>
+                       </Dialog>
+
+                      {log && (
+                        <div className={`text-[10px] font-bold ${log.status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                          {log.message}
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );

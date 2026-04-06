@@ -9,7 +9,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 export interface WorkerData {
-  matricula: string;
+  cpf: string;
   nome: string;
   email: string;
 }
@@ -21,13 +21,14 @@ export interface Critica {
 }
 
 export interface FolhaPontoResult {
-  matricula: string;
+  cpf: string;
   nome: string;
   email: string;
-  matchStatus: "encontrado" | "nao_encontrado" | "folha_ausente" | "matricula_extra";
+  matchStatus: "encontrado" | "nao_encontrado" | "folha_ausente" | "cpf_extra";
   criticas: Critica[];
   pdfBuffer?: Uint8Array;
   paginas: number[];
+  rawText: string;
 }
 
 export interface ProcessingOptions {
@@ -68,12 +69,12 @@ export async function parseWorkersExcel(file: File): Promise<WorkerData[]> {
     // Tenta encontrar colunas por nome ou posição
     const nome = row["Nome"] || row["NOME"] || Object.values(row)[0];
     const email = row["E-mail"] || row["Email"] || row["EMAIL"] || Object.values(row)[1];
-    const matricula = String(row["Matrícula"] || row["Matricula"] || row["MATRICULA"] || row["Código"] || row["Codigo"] || Object.values(row).slice(-1)[0]);
+    const cpf = String(row["CPF"] || row["Cpf"] || row["cpf"] || Object.values(row).slice(-1)[0]);
 
     return {
       nome: String(nome || ""),
       email: String(email || ""),
-      matricula: matricula.trim(),
+      cpf: cpf.replace(/\D/g, ""), // Normaliza apenas números
     };
   });
 }
@@ -97,13 +98,14 @@ export async function processFolhaPonto(
 
   // Inicializa resultados com base na planilha (Left Join)
   workers.forEach(w => {
-    resultsMap.set(w.matricula, {
-      matricula: w.matricula,
+    resultsMap.set(w.cpf, {
+      cpf: w.cpf,
       nome: w.nome,
       email: w.email,
       matchStatus: "folha_ausente",
       criticas: [],
-      paginas: []
+      paginas: [],
+      rawText: ""
     });
   });
 
@@ -112,37 +114,33 @@ export async function processFolhaPonto(
   for (let i = 1; i <= totalPages; i++) {
     const page = await pdfDoc.getPage(i);
     const textContent = await page.getTextContent();
-    const rawText = textContent.items.map((item: any) => item.str).join(" ");
-    const text = normalizeText(rawText);
+    const pageRawText = textContent.items.map((item: any) => item.str).join(" ");
+    const text = normalizeText(pageRawText);
 
-    // Localizar Matrícula/Código
-    // Com base na imagem, procurar por "Código: [número]" ou similar
-    const matriculaMatch = text.match(/(?:Código|Matrícula|Matricula):\s*(\d+)/i) || text.match(/(\d+)\s*-\s*[A-Z ]+/);
-    let matricula = matriculaMatch ? matriculaMatch[1] : null;
+    // Localizar CPF (000.000.000-00 ou similar)
+    const cpfMatch = text.match(/(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/);
+    let cpf = cpfMatch ? cpfMatch[1].replace(/\D/g, "") : null;
 
-    if (!matricula) {
-      // Tentar encontrar um padrão de número isolado que pareça matrícula se o rótulo falhar
-      // Mas por enquanto vamos ser conservadores
-    }
-
-    if (matricula) {
-      let result = resultsMap.get(matricula);
+    if (cpf) {
+      let result = resultsMap.get(cpf);
       if (!result) {
-        // Matrícula no PDF que não está na planilha
+        // CPF no PDF que não está na planilha
         result = {
-          matricula,
+          cpf,
           nome: "Desconhecido (PDF)",
           email: "",
-          matchStatus: "matricula_extra",
+          matchStatus: "cpf_extra",
           criticas: [],
-          paginas: []
+          paginas: [],
+          rawText: ""
         };
-        resultsMap.set(matricula, result);
+        resultsMap.set(cpf, result);
       } else {
         result.matchStatus = "encontrado";
       }
 
       result.paginas.push(i - 1);
+      result.rawText += (result.rawText ? "\n\n" : "") + `PÁGINA ${i}:\n` + text;
 
       // Análise de Críticas na página
       const criticas = analyzePageCriticas(text, options);
