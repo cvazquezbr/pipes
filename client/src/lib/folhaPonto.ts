@@ -118,7 +118,20 @@ export async function processFolhaPonto(
   for (let i = 1; i <= totalPages; i++) {
     const page = await pdfDoc.getPage(i);
     const textContent = await page.getTextContent();
-    const pageRawText = textContent.items.map((item: any) => item.str).join(" ");
+
+    // Agrupa texto por linha baseado na posição vertical (Y)
+    let pageRawText = "";
+    let lastY: number | null = null;
+
+    for (const item of textContent.items as any[]) {
+      const y = item.transform[5];
+      if (lastY !== null && Math.abs(y - lastY) > 5) {
+        pageRawText += "\n";
+      }
+      pageRawText += item.str + " ";
+      lastY = y;
+    }
+
     const text = normalizeText(pageRawText);
 
     const cpfMatch = text.match(/(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/) || text.match(/CPF:\s*(\d{11})/);
