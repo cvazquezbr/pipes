@@ -34,6 +34,7 @@ async function startServer() {
       const info = await transporter.sendMail({
         from: `"${smtpConfig.fromName || "RH"}" <${smtpConfig.user}>`,
         to: emailData.to,
+        cc: emailData.cc,
         subject: emailData.subject,
         html: emailData.html,
         attachments: emailData.attachments?.map((att: any) => ({

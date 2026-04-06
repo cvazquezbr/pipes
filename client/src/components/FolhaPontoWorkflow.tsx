@@ -33,6 +33,7 @@ interface FolhaPontoWorkflowProps {
 export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
   const [step, setStep] = useState(1);
   const [workers, setWorkers] = useState<WorkerData[]>([]);
+  const [teamChiefs, setTeamChiefs] = useState<Record<string, string>>({});
   const [results, setResults] = useState<FolhaPontoResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -41,8 +42,9 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
 
   const handleExcelLoaded = async (data: any, file: File) => {
     try {
-      const parsedWorkers = await parseWorkersExcel(file);
+      const { workers: parsedWorkers, teamChiefs: parsedChiefs } = await parseWorkersExcel(file);
       setWorkers(parsedWorkers);
+      setTeamChiefs(parsedChiefs);
       toast.success(`${parsedWorkers.length} funcionários carregados da planilha.`);
       setStep(2);
     } catch (e) {
@@ -194,9 +196,11 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
         {step === 4 && (
           <FolhaPontoDashboard
             results={results}
+            teamChiefs={teamChiefs}
             onClear={() => {
               setResults([]);
               setWorkers([]);
+              setTeamChiefs({});
               setStep(1);
             }}
           />

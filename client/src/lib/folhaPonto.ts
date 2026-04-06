@@ -12,6 +12,7 @@ export interface WorkerData {
   cpf: string;
   nome: string;
   email: string;
+  equipe: string;
 }
 
 export interface Critica {
@@ -24,6 +25,7 @@ export interface FolhaPontoResult {
   cpf: string;
   nome: string;
   email: string;
+  equipe: string;
   matchStatus: "encontrado" | "nao_encontrado" | "folha_ausente" | "cpf_extra";
   criticas: Critica[];
   pdfBuffer?: Uint8Array;
@@ -60,16 +62,18 @@ function timeToMinutes(timeStr: string): number {
 }
 
 /**
- * Parse da planilha de trabalhadores
+ * Parse da planilha de trabalhadores e mapeamento de chefes
  */
-export async function parseWorkersExcel(file: File): Promise<WorkerData[]> {
+export async function parseWorkersExcel(file: File): Promise<{ workers: WorkerData[], teamChiefs: Record<string, string> }> {
   const data = await file.arrayBuffer();
   const workbook = XLSX.read(data);
+
+  // 1. Processar Funcionários (Primeira Aba)
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
   const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-  return jsonData
+  const workers = jsonData
     .filter(row => {
       const vinculo = String(row["Vínculo"] || row["Vinculo"] || row["VINCULO"] || "");
       return !["X", "D"].includes(vinculo.toUpperCase().trim());
@@ -78,13 +82,37 @@ export async function parseWorkersExcel(file: File): Promise<WorkerData[]> {
       const nome = row["Nome"] || row["NOME"] || Object.values(row)[0];
       const email = row["E-mail"] || row["Email"] || row["EMAIL"] || Object.values(row)[1];
       const cpf = String(row["CPF"] || row["Cpf"] || row["cpf"] || Object.values(row).slice(-1)[0]);
+      const equipe = row["equipe"] || row["Equipe"] || row["EQUIPE"] || "Sem Equipe";
 
       return {
         nome: String(nome || ""),
         email: String(email || ""),
         cpf: cpf.replace(/\D/g, ""), // Normaliza apenas números
+        equipe: String(equipe).trim() || "Sem Equipe"
       };
     });
+
+  // 2. Processar Chefes (Segunda Aba)
+  const teamChiefs: Record<string, string> = {};
+  const secondSheetName = workbook.SheetNames[1];
+  if (secondSheetName) {
+    const chiefSheet = workbook.Sheets[secondSheetName];
+    const chiefData = XLSX.utils.sheet_to_json(chiefSheet, { header: 1 }) as any[][];
+
+    // Ignorar cabeçalho se houver e mapear
+    chiefData.forEach((row, index) => {
+      if (index === 0 && (String(row[0]).toLowerCase().includes("equipe") || String(row[1]).toLowerCase().includes("email"))) {
+        return;
+      }
+      const team = String(row[0] || "").trim();
+      const email = String(row[1] || "").trim();
+      if (team && email) {
+        teamChiefs[team] = email;
+      }
+    });
+  }
+
+  return { workers, teamChiefs };
 }
 
 /**
@@ -107,6 +135,7 @@ export async function processFolhaPonto(
       cpf: w.cpf,
       nome: w.nome,
       email: w.email,
+      equipe: w.equipe,
       matchStatus: "folha_ausente",
       criticas: [],
       paginas: [],
@@ -145,6 +174,7 @@ export async function processFolhaPonto(
           cpf,
           nome: "Desconhecido (PDF)",
           email: "",
+          equipe: "Sem Equipe",
           matchStatus: "cpf_extra",
           criticas: [],
           paginas: [],
