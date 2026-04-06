@@ -41,19 +41,21 @@ export interface ProcessingOptions {
 function normalizeText(text: string): string {
   return text
     .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ")
-    // Mantém quebras de linha (\n ou \r\n), mas colapsa múltiplos espaços em um só
     .replace(/[^\S\r\n]+/g, " ")
     .trim();
 }
 
 /**
- * Converte string de horas (HH:mm) para minutos
+ * Converte string de horas (HH:mm ou +-HH:mm) para minutos
  */
 function timeToMinutes(timeStr: string): number {
   if (!timeStr || !timeStr.includes(":")) return 0;
-  const sign = timeStr.startsWith("-") ? -1 : 1;
-  const [hours, minutes] = timeStr.replace("-", "").split(":").map(Number);
-  return sign * (hours * 60 + (minutes || 0));
+  const sign = timeStr.includes("-") ? -1 : 1;
+  const cleaned = timeStr.replace(/[+-]/g, "").trim();
+  const parts = cleaned.split(":");
+  const hours = parseInt(parts[0], 10) || 0;
+  const minutes = parseInt(parts[1], 10) || 0;
+  return sign * (hours * 60 + minutes);
 }
 
 /**
@@ -72,7 +74,6 @@ export async function parseWorkersExcel(file: File): Promise<WorkerData[]> {
       return !["X", "D"].includes(vinculo.toUpperCase().trim());
     })
     .map(row => {
-      // Tenta encontrar colunas por nome ou posição
       const nome = row["Nome"] || row["NOME"] || Object.values(row)[0];
       const email = row["E-mail"] || row["Email"] || row["EMAIL"] || Object.values(row)[1];
       const cpf = String(row["CPF"] || row["Cpf"] || row["cpf"] || Object.values(row).slice(-1)[0]);
@@ -95,14 +96,11 @@ export async function processFolhaPonto(
   onProgress?: (p: number) => void
 ): Promise<FolhaPontoResult[]> {
   const arrayBuffer = await pdfFile.arrayBuffer();
-  // Usamos slice(0) para evitar que o buffer seja desvinculado (detached)
-  // ao ser passado para os processadores de PDF
   const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
   const originalPdfLibDoc = await PDFDocument.load(arrayBuffer.slice(0));
 
   const resultsMap = new Map<string, FolhaPontoResult>();
 
-  // Inicializa resultados com base na planilha (Left Join)
   workers.forEach(w => {
     resultsMap.set(w.cpf, {
       cpf: w.cpf,
@@ -123,14 +121,12 @@ export async function processFolhaPonto(
     const pageRawText = textContent.items.map((item: any) => item.str).join(" ");
     const text = normalizeText(pageRawText);
 
-    // Localizar CPF (000.000.000-00 ou similar)
-    const cpfMatch = text.match(/(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/);
+    const cpfMatch = text.match(/(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/) || text.match(/CPF:\s*(\d{11})/);
     let cpf = cpfMatch ? cpfMatch[1].replace(/\D/g, "") : null;
 
     if (cpf) {
       let result = resultsMap.get(cpf);
       if (!result) {
-        // CPF no PDF que não está na planilha
         result = {
           cpf,
           nome: "Desconhecido (PDF)",
@@ -148,7 +144,6 @@ export async function processFolhaPonto(
       result.paginas.push(i - 1);
       result.rawText += (result.rawText ? "\n\n" : "") + `PÁGINA ${i}:\n` + text;
 
-      // Análise de Críticas na página
       const criticas = analyzePageCriticas(text, options);
       result.criticas.push(...criticas);
     }
@@ -158,7 +153,6 @@ export async function processFolhaPonto(
 
   const finalResults = Array.from(resultsMap.values());
 
-  // Gerar sub-PDFs para cada funcionário que tem páginas
   for (const res of finalResults) {
     if (res.paginas.length > 0) {
       const newDoc = await PDFDocument.create();
@@ -173,26 +167,77 @@ export async function processFolhaPonto(
 
 export function analyzePageCriticas(text: string, options: ProcessingOptions): Critica[] {
   const criticas: Critica[] = [];
-  // Regex melhorado para capturar linhas de dias: DD/MM [dia-da-semana] [pontos] ... [saldo]
-  // Ex: 02/02 segunda-feira 07:38 12:05 | 12:53 16:04 | ... -00:22
-  // Considera caracteres acentuados (ex: terça) e garante match por linha
-  const dayRegex = /^(\d{2}\/\d{2})\s+[a-z-ç]+(?:-feira)?\s+(.*?)\s+([+-]?\d{2}:\d{2})$/gim;
 
-  let match;
-  while ((match = dayRegex.exec(text)) !== null) {
-    const [_, dia, centerContent, saldoStr] = match;
+  const dateRegex = /(\d{2}\/\d{2})/g;
+  const matches = Array.from(text.matchAll(dateRegex));
 
-    // 1. Falta Não Justificada
-    if (centerContent.includes("FALTA") || centerContent.includes("FALTA NAO JUSTIFICADA")) {
+  if (matches.length === 0) return [];
+
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    const dia = match[1];
+    const startIdx = match.index!;
+    const nextMatch = matches[i+1];
+    const endIdx = nextMatch ? nextMatch.index! : text.length;
+
+    const lookback = 80;
+    const dayBlock = text.substring(Math.max(0, startIdx - lookback), endIdx);
+
+    if (dayBlock.includes("DIA / MÊS") || dayBlock.includes("DADOS DO EMPREGADOR") || dayBlock.includes("Quadro de Horários") || dayBlock.includes("Página")) {
+      continue;
+    }
+
+    if (dayBlock.includes("FALTA NAO JUSTIFICADA") || dayBlock.includes("FALTA")) {
        criticas.push({
          tipo: "erro",
          mensagem: `Falta não justificada identificada no dia ${dia}`,
          dia
        });
+       continue;
     }
 
-    // 2. Marcações Ímpares
-    const batidas = centerContent.match(/\d{2}:\d{2}/g) || [];
+    const rawTimes = dayBlock.match(/[+-]?\s*\d{1,2}:\d{2}/g) || [];
+    const times = rawTimes.map(t => t.replace(/\s+/g, ""));
+
+    if (times.length === 0) continue;
+
+    const isDiaUtil = dayBlock.toLowerCase().match(/segunda|terça|quarta|quinta|sexta|seg|ter|qua|qui|sex/);
+
+    let saldoStr = "00:00";
+    let totalStr = "00:00";
+    let batidas: string[] = [];
+
+    if (isDiaUtil) {
+       let saldoIdx = times.findIndex(t => t.startsWith('+') || t.startsWith('-'));
+
+       if (saldoIdx !== -1) {
+         saldoStr = times[saldoIdx];
+         totalStr = times[saldoIdx + 1] || "00:00";
+
+         batidas = times.filter((t, idx) => {
+            if (idx === saldoIdx) return false;
+            if (idx === 0) return false;
+            if (idx === (saldoIdx + 1)) return false;
+            if (t === dia) return false;
+            return true;
+         });
+       } else if (times.length >= 3) {
+         saldoStr = times[1];
+         totalStr = times[2];
+         batidas = times.slice(3);
+       } else {
+         batidas = times.slice(1);
+       }
+    } else {
+       let saldoIdx = times.findIndex(t => t.startsWith('+') || t.startsWith('-'));
+       if (saldoIdx !== -1) {
+          saldoStr = times[saldoIdx];
+          batidas = times.filter((_, idx) => idx !== saldoIdx);
+       } else {
+          batidas = times;
+       }
+    }
+
     if (batidas.length > 0 && batidas.length % 2 !== 0) {
       criticas.push({
         tipo: "alerta",
@@ -201,7 +246,6 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
       });
     }
 
-    // 3. Atrasos / Débito
     const saldoMinutos = timeToMinutes(saldoStr);
     if (saldoMinutos < 0) {
       criticas.push({
@@ -211,7 +255,6 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
       });
     }
 
-    // 4. Horas Adicionais Excessivas
     if (saldoMinutos > options.horasAdicionaisLimite * 60) {
       criticas.push({
         tipo: "alerta",
@@ -219,11 +262,17 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
         dia
       });
     }
-  }
 
-  // Fallback para faltas se o regex de linha falhar mas a string existir solta
-  if (text.includes("FALTA NAO JUSTIFICADA") && !criticas.some(c => c.mensagem.includes("Falta"))) {
-     // Tentar encontrar o dia próximo à string
+    if (isDiaUtil && batidas.length === 2) {
+       const totalWorkedMin = Math.abs(timeToMinutes(totalStr));
+       if (totalWorkedMin > 300) {
+          criticas.push({
+            tipo: "alerta",
+            mensagem: `Possível falta de intervalo de almoço no dia ${dia}`,
+            dia
+          });
+       }
+    }
   }
 
   return criticas;
