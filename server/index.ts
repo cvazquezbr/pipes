@@ -14,9 +14,11 @@ async function startServer() {
   const server = createServer(app);
 
   app.post("/api/send-email", async (req, res) => {
+    console.log(`[Email] Request to send to: ${req.body?.emailData?.to}`);
     const { smtpConfig, emailData } = req.body;
 
     if (!smtpConfig || !emailData) {
+      console.error("[Email] Missing config or data");
       return res.status(400).json({ error: "Missing smtpConfig or emailData" });
     }
 
@@ -31,18 +33,23 @@ async function startServer() {
     });
 
     try {
-      const info = await transporter.sendMail({
+      const mailOptions: any = {
         from: `"${smtpConfig.fromName || "RH"}" <${smtpConfig.user}>`,
         to: emailData.to,
-        cc: emailData.cc,
         subject: emailData.subject,
         html: emailData.html,
         attachments: emailData.attachments?.map((att: any) => ({
           filename: att.filename,
           content: Buffer.from(att.content, "base64"),
         })),
-      });
+      };
 
+      if (emailData.cc && emailData.cc.trim()) {
+        mailOptions.cc = emailData.cc.trim();
+      }
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`[Email] Success: ${info.messageId}`);
       res.json({ success: true, messageId: info.messageId });
     } catch (error: any) {
       console.error("Error sending email:", error);
