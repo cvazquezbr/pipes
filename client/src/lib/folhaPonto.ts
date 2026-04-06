@@ -88,8 +88,10 @@ export async function processFolhaPonto(
   onProgress?: (p: number) => void
 ): Promise<FolhaPontoResult[]> {
   const arrayBuffer = await pdfFile.arrayBuffer();
-  const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const originalPdfLibDoc = await PDFDocument.load(arrayBuffer);
+  // Usamos slice(0) para evitar que o buffer seja desvinculado (detached)
+  // ao ser passado para os processadores de PDF
+  const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+  const originalPdfLibDoc = await PDFDocument.load(arrayBuffer.slice(0));
 
   const resultsMap = new Map<string, FolhaPontoResult>();
 
