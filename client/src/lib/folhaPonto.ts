@@ -218,12 +218,41 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
     let totalStr = "00:00";
 
     if (isWorkingDay) {
+       // No layout Solides/Fatto, a linha costuma ser:
+       // Ent1 Sai1 | Ent2 Sai2 | segunda-feira 08:00 02/03 SALDO TOTAL
+       // Ou: Ent1 Sai1 segunda-feira 08:00 02/03 SALDO TOTAL
+
        let sIdx = allTimes.findIndex(t => t.startsWith('+') || t.startsWith('-'));
 
        if (sIdx !== -1) {
+         // O saldo é o valor com + ou -
          saldoStr = allTimes[sIdx];
+         // O total costuma ser o valor imediatamente após o saldo
          totalStr = allTimes[sIdx + 1] || "00:00";
-         batidas = allTimes.filter((t, idx) => idx !== sIdx && idx !== sIdx + 1 && idx !== 0);
+
+         // No layout Solides/Fatto:
+         // punches ... [weekday] [previstas] [date] [saldo] [total]
+         // Precisamos identificar onde começam os metadados.
+         // O 'previstas' (ex: 08:00) costuma estar antes da data ou do saldo.
+
+         // Vamos reconstruir batidas pegando tudo ANTES do padrão [weekday] [previstas] [date]
+         // Como temos a data (dia), vamos ver o índice dela no texto.
+         const dateIndex = line.indexOf(dia);
+         const textBeforeDate = line.substring(0, dateIndex);
+
+         // As batidas são os horários que aparecem ANTES da data,
+         // excluindo o horário previsto que vem colado no dia da semana.
+         // Ex: "07:32 13:21 | 14:10 16:12 | quarta-feira 08:00 04/03"
+         const timesBeforeDate = (textBeforeDate.match(/\d{1,2}:\d{2}/g) || []);
+         if (timesBeforeDate.length > 0) {
+            // Remove o último se houver um dia da semana antes dele (é o previsto)
+            const weekdayPart = textBeforeDate.toLowerCase().match(/domingo|segunda|terça|quarta|quinta|sexta|sabado|sábado|seg|ter|qua|qui|sex|dom|sab/);
+            if (weekdayPart) {
+                batidas = timesBeforeDate.slice(0, -1);
+            } else {
+                batidas = timesBeforeDate;
+            }
+         }
        } else {
          batidas = allTimes.slice(1);
        }

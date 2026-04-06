@@ -46,37 +46,46 @@ describe('folhaPonto analyzePageCriticas', () => {
   describe('Work Interval Rules', () => {
     it('should alert if pause < 1h for worked > 6h', () => {
       // 08:00-12:00, 12:30-17:00 => 8.5h worked, 30min pause
-      const text = 'segunda-feira 08:00 02/03 +00:30 08:30 08:00 12:00 12:30 17:00';
+      const text = '08:00 12:00 12:30 17:00 segunda-feira 08:00 02/03 +00:30 08:30';
       const criticas = analyzePageCriticas(text, options);
       expect(criticas.some(c => c.mensagem.includes('Intervalo insuficiente no dia 02/03 (30min). Mínimo de 1h para jornada > 6h.'))).toBe(true);
     });
 
     it('should alert if pause > 2h for worked > 6h', () => {
       // 08:00-12:00, 15:00-19:00 => 8h worked, 3h pause
-      const text = 'segunda-feira 08:00 02/03 +00:00 08:00 08:00 12:00 15:00 19:00';
+      const text = '08:00 12:00 15:00 19:00 segunda-feira 08:00 02/03 +00:00 08:00';
       const criticas = analyzePageCriticas(text, options);
       expect(criticas.some(c => c.mensagem.includes('Intervalo excedente no dia 02/03 (180min). Máximo de 2h para jornada > 6h.'))).toBe(true);
     });
 
     it('should alert if pause < 15min for worked 4h-6h', () => {
       // 08:00-13:00 => 5h worked, 0 pause. Wait, 1 punch? No, 2 punches: 08:00 13:00
-      const text = 'segunda-feira 08:00 02/03 -03:00 05:00 08:00 13:00';
+      const text = '08:00 13:00 segunda-feira 08:00 02/03 -03:00 05:00';
       const criticas = analyzePageCriticas(text, options);
-      // For 2 punches, it defaults to legacy if no interval found.
-      // But here pause is 0.
       expect(criticas.some(c => c.mensagem.includes('Intervalo insuficiente no dia 02/03 (0min). Mínimo de 15min para jornada entre 4h e 6h.'))).toBe(true);
+    });
+
+    it('should correctly identify punches on 04/03 (Agnaldo case)', () => {
+        // 07:32 13:21 | 14:10 16:12 | quarta-feira 08:00 04/03 -00:09 07:51
+        // Pause: 13:21 to 14:10 = 49 min.
+        // Jornada: 07:51 (> 6h). Required: 1h. Result: "Intervalo insuficiente".
+        const text = '07:32 13:21 | 14:10 16:12 | quarta-feira 08:00 04/03 -00:09 07:51';
+        const criticas = analyzePageCriticas(text, options);
+        expect(criticas.some(c => c.mensagem.includes('Intervalo insuficiente no dia 04/03 (49min)'))).toBe(true);
+        // It should NOT be "Intervalo excedente"
+        expect(criticas.some(c => c.mensagem.includes('excedente'))).toBe(false);
     });
 
     it('should NOT alert if pause is valid for worked > 6h', () => {
       // 08:00-12:00, 13:30-17:30 => 8h worked, 1.5h pause
-      const text = 'segunda-feira 08:00 02/03 00:00 08:00 08:00 12:00 13:30 17:30';
+      const text = '08:00 12:00 13:30 17:30 segunda-feira 08:00 02/03 00:00 08:00';
       const criticas = analyzePageCriticas(text, options);
       expect(criticas.some(c => c.mensagem.includes('Intervalo'))).toBe(false);
     });
 
     it('should NOT alert if worked <= 4h', () => {
         // 08:00-11:00 => 3h worked, 0 pause
-        const text = 'segunda-feira 08:00 02/03 -05:00 03:00 08:00 11:00';
+        const text = '08:00 11:00 segunda-feira 08:00 02/03 -05:00 03:00';
         const criticas = analyzePageCriticas(text, options);
         expect(criticas.some(c => c.mensagem.includes('Intervalo'))).toBe(false);
     });
