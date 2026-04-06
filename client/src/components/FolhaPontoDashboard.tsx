@@ -26,7 +26,9 @@ import {
   FileWarning,
   Loader2,
   Trash2,
-  Search
+  Search,
+  Copy,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 import type { FolhaPontoResult } from "@/lib/folhaPonto";
@@ -54,6 +56,11 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Texto copiado para a área de transferência!");
   };
 
   const handleSendEmails = async () => {
@@ -258,9 +265,20 @@ export function FolhaPontoDashboard({ results, onClear }: FolhaPontoDashboardPro
                              </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-                             <DialogHeader>
-                                <DialogTitle>Texto Extraído - {res.nome || res.cpf}</DialogTitle>
-                                <DialogDescription>Conteúdo bruto obtido do PDF para análise.</DialogDescription>
+                             <DialogHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                   <DialogTitle>Texto Extraído - {res.nome || res.cpf}</DialogTitle>
+                                   <DialogDescription>Conteúdo bruto obtido do PDF para análise.</DialogDescription>
+                                </div>
+                                <Button
+                                   variant="outline"
+                                   size="sm"
+                                   onClick={() => copyToClipboard(res.rawText)}
+                                   className="h-8"
+                                >
+                                   <Copy className="h-4 w-4 mr-2" />
+                                   Copiar Texto
+                                </Button>
                              </DialogHeader>
                              <div className="flex-1 overflow-y-auto bg-slate-50 p-4 rounded-md font-mono text-[10px] whitespace-pre-wrap border">
                                 {res.rawText || "Nenhum texto extraído."}
