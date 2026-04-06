@@ -34,6 +34,7 @@ import {
 import { exportIrpjCsllExcel, processIrpjCsllData } from "@/lib/irpjCsllExport";
 import { JsonUpload } from "@/components/JsonUpload";
 import { WorkerComparison } from "@/components/WorkerComparison";
+import { FolhaPontoWorkflow } from "@/components/FolhaPontoWorkflow";
 import {
   aggregateWorkerData,
   exportRendimentosToExcel,
@@ -76,6 +77,7 @@ import {
   FileCode,
   History,
   Info,
+  Clock,
 } from "lucide-react";
 import {
   Tooltip,
@@ -88,7 +90,7 @@ import type { AggregatedWorkerData } from "@/lib/rendimentosExport";
 
 export default function Home() {
   const [workflow, setWorkflow] = useState<
-    "nfse" | "piscofinsiss" | "irpjcsll" | "rendimentos" | "compress" | "worker-comparison" | null
+    "nfse" | "piscofinsiss" | "irpjcsll" | "rendimentos" | "compress" | "worker-comparison" | "folha-ponto" | null
   >(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [isVerResultadosLoading, setIsVerResultadosLoading] = useState(false);
@@ -623,6 +625,35 @@ export default function Home() {
 
               <Card
                 className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
+                onClick={() => setWorkflow("folha-ponto")}
+              >
+                <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                <CardHeader>
+                  <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Clock className="text-primary h-6 w-6" />
+                  </div>
+                  <CardTitle>Folha de Ponto (Críticas)</CardTitle>
+                  <CardDescription>
+                    Automatizar a validação e o envio por e-mail dos espelhos de ponto.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Cruzamento de matrícula
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Regras de críticas (faltas, batidas ímpares, extras)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-3 w-3 text-green-500" /> Disparo por E-mail (SMTP)
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="group hover:border-primary/50 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md overflow-hidden"
                 onClick={() => setWorkflow("compress")}
               >
                 <div className="h-2 bg-primary/20 group-hover:bg-primary/40 transition-colors" />
@@ -658,7 +689,7 @@ export default function Home() {
         )}
 
         {/* Stepper */}
-        {workflow && (
+        {workflow && workflow !== "folha-ponto" && (
           <nav aria-label="Progress" className="mb-12">
             <ol
               role="list"
@@ -709,6 +740,10 @@ export default function Home() {
 
         {workflow && (
           <div className="space-y-8">
+            {workflow === "folha-ponto" ? (
+              <FolhaPontoWorkflow onBackToMenu={() => setWorkflow(null)} />
+            ) : (
+            <>
             {/* Step 1: Excel Upload (Reference) or Compression */}
             {currentStep === 1 && (
               <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1674,6 +1709,8 @@ export default function Home() {
                   </div>
                 </div>
               )}
+            </>
+            )}
           </div>
         )}
 
