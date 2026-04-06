@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Mail, ShieldCheck, Server } from "lucide-react";
+import { Mail, ShieldCheck, Server, Loader2 } from "lucide-react";
 
 export interface SMTPConfig {
   host: string;
