@@ -181,9 +181,19 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
     const endIdx = nextMatch ? nextMatch.index! : text.length;
 
     const lookback = 80;
-    const dayBlock = text.substring(Math.max(0, startIdx - lookback), endIdx);
+    const contextStart = Math.max(0, startIdx - lookback);
+    const dayBlock = text.substring(contextStart, endIdx);
+    const beforeDate = text.substring(contextStart, startIdx);
 
-    if (dayBlock.includes("DIA / MÊS") || dayBlock.includes("DADOS DO EMPREGADOR") || dayBlock.includes("Quadro de Horários") || dayBlock.includes("Página")) {
+    // Ignorar datas que fazem parte de cabeçalhos ou metadados
+    if (
+      beforeDate.includes("Admissão:") ||
+      beforeDate.includes("Emissão:") ||
+      dayBlock.includes("DIA / MÊS") ||
+      dayBlock.includes("DADOS DO EMPREGADOR") ||
+      dayBlock.includes("Quadro de Horários") ||
+      dayBlock.includes("Página")
+    ) {
       continue;
     }
 

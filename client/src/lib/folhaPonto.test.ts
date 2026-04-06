@@ -43,4 +43,13 @@ describe('folhaPonto analyzePageCriticas', () => {
     const criticas = analyzePageCriticas(text, options);
     expect(criticas.some(c => c.mensagem.includes('Possível falta de intervalo de almoço'))).toBe(false);
   });
+
+  it('should ignore admission date (Agnaldo Correia case)', () => {
+    const text = 'CPF: 93501650310 Admissão: 17/02/2025 PONTOS 01/03 domingo 07:34 13:32 14:06 17:20';
+    const criticas = analyzePageCriticas(text, options);
+    // Should not have any critique for 17/02
+    expect(criticas.some(c => c.dia === '17/02')).toBe(false);
+    // Should still have data for 01/03 (if valid, here it's 4 punches so likely no error)
+    expect(criticas.length).toBe(0);
+  });
 });
