@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { analyzePageCriticas } from './folhaPonto';
 
 describe('folhaPonto analyzePageCriticas', () => {
-  const options = { horasAdicionaisLimite: 2, horasDebitoLimite: 2 };
+  const options = { horasAdicionaisLimite: 2, horasDebitoLimite: 2, intervaloAlmocoTolerancia: 0 };
 
   it('should identify FALTA NAO JUSTIFICADA', () => {
     const text = '10/05 SEX FALTA NAO JUSTIFICADA 00:00 00:00 -08:00';
@@ -128,6 +128,59 @@ describe('folhaPonto analyzePageCriticas', () => {
         // Saldo -2:23 é maior que limite de 2h.
         expect(criticas.some(c => c.mensagem.includes('Mais de 02:00h de débito'))).toBe(true);
         expect(criticas.some(c => c.mensagem.includes('Inconsistência de batida'))).toBe(false);
+    });
+  });
+
+  describe('Interval Tolerance', () => {
+    const optionsWithTolerance = { horasAdicionaisLimite: 2, horasDebitoLimite: 2, intervaloAlmocoTolerancia: 15 };
+
+    it('should NOT alert if pause is 45min (within 15min tolerance) for worked > 6h', () => {
+      // 08:00-12:00, 12:45-17:00 => 8.25h worked, 45min pause. Required: 1h. 45min is >= 60-15.
+      const text = '08:00 12:00 12:45 17:00 segunda-feira 08:00 02/03 +00:15 08:15';
+      const criticas = analyzePageCriticas(text, optionsWithTolerance);
+      expect(criticas.some(c => c.categoria === 'Intervalo')).toBe(false);
+    });
+
+    it('should alert if pause is 44min (outside 15min tolerance) for worked > 6h', () => {
+      const text = '08:00 12:00 12:44 17:00 segunda-feira 08:00 02/03 +00:16 08:16';
+      const criticas = analyzePageCriticas(text, optionsWithTolerance);
+      expect(criticas.some(c => c.mensagem.includes('Intervalo insuficiente no dia 02/03 (44min)'))).toBe(true);
+    });
+
+    it('should NOT alert if pause is 135min (within 15min tolerance) for worked > 6h', () => {
+      // 120 + 15 = 135.
+      const text = '08:00 12:00 14:15 18:15 segunda-feira 08:00 02/03 +00:00 08:00';
+      const criticas = analyzePageCriticas(text, optionsWithTolerance);
+      expect(criticas.some(c => c.categoria === 'Intervalo')).toBe(false);
+    });
+
+    it('should alert if pause is 136min (outside 15min tolerance) for worked > 6h', () => {
+      const text = '08:00 12:00 14:16 18:16 segunda-feira 08:00 02/03 +00:00 08:00';
+      const criticas = analyzePageCriticas(text, optionsWithTolerance);
+      expect(criticas.some(c => c.mensagem.includes('Intervalo excedente no dia 02/03 (136min)'))).toBe(true);
+    });
+
+    it('should NOT alert if pause is 0min (within 15min tolerance) for worked 4h-6h', () => {
+      // Required: 15min. 0 is >= 15-15.
+      const text = '08:00 13:00 segunda-feira 08:00 02/03 -03:00 05:00';
+      const criticas = analyzePageCriticas(text, optionsWithTolerance);
+      expect(criticas.some(c => c.categoria === 'Intervalo')).toBe(false);
+    });
+
+    it('should respect max(0, min-tolerance)', () => {
+        const highTolerance = { horasAdicionaisLimite: 2, horasDebitoLimite: 2, intervaloAlmocoTolerancia: 70 };
+        // worked > 6h. Required 1h. Tolerance 70. Min = 60-70 = -10 -> 0.
+        // 08:00-16:00 (8h), no pause.
+        const text = '08:00 16:00 segunda-feira 08:00 02/03 00:00 08:00';
+        const criticas = analyzePageCriticas(text, highTolerance);
+        expect(criticas.some(c => c.categoria === 'Intervalo')).toBe(false);
+    });
+
+    it('should NOT impact "Possível falta de intervalo" rule', () => {
+        const text = '08:00 14:00 segunda-feira 08:00 02/03 -02:00 06:00';
+        // 2 punches, 6h worked.
+        const criticas = analyzePageCriticas(text, optionsWithTolerance);
+        expect(criticas.some(c => c.categoria === 'Possível falta de intervalo')).toBe(true);
     });
   });
 });

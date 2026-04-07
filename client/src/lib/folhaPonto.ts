@@ -46,6 +46,7 @@ export interface FolhaPontoResult {
 export interface ProcessingOptions {
   horasAdicionaisLimite: number;
   horasDebitoLimite: number;
+  intervaloAlmocoTolerancia?: number;
 }
 
 /**
@@ -356,16 +357,21 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
       }
 
       // Regras de Intervalo:
+      const tolerance = options.intervaloAlmocoTolerancia !== undefined ? options.intervaloAlmocoTolerancia : 15;
+
       // Acima de 6 horas diárias: Mínimo de 1 hora e máximo de 2 horas.
       if (workedMin > 360) {
-        if (pauseMin < 60) {
+        const minInterval = Math.max(0, 60 - tolerance);
+        const maxInterval = 120 + tolerance;
+
+        if (pauseMin < minInterval) {
           criticas.push({
             tipo: "alerta",
             categoria: CRITICA_CATEGORIES.INTERVALO,
             mensagem: `Intervalo insuficiente no dia ${dia} (${pauseMin}min). Mínimo de 1h para jornada > 6h.`,
             dia
           });
-        } else if (pauseMin > 120) {
+        } else if (pauseMin > maxInterval) {
           criticas.push({
             tipo: "alerta",
             categoria: CRITICA_CATEGORIES.INTERVALO,
@@ -376,7 +382,9 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
       }
       // 4 a 6 horas diárias: 15 minutos obrigatórios.
       else if (workedMin > 240) {
-        if (pauseMin < 15) {
+        const minInterval = Math.max(0, 15 - tolerance);
+
+        if (pauseMin < minInterval) {
           criticas.push({
             tipo: "alerta",
             categoria: CRITICA_CATEGORIES.INTERVALO,
