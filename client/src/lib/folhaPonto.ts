@@ -249,42 +249,42 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
 
     if (isWorkingDay) {
        // No layout Solides/Fatto, a linha costuma ser:
-       // Ent1 Sai1 | Ent2 Sai2 | segunda-feira 08:00 02/03 SALDO TOTAL
-       // Ou: Ent1 Sai1 segunda-feira 08:00 02/03 SALDO TOTAL
+       // punches ... [weekday] [previstas] [date] [saldo] [total]
+       // Ex: (m)08:00 12:00 | (m)13:00 17:00 | quarta-feira 08:00 18/03 08:00
 
-       let sIdx = allTimes.findIndex(t => t.startsWith('+') || t.startsWith('-'));
+       const dateIndex = line.indexOf(dia);
+       const textBeforeDate = line.substring(0, dateIndex);
+       const textAfterDate = line.substring(dateIndex + dia.length);
 
-       if (sIdx !== -1) {
-         // O saldo é o valor com + ou -
-         saldoStr = allTimes[sIdx];
-         // O total costuma ser o valor imediatamente após o saldo
-         totalStr = allTimes[sIdx + 1] || "00:00";
+       // 1. Extrair Batidas (Tudo antes da data, removendo o previsto)
+       const timesBeforeDate = (textBeforeDate.match(/\d{1,2}:\d{2}/g) || []);
+       const hasWeekday = textBeforeDate.toLowerCase().match(/domingo|segunda|terça|quarta|quinta|sexta|sabado|sábado|seg|ter|qua|qui|sex|dom|sab/);
 
-         // No layout Solides/Fatto:
-         // punches ... [weekday] [previstas] [date] [saldo] [total]
-         // Precisamos identificar onde começam os metadados.
-         // O 'previstas' (ex: 08:00) costuma estar antes da data ou do saldo.
-
-         // Vamos reconstruir batidas pegando tudo ANTES do padrão [weekday] [previstas] [date]
-         // Como temos a data (dia), vamos ver o índice dela no texto.
-         const dateIndex = line.indexOf(dia);
-         const textBeforeDate = line.substring(0, dateIndex);
-
-         // As batidas são os horários que aparecem ANTES da data,
-         // excluindo o horário previsto que vem colado no dia da semana.
-         // Ex: "07:32 13:21 | 14:10 16:12 | quarta-feira 08:00 04/03"
-         const timesBeforeDate = (textBeforeDate.match(/\d{1,2}:\d{2}/g) || []);
-         if (timesBeforeDate.length > 0) {
-            // Remove o último se houver um dia da semana antes dele (é o previsto)
-            const weekdayPart = textBeforeDate.toLowerCase().match(/domingo|segunda|terça|quarta|quinta|sexta|sabado|sábado|seg|ter|qua|qui|sex|dom|sab/);
-            if (weekdayPart) {
-                batidas = timesBeforeDate.slice(0, -1);
-            } else {
-                batidas = timesBeforeDate;
-            }
-         }
+       if (hasWeekday && timesBeforeDate.length > 0) {
+         batidas = timesBeforeDate.slice(0, -1); // Remove o 'previstas'
        } else {
-         batidas = allTimes.slice(1);
+         batidas = timesBeforeDate;
+       }
+
+       // 2. Extrair Saldo e Total (Tudo após a data)
+       const timesAfterDate = (textAfterDate.match(/[+-]?\s*\d{1,2}:\d{2}/g) || []).map(t => t.replace(/\s+/g, ""));
+
+       // O saldo é o primeiro que tem sinal, ou o primeiro se não houver sinais mas houver dois valores
+       let sIdx = timesAfterDate.findIndex(t => t.startsWith('+') || t.startsWith('-'));
+       if (sIdx !== -1) {
+          saldoStr = timesAfterDate[sIdx];
+          totalStr = timesAfterDate[sIdx + 1] || "00:00";
+       } else if (timesAfterDate.length >= 1) {
+          // Caso sem saldo explícito (saldo zero muitas vezes não vem com sinal no OCR)
+          // Se tiver apenas 1 valor depois da data, é o TOTAL. O Saldo é 00:00.
+          if (timesAfterDate.length === 1) {
+             saldoStr = "00:00";
+             totalStr = timesAfterDate[0];
+          } else {
+             // Se tiver 2 ou mais, assumimos [SALDO, TOTAL]
+             saldoStr = timesAfterDate[0];
+             totalStr = timesAfterDate[1];
+          }
        }
     } else {
        batidas = allTimes.filter(t => !t.startsWith('+') && !t.startsWith('-'));
