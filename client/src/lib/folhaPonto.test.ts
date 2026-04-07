@@ -96,4 +96,38 @@ describe('folhaPonto analyzePageCriticas', () => {
     const criticas = analyzePageCriticas(text, options);
     expect(criticas.some(c => c.mensagem.includes('Possível falta de intervalo de almoço'))).toBe(false);
   });
+
+  describe('Complex Layout Cases (Yascara Case)', () => {
+    it('should NOT identify odd punches on 18/03 (4 punches, zero balance)', () => {
+        // (m)08:00 12:00 | (m)13:00 17:00 | quarta-feira 08:00 18/03 08:00
+        const text = '(m)08:00 12:00 | (m)13:00 17:00 | quarta-feira 08:00 18/03 08:00';
+        const criticas = analyzePageCriticas(text, options);
+        expect(criticas.length).toBe(0);
+    });
+
+    it('should NOT identify odd punches on 23/03', () => {
+        const text = '(m)08:00 12:00 | (m)13:00 17:00 | segunda-feira 08:00 23/03 08:00';
+        const criticas = analyzePageCriticas(text, options);
+        expect(criticas.length).toBe(0);
+    });
+
+    it('should identify even punches correctly on 31/03 (2 punches, negative balance)', () => {
+        // (m)07:55 14:33 | terça-feira 08:00 31/03 -1:22 06:38
+        const text = '(m)07:55 14:33 | terça-feira 08:00 31/03 -1:22 06:38';
+        const criticas = analyzePageCriticas(text, options);
+        // Jornada de 06:38 (> 6h). Intervalo de 0 min. Deveria ter alerta de intervalo.
+        expect(criticas.some(c => c.mensagem.includes('Intervalo insuficiente'))).toBe(true);
+        // Mas NÃO deveria ter inconsistência de batida (são 2 batidas)
+        expect(criticas.some(c => c.mensagem.includes('Inconsistência de batida'))).toBe(false);
+    });
+
+    it('should handle 06/03 (4 punches, negative balance with space)', () => {
+        // (m)08:03 12:44 | (m)13:44 14:40 | sexta-feira 08:00 06/03 -2:23 05:37
+        const text = '(m)08:03 12:44 | (m)13:44 14:40 | sexta-feira 08:00 06/03 -2:23 05:37';
+        const criticas = analyzePageCriticas(text, options);
+        // Saldo -2:23 é maior que limite de 2h.
+        expect(criticas.some(c => c.mensagem.includes('Mais de 02:00h de débito'))).toBe(true);
+        expect(criticas.some(c => c.mensagem.includes('Inconsistência de batida'))).toBe(false);
+    });
+  });
 });
