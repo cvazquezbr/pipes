@@ -48,6 +48,10 @@ async function startServer() {
         mailOptions.cc = emailData.cc.trim();
       }
 
+      if (emailData.replyTo && emailData.replyTo.trim()) {
+        mailOptions.replyTo = emailData.replyTo.trim();
+      }
+
       const info = await transporter.sendMail(mailOptions);
       console.log(`[Email] Success: ${info.messageId}`);
       res.json({ success: true, messageId: info.messageId });

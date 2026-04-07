@@ -64,6 +64,7 @@ export function SMTPConfigForm() {
           emailData: {
             to: config.user,
             cc: config.ccEmail,
+            replyTo: config.ccEmail,
             subject: "Teste de Configuração SMTP - Sistema de Ponto",
             html: `
               <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
