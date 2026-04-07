@@ -17,9 +17,19 @@ export interface WorkerData {
 
 export interface Critica {
   tipo: "erro" | "alerta" | "sucesso";
+  categoria?: string;
   mensagem: string;
   dia?: string;
 }
+
+export const CRITICA_CATEGORIES = {
+  FALTA: "Faltas",
+  BATIDA_IMPAR: "Batidas Ímpares",
+  DEBITO: "Débito de Horas",
+  EXTRA: "Horas Extras",
+  INTERVALO: "Intervalo",
+  POSSIVEL_FALTA_INTERVALO: "Possível falta de intervalo",
+} as const;
 
 export interface FolhaPontoResult {
   cpf: string;
@@ -236,7 +246,12 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
     const isWorkingDay = weekdayMatch && !isWeekend;
 
     if (line.includes("FALTA NAO JUSTIFICADA") || line.includes("FALTA")) {
-       criticas.push({ tipo: "erro", mensagem: `Falta não justificada identificada no dia ${dia}`, dia });
+       criticas.push({
+         tipo: "erro",
+         categoria: CRITICA_CATEGORIES.FALTA,
+         mensagem: `Falta não justificada identificada no dia ${dia}`,
+         dia
+       });
        continue;
     }
 
@@ -293,7 +308,12 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
     if (isWeekend && batidas.length === 0) continue;
 
     if (batidas.length > 0 && batidas.length % 2 !== 0) {
-      criticas.push({ tipo: "alerta", mensagem: `Inconsistência de batida (marcação ímpar) no dia ${dia}`, dia });
+      criticas.push({
+        tipo: "alerta",
+        categoria: CRITICA_CATEGORIES.BATIDA_IMPAR,
+        mensagem: `Inconsistência de batida (marcação ímpar) no dia ${dia}`,
+        dia
+      });
     }
 
     const saldoMin = timeToMinutes(saldoStr);
@@ -302,12 +322,22 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
 
     if (saldoMin < -debitLimitMin) {
       const limitStr = String(options.horasDebitoLimite).padStart(2, '0') + ':00';
-      criticas.push({ tipo: "alerta", mensagem: `Atenção: Mais de ${limitStr}h de débito registradas no dia ${dia} (${saldoStr})`, dia });
+      criticas.push({
+        tipo: "alerta",
+        categoria: CRITICA_CATEGORIES.DEBITO,
+        mensagem: `Atenção: Mais de ${limitStr}h de débito registradas no dia ${dia} (${saldoStr})`,
+        dia
+      });
     }
 
     if (saldoMin > extraLimitMin) {
       const limitStr = String(options.horasAdicionaisLimite).padStart(2, '0') + ':00';
-      criticas.push({ tipo: "alerta", mensagem: `Atenção: Mais de ${limitStr}h adicionais realizadas no dia ${dia} (${saldoStr})`, dia });
+      criticas.push({
+        tipo: "alerta",
+        categoria: CRITICA_CATEGORIES.EXTRA,
+        mensagem: `Atenção: Mais de ${limitStr}h adicionais realizadas no dia ${dia} (${saldoStr})`,
+        dia
+      });
     }
 
     if (isWorkingDay && batidas.length >= 2) {
@@ -329,22 +359,42 @@ export function analyzePageCriticas(text: string, options: ProcessingOptions): C
       // Acima de 6 horas diárias: Mínimo de 1 hora e máximo de 2 horas.
       if (workedMin > 360) {
         if (pauseMin < 60) {
-          criticas.push({ tipo: "alerta", mensagem: `Intervalo insuficiente no dia ${dia} (${pauseMin}min). Mínimo de 1h para jornada > 6h.`, dia });
+          criticas.push({
+            tipo: "alerta",
+            categoria: CRITICA_CATEGORIES.INTERVALO,
+            mensagem: `Intervalo insuficiente no dia ${dia} (${pauseMin}min). Mínimo de 1h para jornada > 6h.`,
+            dia
+          });
         } else if (pauseMin > 120) {
-          criticas.push({ tipo: "alerta", mensagem: `Intervalo excedente no dia ${dia} (${pauseMin}min). Máximo de 2h para jornada > 6h.`, dia });
+          criticas.push({
+            tipo: "alerta",
+            categoria: CRITICA_CATEGORIES.INTERVALO,
+            mensagem: `Intervalo excedente no dia ${dia} (${pauseMin}min). Máximo de 2h para jornada > 6h.`,
+            dia
+          });
         }
       }
       // 4 a 6 horas diárias: 15 minutos obrigatórios.
       else if (workedMin > 240) {
         if (pauseMin < 15) {
-          criticas.push({ tipo: "alerta", mensagem: `Intervalo insuficiente no dia ${dia} (${pauseMin}min). Mínimo de 15min para jornada entre 4h e 6h.`, dia });
+          criticas.push({
+            tipo: "alerta",
+            categoria: CRITICA_CATEGORIES.INTERVALO,
+            mensagem: `Intervalo insuficiente no dia ${dia} (${pauseMin}min). Mínimo de 15min para jornada entre 4h e 6h.`,
+            dia
+          });
         }
       }
       // Até 4 horas diárias: Sem intervalo obrigatório. (Nada a fazer)
 
       // Legado: Alerta simples para 2 batidas e jornada longa
       if (batidas.length === 2 && workedMin > 300 && !criticas.some(c => c.dia === dia && c.mensagem.includes("Intervalo"))) {
-        criticas.push({ tipo: "alerta", mensagem: `Possível falta de intervalo de almoço no dia ${dia}`, dia });
+        criticas.push({
+          tipo: "alerta",
+          categoria: CRITICA_CATEGORIES.POSSIVEL_FALTA_INTERVALO,
+          mensagem: `Possível falta de intervalo de almoço no dia ${dia}`,
+          dia
+        });
       }
     }
   }
