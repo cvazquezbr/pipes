@@ -1,8 +1,9 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from "nodemailer";
 
-export default async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
-    return res.status(450).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { smtpConfig, emailData } = req.body;
@@ -23,7 +24,7 @@ export default async function handler(req, res) {
 
   try {
     const mailOptions: any = {
-      from: \`"\${smtpConfig.fromName || "RH"}" <\${smtpConfig.user}>\`,
+      from: `"${smtpConfig.fromName || "RH"}" <${smtpConfig.user}>`,
       to: emailData.to,
       subject: emailData.subject,
       html: emailData.html,
@@ -38,9 +39,9 @@ export default async function handler(req, res) {
     }
 
     const info = await transporter.sendMail(mailOptions);
-    res.status(200).json({ success: true, messageId: info.messageId });
+    return res.status(200).json({ success: true, messageId: info.messageId });
   } catch (error: any) {
     console.error("Error sending email:", error);
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
