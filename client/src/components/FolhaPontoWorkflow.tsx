@@ -39,6 +39,7 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
   const [progress, setProgress] = useState(0);
   const [horasAdicionaisLimite, setHorasAdicionaisLimite] = useState(2);
   const [horasDebitoLimite, setHorasDebitoLimite] = useState(2);
+  const [intervaloAlmocoTolerancia, setIntervaloAlmocoTolerancia] = useState(15);
 
   const handleExcelLoaded = async (data: any, file: File) => {
     try {
@@ -60,7 +61,7 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
      setProgress(0);
      try {
        const pdfFile = files[0];
-       const results = await processFolhaPonto(pdfFile, workers, { horasAdicionaisLimite, horasDebitoLimite }, (p) => setProgress(p));
+       const results = await processFolhaPonto(pdfFile, workers, { horasAdicionaisLimite, horasDebitoLimite, intervaloAlmocoTolerancia }, (p) => setProgress(p));
        setResults(results);
        toast.success("Processamento concluído!");
        setStep(4);
@@ -159,6 +160,19 @@ export function FolhaPontoWorkflow({ onBackToMenu }: FolhaPontoWorkflowProps) {
                         className="w-24"
                       />
                       <span className="text-sm text-slate-500">horas por dia</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tolerância de Intervalo de Almoço</Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        value={intervaloAlmocoTolerancia}
+                        onChange={e => setIntervaloAlmocoTolerancia(Number(e.target.value))}
+                        className="w-24"
+                      />
+                      <span className="text-sm text-slate-500">minutos</span>
                     </div>
                   </div>
                 </CardContent>
