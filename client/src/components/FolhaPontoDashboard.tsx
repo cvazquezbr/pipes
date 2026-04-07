@@ -219,6 +219,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
               emailData: {
                 to: chiefEmail,
                 cc: smtpConfig.ccEmail,
+                replyTo: smtpConfig.ccEmail,
                 subject,
                 html: teamHtml
               }
@@ -307,6 +308,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
             emailData: {
               to: worker.email,
               cc: smtpConfig.ccEmail,
+              replyTo: smtpConfig.ccEmail,
               subject,
               html,
               attachments
