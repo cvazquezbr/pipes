@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -32,10 +32,22 @@ import {
   ChevronDown,
   ChevronUp,
   Printer,
-  Users
+  Users,
+  Filter
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import type { FolhaPontoResult } from "@/lib/folhaPonto";
+import { CRITICA_CATEGORIES } from "@/lib/folhaPonto";
 
 interface FolhaPontoDashboardProps {
   results: FolhaPontoResult[];
@@ -50,11 +62,51 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
   const [sendProgress, setSendProgress] = useState(0);
   const [logs, setLogs] = useState<{ cpf: string; status: "success" | "error"; message: string }[]>([]);
 
+  // Estados de filtro
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+
+  const teams = useMemo(() => {
+    return Array.from(new Set(results.map(r => r.equipe || "Sem Equipe"))).sort();
+  }, [results]);
+
+  const categories = Object.values(CRITICA_CATEGORIES);
+
+  const filteredResults = useMemo(() => {
+    return results.filter(res => {
+      // Filtro de Equipe
+      if (selectedTeams.length > 0 && !selectedTeams.includes(res.equipe || "Sem Equipe")) {
+        return false;
+      }
+
+      // Filtro de Status de Cruzamento
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(res.matchStatus)) {
+        return false;
+      }
+
+      // Filtro de Categorias de Crítica (Pontos de Atenção)
+      if (selectedCategories.length > 0) {
+        const hasSelectedCategory = res.criticas.some(c => c.categoria && selectedCategories.includes(c.categoria));
+        if (!hasSelectedCategory) return false;
+      }
+
+      return true;
+    });
+  }, [results, selectedTeams, selectedCategories, selectedStatuses]);
+
+  const visibleSelectedIds = selectedIds.filter(id =>
+    filteredResults.some(r => r.cpf === id)
+  );
+
   const toggleSelectAll = () => {
-    if (selectedIds.length === results.length) {
-      setSelectedIds([]);
+    if (visibleSelectedIds.length === filteredResults.length) {
+      // Deselecionar apenas os que estão visíveis
+      setSelectedIds(prev => prev.filter(id => !filteredResults.some(r => r.cpf === id)));
     } else {
-      setSelectedIds(results.map(r => r.cpf));
+      // Adicionar todos os visíveis aos selecionados (evitando duplicatas)
+      const newVisibleIds = filteredResults.map(r => r.cpf);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...newVisibleIds])));
     }
   };
 
@@ -71,7 +123,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
   };
 
   const expandAll = () => {
-    setExpandedRows(results.map(r => r.cpf));
+    setExpandedRows(filteredResults.map(r => r.cpf));
   };
 
   const collapseAll = () => {
@@ -195,7 +247,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
     }
     const smtpConfig = JSON.parse(smtpConfigStr);
 
-    const toSend = results.filter(r => selectedIds.includes(r.cpf) && r.email);
+    const toSend = filteredResults.filter(r => selectedIds.includes(r.cpf) && r.email);
     if (toSend.length === 0) {
       toast.error("Selecione funcionários com e-mail cadastrado.");
       return;
@@ -278,7 +330,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
     toast.success("Processo de envio finalizado.");
   };
 
-  const resultsByTeam = results.reduce((acc, res) => {
+  const resultsByTeam = filteredResults.reduce((acc, res) => {
      const team = res.equipe || "Sem Equipe";
      if (!acc[team]) acc[team] = [];
      acc[team].push(res);
@@ -350,10 +402,127 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
         <div className="space-y-1">
           <h2 className="text-xl font-bold">Resumo do Processamento</h2>
           <p className="text-sm text-slate-500">
-            {results.length} registros encontrados • {selectedIds.length} selecionados
+            {filteredResults.length} de {results.length} registros exibidos • {visibleSelectedIds.length} selecionados
           </p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="gap-2 relative">
+                <Filter className="h-4 w-4" />
+                Filtros
+                {(selectedTeams.length > 0 || selectedCategories.length > 0 || selectedStatuses.length > 0) && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center">
+                    {selectedTeams.length + selectedCategories.length + selectedStatuses.length}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[300px] sm:w-[400px]">
+              <SheetHeader>
+                <SheetTitle>Filtros</SheetTitle>
+                <SheetDescription>
+                  Refine a lista de funcionários exibida.
+                </SheetDescription>
+              </SheetHeader>
+
+              <ScrollArea className="h-[calc(100vh-180px)] mt-4 pr-4">
+                <div className="space-y-6">
+                  {/* Status do Cruzamento */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Status do Cruzamento</h3>
+                    <div className="space-y-2">
+                      {[
+                        { id: "encontrado", label: "Match" },
+                        { id: "folha_ausente", label: "Folha Ausente" },
+                        { id: "cpf_extra", label: "CPF Extra" },
+                      ].map((status) => (
+                        <div key={status.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`status-${status.id}`}
+                            checked={selectedStatuses.includes(status.id)}
+                            onCheckedChange={(checked) => {
+                              setSelectedStatuses(prev =>
+                                checked ? [...prev, status.id] : prev.filter(s => s !== status.id)
+                              );
+                            }}
+                          />
+                          <label htmlFor={`status-${status.id}`} className="text-sm font-medium leading-none cursor-pointer">
+                            {status.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Pontos de Atenção */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Pontos de Atenção</h3>
+                    <div className="space-y-2">
+                      {categories.map((cat) => (
+                        <div key={cat} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`cat-${cat}`}
+                            checked={selectedCategories.includes(cat)}
+                            onCheckedChange={(checked) => {
+                              setSelectedCategories(prev =>
+                                checked ? [...prev, cat] : prev.filter(c => c !== cat)
+                              );
+                            }}
+                          />
+                          <label htmlFor={`cat-${cat}`} className="text-sm font-medium leading-none cursor-pointer">
+                            {cat}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Equipes */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Equipes</h3>
+                    <div className="space-y-2">
+                      {teams.map((team) => (
+                        <div key={team} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`team-${team}`}
+                            checked={selectedTeams.includes(team)}
+                            onCheckedChange={(checked) => {
+                              setSelectedTeams(prev =>
+                                checked ? [...prev, team] : prev.filter(t => t !== team)
+                              );
+                            }}
+                          />
+                          <label htmlFor={`team-${team}`} className="text-sm font-medium leading-none cursor-pointer">
+                            {team}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+
+              <div className="mt-auto pt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedTeams([]);
+                    setSelectedCategories([]);
+                    setSelectedStatuses([]);
+                  }}
+                >
+                  Limpar Filtros
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+
           <Button variant="outline" onClick={() => window.print()} className="gap-2">
             <Printer className="h-4 w-4" />
             Imprimir Relatório
@@ -377,7 +546,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
           </Button>
           <Button
             onClick={handleSendEmails}
-            disabled={isSending || selectedIds.length === 0}
+            disabled={isSending || visibleSelectedIds.length === 0}
             className="bg-primary hover:bg-primary/90"
           >
             {isSending ? (
@@ -415,7 +584,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
             <TableRow className="bg-slate-50/50">
               <TableHead className="w-[50px] print:hidden">
                 <Checkbox
-                  checked={selectedIds.length === results.length && results.length > 0}
+                  checked={filteredResults.length > 0 && visibleSelectedIds.length === filteredResults.length}
                   onCheckedChange={toggleSelectAll}
                 />
               </TableHead>
@@ -428,7 +597,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
             </TableRow>
           </TableHeader>
           <TableBody>
-            {results.map((res) => {
+            {filteredResults.map((res) => {
               const log = logs.find(l => l.cpf === res.cpf);
               const isExpanded = expandedRows.includes(res.cpf);
               const erros = res.criticas.filter(c => c.tipo === 'erro').length;
