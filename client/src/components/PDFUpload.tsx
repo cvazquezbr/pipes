@@ -19,10 +19,12 @@ import { Progress } from "@/components/ui/progress";
 import type { ExtractedInvoice } from "@/lib/types";
 
 interface PDFUploadProps {
-  onProcessComplete: (invoices: ExtractedInvoice[]) => void;
+  onProcessComplete?: (invoices: ExtractedInvoice[]) => void;
   onProcess?: (files: File[]) => Promise<ExtractedInvoice[]>;
   isProcessing?: boolean;
   progress?: number;
+  title?: string;
+  description?: string;
 }
 
 export function PDFUpload({
@@ -30,6 +32,8 @@ export function PDFUpload({
   onProcess,
   isProcessing = false,
   progress = 0,
+  title,
+  description,
 }: PDFUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -99,7 +103,7 @@ export function PDFUpload({
         const { processPDFInvoices } = await import("@/lib/pdfExtractor");
         results = await processPDFInvoices(selectedFiles);
         console.log("[PDFUpload] Processamento local concluido");
-        onProcessComplete(results);
+        if (onProcessComplete) onProcessComplete(results);
       }
     } catch (err) {
       const errorMessage =
@@ -122,10 +126,10 @@ export function PDFUpload({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          Arquivos PDF
+          {title || "Arquivos PDF"}
         </CardTitle>
         <CardDescription>
-          Carregue um ou mais arquivos PDF de notas fiscais
+          {description || "Carregue um ou mais arquivos PDF de notas fiscais"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

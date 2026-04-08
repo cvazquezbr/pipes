@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { PDFDocument } from "pdf-lib";
 import type { FolhaPontoResult } from "@/lib/folhaPonto";
 import { CRITICA_CATEGORIES } from "@/lib/folhaPonto";
 
@@ -146,7 +147,8 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
     // Agrupar resultados por equipe
     const teamsMap = new Map<string, FolhaPontoResult[]>();
     results.forEach(res => {
-      if (res.criticas.length === 0) return; // Só envia se tiver crítica
+      // Incluir se tiver crítica OU se a folha estiver ausente
+      if (res.criticas.length === 0 && res.matchStatus !== "folha_ausente") return;
       const team = res.equipe || "Sem Equipe";
       if (!teamsMap.has(team)) teamsMap.set(team, []);
       teamsMap.get(team)!.push(res);
@@ -154,7 +156,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
 
     const teams = Array.from(teamsMap.keys());
     if (teams.length === 0) {
-      toast.error("Nenhuma crítica encontrada para enviar.");
+      toast.error("Nenhuma crítica ou folha ausente encontrada para enviar.");
       return;
     }
 
@@ -176,8 +178,37 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
        const chiefEmail = teamChiefs[teamName];
        const teamResults = teamsMap.get(teamName)!;
 
+       // Ordenar alfabeticamente
+       teamResults.sort((a, b) => a.nome.localeCompare(b.nome));
+
        try {
           const subject = `Relatório de Críticas de Ponto - Equipe: ${teamName}`;
+
+          // Concatenar PDFs da equipe
+          const mergedPdf = await PDFDocument.create();
+          let hasAttachments = false;
+
+          for (const res of teamResults) {
+            if (res.pdfBuffer) {
+              const doc = await PDFDocument.load(res.pdfBuffer);
+              const copiedPages = await mergedPdf.copyPages(doc, doc.getPageIndices());
+              copiedPages.forEach((page) => mergedPdf.addPage(page));
+              hasAttachments = true;
+            }
+          }
+
+          let attachments = [];
+          if (hasAttachments) {
+            const mergedPdfBytes = await mergedPdf.save();
+            const base64Content = btoa(
+              new Uint8Array(mergedPdfBytes)
+                .reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
+            attachments.push({
+              filename: `Espelhos_de_Ponto_Equipe_${teamName.replace(/\s+/g, '_')}.pdf`,
+              content: base64Content
+            });
+          }
 
           let teamHtml = `
             <div style="font-family: sans-serif; color: #333;">
@@ -188,7 +219,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
                 <thead>
                   <tr style="background-color: #f8fafc;">
                     <th style="border: 1px solid #e2e8f0; padding: 12px; text-align: left;">Funcionário</th>
-                    <th style="border: 1px solid #e2e8f0; padding: 12px; text-align: left;">Críticas</th>
+                    <th style="border: 1px solid #e2e8f0; padding: 12px; text-align: left;">Críticas / Observações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,6 +228,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
                       <td style="border: 1px solid #e2e8f0; padding: 12px; vertical-align: top; font-weight: bold;">${res.nome}</td>
                       <td style="border: 1px solid #e2e8f0; padding: 12px; vertical-align: top;">
                         <ul style="margin: 0; padding-left: 20px; color: #475569;">
+                          ${res.matchStatus === "folha_ausente" ? '<li style="color: #dc2626; font-weight: bold;">Folha de ponto não encontrada no arquivo PDF.</li>' : ''}
                           ${res.criticas.map(c => `<li style="margin-bottom: 4px;">${c.mensagem}</li>`).join('')}
                         </ul>
                       </td>
@@ -221,7 +253,8 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
                 cc: smtpConfig.ccEmail,
                 replyTo: smtpConfig.ccEmail,
                 subject,
-                html: teamHtml
+                html: teamHtml,
+                attachments
               }
             })
           });
@@ -232,6 +265,7 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
           }
        } catch (e: any) {
          toast.error(`Erro ao processar envio para ${teamName}: ${e.message}`);
+         console.error(e);
        }
        setSendProgress(Math.round(((i + 1) / totalTeams) * 100));
     }
