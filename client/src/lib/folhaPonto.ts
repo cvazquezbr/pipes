@@ -82,29 +82,58 @@ export async function parseWorkersExcel(file: File): Promise<{ workers: WorkerDa
   // 1. Processar Funcionários (Primeira Aba)
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
-  const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-  const findValue = (row: any, keys: string[]) => {
-    const rowKeys = Object.keys(row);
-    for (const key of keys) {
-      const foundKey = rowKeys.find(rk => rk.toLowerCase().trim() === key.toLowerCase().trim());
-      if (foundKey) return row[foundKey];
+  // Tenta encontrar a linha de cabeçalho real procurando por colunas conhecidas
+  const allRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+  let headerIndex = 0;
+  for (let i = 0; i < Math.min(allRows.length, 20); i++) {
+    const row = (allRows[i] || []).map(c => String(c || "").toLowerCase().trim());
+    if (row.some(c => c === "cpf" || c === "nome" || c.includes("e-mail") || c.includes("email"))) {
+      headerIndex = i;
+      break;
     }
+  }
+
+  const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerIndex, defval: "" }) as any[];
+
+  const normalizeKey = (k: string) => k.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
+
+  const findValue = (row: any, searchKeys: string[]) => {
+    const rowKeys = Object.keys(row);
+    const normalizedSearch = searchKeys.map(normalizeKey);
+
+    // 1. Tenta match por chave normalizada (exato ou contido se for nome/equipe)
+    for (const rk of rowKeys) {
+      const normalizedRowKey = normalizeKey(rk);
+      if (normalizedSearch.includes(normalizedRowKey)) {
+        return row[rk];
+      }
+
+      // Fallback para "Nome Completo" ou similar
+      if (searchKeys.includes("Nome") && normalizedRowKey.includes("nome")) return row[rk];
+      if (searchKeys.includes("equipe") && normalizedRowKey.includes("equipe")) return row[rk];
+    }
+
+    // 2. Se for e-mail, tenta encontrar qualquer coluna que contenha um '@'
+    if (searchKeys.includes("E-mail")) {
+      for (const rk of rowKeys) {
+        const val = String(row[rk] || "");
+        if (val.includes("@") && val.includes(".")) return val;
+      }
+    }
+
     return undefined;
   };
 
   const workers = jsonData
-    .filter(row => {
-      const vinculo = String(findValue(row, ["Vínculo", "Vinculo"]) || "");
-      return !["X", "D"].includes(vinculo.toUpperCase().trim());
-    })
     .map(row => {
       const nome = String(findValue(row, ["Nome"]) || "").trim();
       const email = String(findValue(row, ["E-mail", "Email", "Correio Eletrônico"]) || "").trim();
       const cpf = String(findValue(row, ["CPF"]) || "").replace(/\D/g, "");
       const equipe = String(findValue(row, ["equipe", "Equipe"]) || "Sem Equipe").trim();
+      const vinculo = String(findValue(row, ["Vínculo", "Vinculo"]) || "").toUpperCase().trim();
 
-      // Validação básica de e-mail para evitar pegar colunas erradas
+      // Validação básica de e-mail para evitar pegar colunas erradas (se pegou pelo fallback)
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const validEmail = emailRegex.test(email) ? email : "";
 
@@ -112,9 +141,18 @@ export async function parseWorkersExcel(file: File): Promise<{ workers: WorkerDa
         nome,
         email: validEmail,
         cpf,
-        equipe: equipe || "Sem Equipe"
+        equipe: equipe || "Sem Equipe",
+        vinculo
       };
-    });
+    })
+    .filter(w => {
+      // Filtrar linhas vazias ou cabeçalhos que foram pegos como dados
+      if (!w.nome && !w.cpf) return false;
+      // Filtrar vínculos desligados
+      if (["X", "D"].includes(w.vinculo)) return false;
+      return true;
+    })
+    .map(({ vinculo, ...rest }) => rest);
 
   // 2. Processar Chefes (Segunda Aba)
   const teamChiefs: Record<string, string> = {};

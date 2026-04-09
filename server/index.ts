@@ -17,9 +17,9 @@ async function startServer() {
     console.log(`[Email] Request to send to: ${req.body?.emailData?.to}`);
     const { smtpConfig, emailData } = req.body;
 
-    if (!smtpConfig || !emailData) {
-      console.error("[Email] Missing config or data");
-      return res.status(400).json({ error: "Missing smtpConfig or emailData" });
+    if (!smtpConfig || !emailData || !emailData.to) {
+      console.error("[Email] Missing config, data or recipient (to)");
+      return res.status(400).json({ error: "Missing smtpConfig, emailData or recipient (to)" });
     }
 
     const transporter = nodemailer.createTransport({
