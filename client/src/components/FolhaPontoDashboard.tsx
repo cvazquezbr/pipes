@@ -649,7 +649,14 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
                   </TableCell>
                   <TableCell>
                     <div className="font-medium text-slate-900">{res.nome}</div>
-                    <div className="text-xs text-slate-500 print:hidden">{res.email || "Sem e-mail"}</div>
+                    <div className={`text-xs print:hidden ${res.email ? "text-slate-500" : "text-red-500 font-bold flex items-center gap-1"}`}>
+                      {res.email || (
+                        <>
+                          <AlertCircle className="h-3 w-3" />
+                          Sem e-mail cadastrado
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="font-mono text-xs print:hidden">{res.cpf}</TableCell>
                   <TableCell className="text-xs print:hidden">

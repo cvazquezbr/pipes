@@ -84,22 +84,35 @@ export async function parseWorkersExcel(file: File): Promise<{ workers: WorkerDa
   const worksheet = workbook.Sheets[firstSheetName];
   const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
+  const findValue = (row: any, keys: string[]) => {
+    const rowKeys = Object.keys(row);
+    for (const key of keys) {
+      const foundKey = rowKeys.find(rk => rk.toLowerCase().trim() === key.toLowerCase().trim());
+      if (foundKey) return row[foundKey];
+    }
+    return undefined;
+  };
+
   const workers = jsonData
     .filter(row => {
-      const vinculo = String(row["Vínculo"] || row["Vinculo"] || row["VINCULO"] || "");
+      const vinculo = String(findValue(row, ["Vínculo", "Vinculo"]) || "");
       return !["X", "D"].includes(vinculo.toUpperCase().trim());
     })
     .map(row => {
-      const nome = row["Nome"] || row["NOME"] || Object.values(row)[0];
-      const email = row["E-mail"] || row["Email"] || row["EMAIL"] || Object.values(row)[1];
-      const cpf = String(row["CPF"] || row["Cpf"] || row["cpf"] || Object.values(row).slice(-1)[0]);
-      const equipe = row["equipe"] || row["Equipe"] || row["EQUIPE"] || "Sem Equipe";
+      const nome = String(findValue(row, ["Nome"]) || "").trim();
+      const email = String(findValue(row, ["E-mail", "Email", "Correio Eletrônico"]) || "").trim();
+      const cpf = String(findValue(row, ["CPF"]) || "").replace(/\D/g, "");
+      const equipe = String(findValue(row, ["equipe", "Equipe"]) || "Sem Equipe").trim();
+
+      // Validação básica de e-mail para evitar pegar colunas erradas
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const validEmail = emailRegex.test(email) ? email : "";
 
       return {
-        nome: String(nome || ""),
-        email: String(email || ""),
-        cpf: cpf.replace(/\D/g, ""), // Normaliza apenas números
-        equipe: String(equipe).trim() || "Sem Equipe"
+        nome,
+        email: validEmail,
+        cpf,
+        equipe: equipe || "Sem Equipe"
       };
     });
 
