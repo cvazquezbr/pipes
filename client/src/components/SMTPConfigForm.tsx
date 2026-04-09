@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Mail, ShieldCheck, Server, Loader2 } from "lucide-react";
+import { generateEmailHtml } from "@/lib/emailTemplate";
 
 export interface SMTPConfig {
   host: string;
@@ -66,16 +67,22 @@ export function SMTPConfigForm() {
             cc: config.ccEmail,
             replyTo: config.ccEmail,
             subject: "Teste de Configuração SMTP - Sistema de Ponto",
-            html: `
-              <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <h2 style="color: #2563eb;">Teste de Conexão Bem-sucedido!</h2>
-                <p>Olá, este é um e-mail de teste enviado pelo Sistema de Ponto.</p>
-                <p>Se você recebeu esta mensagem no e-mail <strong>${config.user}</strong>, suas configurações de SMTP estão funcionando corretamente.</p>
-                ${config.ccEmail ? `<p>Uma cópia também foi enviada para o e-mail em CC: <strong>${config.ccEmail}</strong>.</p>` : ""}
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="font-size: 0.8em; color: #94a3b8;">Data do teste: ${new Date().toLocaleString('pt-BR')}</p>
-              </div>
-            `
+            html: generateEmailHtml({
+              title: "Teste de Conexão Bem-sucedido!",
+              description: "Olá, este é um e-mail de teste enviado pelo Sistema de Gestão de Ponto da FATTO. Se você recebeu esta mensagem, suas configurações de SMTP estão funcionando corretamente.",
+              boxes: [
+                {
+                  title: "Detalhes da Configuração",
+                  items: [
+                    { label: "Servidor", value: config.host },
+                    { label: "Porta", value: config.port },
+                    { label: "Usuário", value: config.user },
+                    { label: "Data do Teste", value: new Date().toLocaleString('pt-BR') },
+                    ...(config.ccEmail ? [{ label: "E-mail em Cópia (CC)", value: config.ccEmail }] : [])
+                  ]
+                }
+              ]
+            })
           }
         })
       });
