@@ -49,6 +49,7 @@ import { Separator } from "@/components/ui/separator";
 import { PDFDocument } from "pdf-lib";
 import type { FolhaPontoResult } from "@/lib/folhaPonto";
 import { CRITICA_CATEGORIES } from "@/lib/folhaPonto";
+import { generateEmailHtml } from "@/lib/emailTemplate";
 
 interface FolhaPontoDashboardProps {
   results: FolhaPontoResult[];
@@ -210,38 +211,26 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
             });
           }
 
-          let teamHtml = `
-            <div style="font-family: sans-serif; color: #333;">
-              <h2 style="color: #2563eb; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Relatório de Críticas - Equipe ${teamName}</h2>
-              <p>Olá, seguem abaixo as pendências identificadas nos espelhos de ponto da sua equipe:</p>
+          const teamBoxes = teamResults.map(res => {
+            const items = [];
+            if (res.matchStatus === "folha_ausente") {
+              items.push({ label: "Status", value: "Folha de ponto não encontrada no PDF" });
+            }
+            res.criticas.forEach(c => {
+              items.push({ label: c.tipo === 'erro' ? "Crítica" : "Alerta", value: c.mensagem });
+            });
 
-              <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                <thead>
-                  <tr style="background-color: #f8fafc;">
-                    <th style="border: 1px solid #e2e8f0; padding: 12px; text-align: left;">Funcionário</th>
-                    <th style="border: 1px solid #e2e8f0; padding: 12px; text-align: left;">Críticas / Observações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${teamResults.map(res => `
-                    <tr>
-                      <td style="border: 1px solid #e2e8f0; padding: 12px; vertical-align: top; font-weight: bold;">${res.nome}</td>
-                      <td style="border: 1px solid #e2e8f0; padding: 12px; vertical-align: top;">
-                        <ul style="margin: 0; padding-left: 20px; color: #475569;">
-                          ${res.matchStatus === "folha_ausente" ? '<li style="color: #dc2626; font-weight: bold;">Folha de ponto não encontrada no arquivo PDF.</li>' : ''}
-                          ${res.criticas.map(c => `<li style="margin-bottom: 4px;">${c.mensagem}</li>`).join('')}
-                        </ul>
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+            return {
+              title: res.nome,
+              items
+            };
+          });
 
-              <p style="margin-top: 30px; font-size: 0.9em; color: #64748b;">Por favor, verifique com os colaboradores as devidas justificativas.</p>
-              <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 0.8em; color: #94a3b8;">Mensagem automática gerada pelo Sistema de Ponto.</p>
-            </div>
-          `;
+          const teamHtml = generateEmailHtml({
+            title: `Relatório de Críticas - Equipe ${teamName}`,
+            description: `Olá. Identificamos pendências nos espelhos de ponto dos colaboradores da sua equipe. Por favor, verifique os detalhes abaixo e as folhas em anexo.`,
+            boxes: teamBoxes
+          });
 
           const response = await fetch("/api/send-email", {
             method: "POST",
@@ -308,31 +297,35 @@ export function FolhaPontoDashboard({ results, teamChiefs, onClear }: FolhaPonto
            });
         }
 
-        const subject = `Seu Espelho de Ponto - ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+        const monthYear = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        const subject = `Seu Espelho de Ponto - ${monthYear.charAt(0).toUpperCase() + monthYear.slice(1)}`;
 
-        let criticasHtml = "";
+        const boxes = [
+          {
+            title: "Dados do Colaborador",
+            items: [
+              { label: "Nome", value: worker.nome },
+              { label: "CPF", value: worker.cpf },
+              { label: "Período", value: monthYear }
+            ]
+          }
+        ];
+
         if (worker.criticas.length > 0) {
-          criticasHtml = `
-            <div style="background-color: #fff4f4; border: 1px solid #ffcdd2; padding: 15px; margin: 20px 0; border-radius: 5px;">
-              <p style="color: #d32f2f; font-weight: bold; margin-top: 0;">Atenção: Nosso sistema identificou as seguintes pendências que precisam de sua revisão:</p>
-              <ul style="color: #5d4037;">
-                ${worker.criticas.map(c => `<li>${c.mensagem}</li>`).join('')}
-              </ul>
-              <p style="font-size: 0.9em; color: #795548;">Por favor, verifique e procure o RH para as devidas justificativas.</p>
-            </div>
-          `;
+          boxes.push({
+            title: "Pontos de Atenção",
+            items: worker.criticas.map(c => ({
+              label: c.tipo === 'erro' ? "Crítica" : "Alerta",
+              value: c.mensagem
+            }))
+          });
         }
 
-        const html = `
-          <div style="font-family: sans-serif; color: #333;">
-            <p>Olá, <strong>${worker.nome}</strong>,</p>
-            <p>Segue em anexo o seu espelho de ponto referente ao último período.</p>
-            ${criticasHtml}
-            <p>Em caso de dúvidas, estamos à disposição.</p>
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 0.8em; color: #999;">Esta é uma mensagem automática, favor não responder.</p>
-          </div>
-        `;
+        const html = generateEmailHtml({
+          title: "Espelho de Ponto Disponível",
+          description: `Olá, ${worker.nome.split(' ')[0]}. Identificamos que seu espelho de ponto já está disponível para conferência. Por favor, verifique o documento em anexo e os detalhes abaixo.`,
+          boxes
+        });
 
         const response = await fetch("/api/send-email", {
           method: "POST",
