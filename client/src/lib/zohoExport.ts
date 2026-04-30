@@ -321,6 +321,7 @@ const ZOHO_HEADERS = [
   "Project Name",
   "Equipe",
   "Account",
+  "PurchaseOrder",
   "Notes",
   "Terms & Conditions",
 ];
@@ -380,6 +381,15 @@ export function convertToZOHO(
   const hasTax = taxMapping.percentual > 0;
   const formattedInvoiceDate = formatDate(invoice.emissionDate);
 
+  // Determinar PurchaseOrder (YYYY-MM)
+  let purchaseOrder = "";
+  if (formattedInvoiceDate) {
+    const parts = formattedInvoiceDate.split("-");
+    if (parts.length === 3) {
+      purchaseOrder = `${parts[0]}-${parts[1]}`;
+    }
+  }
+
   return {
     "Invoice Date": formattedInvoiceDate,
     "Due Date": calculateDueDate(invoice.emissionDate, dueDateDays),
@@ -404,6 +414,7 @@ export function convertToZOHO(
     "Project Name": projeto,
     Equipe: equipe,
     Account: account,
+    PurchaseOrder: purchaseOrder,
     Notes: `NFS-e ${invoice.nfsNumber} - Equipe: ${equipe} - Emitente: ${invoice.issuerName}`,
     "Terms & Conditions": "",
   };
