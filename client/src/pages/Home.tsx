@@ -78,6 +78,7 @@ import {
   History,
   Info,
   Clock,
+  FileWarning,
 } from "lucide-react";
 import {
   Tooltip,
@@ -1329,20 +1330,33 @@ export default function Home() {
                     </Card>
                   ) : (
                     irpjCsllResumo && (
-                      <Card className="bg-slate-50/50 border-primary/20">
+                      <Card className={`bg-slate-50/50 border-primary/20 ${irpjCsllResumo.validationError ? 'border-destructive' : ''}`}>
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm font-bold flex items-center gap-2">
-                            <Receipt className="h-4 w-4 text-primary" />
-                            Resumo Consolidado IRPJ e CSLL
-                          </CardTitle>
+                          <div className="flex justify-between items-center">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                              <Receipt className="h-4 w-4 text-primary" />
+                              Resumo Consolidado IRPJ e CSLL
+                            </CardTitle>
+                            {irpjCsllResumo.validationError && (
+                              <div className="bg-destructive/10 text-destructive text-[10px] px-2 py-1 rounded-md font-bold animate-pulse flex items-center gap-1">
+                                <FileWarning className="h-3 w-3" />
+                                Erro de Validação
+                              </div>
+                            )}
+                          </div>
                         </CardHeader>
                         <CardContent>
+                          {irpjCsllResumo.validationError && (
+                            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-xs text-destructive font-medium">
+                              {irpjCsllResumo.validationError}
+                            </div>
+                          )}
                           <div className="grid md:grid-cols-2 gap-8">
                             <div className="space-y-4">
                               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">
-                                Base de Cálculo
+                                Bases de Cálculo
                               </h4>
-                              <div className="space-y-1 text-sm">
+                              <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                   <span className="text-slate-600">
                                     Total Faturado:
@@ -1355,31 +1369,61 @@ export default function Home() {
                                     )}
                                   </span>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span className="text-slate-600">
-                                    Presunção de Lucro (32%):
-                                  </span>
-                                  <span className="font-mono">
-                                    R${" "}
-                                    {irpjCsllResumo.presuncaoLucro.toLocaleString(
-                                      "pt-BR",
-                                      { minimumFractionDigits: 2 }
-                                    )}
-                                  </span>
+
+                                <div className="space-y-1 pt-1 border-t border-slate-100">
+                                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cálculo IRPJ</div>
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-slate-500 italic">
+                                      Presunção IRPJ:
+                                    </span>
+                                    <span className="font-mono">
+                                      R${" "}
+                                      {irpjCsllResumo.presuncaoIRPJ.toLocaleString(
+                                        "pt-BR",
+                                        { minimumFractionDigits: 2 }
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between font-bold">
+                                    <span>Base IRPJ:</span>
+                                    <span className="font-mono">
+                                      R${" "}
+                                      {irpjCsllResumo.baseCalculoIRPJ.toLocaleString(
+                                        "pt-BR",
+                                        { minimumFractionDigits: 2 }
+                                      )}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex justify-between font-bold border-t pt-1">
-                                  <span>Base de Cálculo:</span>
-                                  <span className="font-mono">
-                                    R${" "}
-                                    {irpjCsllResumo.baseCalculo.toLocaleString(
-                                      "pt-BR",
-                                      { minimumFractionDigits: 2 }
-                                    )}
-                                  </span>
+
+                                <div className="space-y-1 pt-1 border-t border-slate-100">
+                                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cálculo CSLL</div>
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-slate-500 italic">
+                                      Presunção CSLL:
+                                    </span>
+                                    <span className="font-mono">
+                                      R${" "}
+                                      {irpjCsllResumo.presuncaoCSLL.toLocaleString(
+                                        "pt-BR",
+                                        { minimumFractionDigits: 2 }
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between font-bold">
+                                    <span>Base CSLL:</span>
+                                    <span className="font-mono">
+                                      R${" "}
+                                      {irpjCsllResumo.baseCalculoCSLL.toLocaleString(
+                                        "pt-BR",
+                                        { minimumFractionDigits: 2 }
+                                      )}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
 
-                              <div className="bg-primary/5 p-3 rounded-lg space-y-1 text-xs">
+                              <div className="bg-primary/5 p-3 rounded-lg space-y-1 text-xs mt-4">
                                 <div className="flex justify-between">
                                   <span>Resultado da Aplicação:</span>
                                   <span className="font-bold">

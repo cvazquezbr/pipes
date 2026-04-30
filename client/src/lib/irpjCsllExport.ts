@@ -103,26 +103,62 @@ export function processIrpjCsllData(
   // Cálculos Totais
   const totalFaturado = faturasProcessadas.reduce((sum, f) => sum + f.Total, 0);
 
-  // Adicional IRPJ (BASE) apenas se houver fatura com emissão posterior a 2025
-  const hasInvoicesAfter2025 = faturasProcessadas.some(f => {
-    const year = parseInt(String(f.InvoiceDateFormatted || "").split("-")[0]);
-    return year > 2025;
-  });
+  // Identificação do trimestre e validação
+  let validationError: string | null = null;
+  let dataReferencia = new Date();
 
-  const presuncaoLucro = hasInvoicesAfter2025
+  if (faturasProcessadas.length > 0) {
+    const quarters = new Set(
+      faturasProcessadas.map(f => {
+        const d = new Date(f.InvoiceDateFormatted + "T12:00:00");
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        return `${d.getFullYear()}-Q${q}`;
+      })
+    );
+
+    if (quarters.size > 1) {
+      validationError = `As faturas pertencem a trimestres diferentes: ${Array.from(
+        quarters
+      ).join(", ")}. Por favor, processe apenas um trimestre por vez.`;
+    }
+
+    // Usar o primeiro dia do trimestre da primeira fatura como referência
+    const firstInvoiceDate = new Date(
+      faturasProcessadas[0].InvoiceDateFormatted + "T12:00:00"
+    );
+    const quarterStartMonth = Math.floor(firstInvoiceDate.getMonth() / 3) * 3;
+    dataReferencia = new Date(
+      firstInvoiceDate.getFullYear(),
+      quarterStartMonth,
+      1
+    );
+  }
+
+  const isAno2026OuMais = dataReferencia.getFullYear() >= 2026;
+  const isAposNoventenaCSLL = dataReferencia >= new Date("2026-04-01");
+
+  const presuncaoIRPJ = isAno2026OuMais
     ? Math.min(totalFaturado, ALIQUOTAS.LIMITE_FAIXA) *
         ALIQUOTAS.PRESUNCAO_LUCRO +
       Math.max(0, totalFaturado - ALIQUOTAS.LIMITE_FAIXA) *
         ALIQUOTAS.ALIQUOTA_EXCEDENTE
     : totalFaturado * ALIQUOTAS.PRESUNCAO_LUCRO;
 
-  const baseCalculo = presuncaoLucro + resultadoAplicacao;
+  const presuncaoCSLL = isAposNoventenaCSLL
+    ? Math.min(totalFaturado, ALIQUOTAS.LIMITE_FAIXA) *
+        ALIQUOTAS.PRESUNCAO_LUCRO +
+      Math.max(0, totalFaturado - ALIQUOTAS.LIMITE_FAIXA) *
+        ALIQUOTAS.ALIQUOTA_EXCEDENTE
+    : totalFaturado * ALIQUOTAS.PRESUNCAO_LUCRO;
+
+  const baseCalculoIRPJ = presuncaoIRPJ + resultadoAplicacao;
+  const baseCalculoCSLL = presuncaoCSLL + resultadoAplicacao;
 
   // IRPJ Total
-  const irDevido = baseCalculo * ALIQUOTAS.IR_ALIQUOTA;
+  const irDevido = baseCalculoIRPJ * ALIQUOTAS.IR_ALIQUOTA;
 
-  const irAdicional = hasInvoicesAfter2025
-    ? Math.max(0, baseCalculo - ALIQUOTAS.LIMITE_IR_ADICIONAL) *
+  const irAdicional = isAno2026OuMais
+    ? Math.max(0, baseCalculoIRPJ - ALIQUOTAS.LIMITE_IR_ADICIONAL) *
       ALIQUOTAS.IR_ADICIONAL
     : 0;
 
@@ -132,7 +168,7 @@ export function processIrpjCsllData(
   const totalIrpjDevido = irDevido + irAdicional - irRetidoTotal;
 
   // CSLL Total
-  const csllDevidoTotal = baseCalculo * ALIQUOTAS.CSLL_ALIQUOTA;
+  const csllDevidoTotal = baseCalculoCSLL * ALIQUOTAS.CSLL_ALIQUOTA;
   const csllRetidoTotal = faturasProcessadas.reduce(
     (sum, f) => sum + f["CSLL.retido"],
     0
@@ -177,8 +213,10 @@ export function processIrpjCsllData(
 
     resumo: {
       totalFaturado,
-      presuncaoLucro,
-      baseCalculo,
+      presuncaoIRPJ,
+      presuncaoCSLL,
+      baseCalculoIRPJ,
+      baseCalculoCSLL,
       resultadoAplicacao,
       retencaoAplicacao,
       irDevido,
@@ -188,6 +226,7 @@ export function processIrpjCsllData(
       csllDevidoTotal,
       csllRetidoTotal,
       totalCsllDevido,
+      validationError,
     },
     dates,
   };
