@@ -121,6 +121,7 @@ export interface ZOHOInvoice {
   "Project Name": string;
   Equipe: string;
   Account: string;
+  PurchaseOrder: string;
   Notes: string;
   "Terms & Conditions": string;
 }

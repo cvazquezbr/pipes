@@ -270,7 +270,25 @@ export function exportIrpjCsllExcel(
     "Vendor Name",
     "Rate",
     "Due Date",
+    "PurchaseOrder",
   ];
+
+  // Identificar o último mês do trimestre para o PurchaseOrder
+  let purchaseOrder = "";
+  if (faturasFinais.length > 0) {
+    const firstInvoiceDate = new Date(
+      faturasFinais[0].InvoiceDateFormatted + "T12:00:00"
+    );
+    const quarterEndMonth = Math.floor(firstInvoiceDate.getMonth() / 3) * 3 + 2;
+    const lastMonthDate = new Date(
+      firstInvoiceDate.getFullYear(),
+      quarterEndMonth,
+      1
+    );
+    const year = lastMonthDate.getFullYear();
+    const monthStr = String(lastMonthDate.getMonth() + 1).padStart(2, "0");
+    purchaseOrder = `${year}-${monthStr}`;
+  }
 
   const prepareZohoRow = (entrada: any, tipo: "IRPJ" | "CSLL") => {
     const rate =
@@ -306,6 +324,7 @@ export function exportIrpjCsllExcel(
     row["Vendor Name"] = "RECEITA FEDERAL";
     row["Rate"] = rate;
     row["Due Date"] = billDate;
+    row["PurchaseOrder"] = purchaseOrder;
 
     return row;
   };
