@@ -314,7 +314,7 @@ export function exportIrpjCsllExcel(
     row["Bill Status"] = "draft";
     row["Discount Type"] = "entity_level";
     row["Bill Number"] = `${tipo} TRIMESTRAL`;
-    row["Account"] = tipo === "IRPJ" ? "IRPJ" : "CSLL";
+    row["Account"] = tipo === "IRPJ" ? "IRPJ TRIMESTRAL" : "CSLL TRIMESTRAL";
     row["Description"] =
       `NF ${entrada.InvoiceNumber} ${entrada.CustomerName} de ${entrada.InvoiceDateFormatted}`;
     row["Customer Name"] = entrada.CustomerName;
