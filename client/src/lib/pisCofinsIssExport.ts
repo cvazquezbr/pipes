@@ -281,6 +281,7 @@ export function exportPisCofinsIssExcel(
     "Discount Type",
     "Bill Number",
     "Account",
+    "Purchase Order",
     "Description",
     "Customer Name",
     "Project Name",
@@ -328,6 +329,7 @@ export function exportPisCofinsIssExcel(
     row["Discount Type"] = "entity_level";
     row["Bill Number"] = `${tipo} ${dates.periodD}`;
     row["Account"] = tipo;
+    row["Purchase Order"] = dates.periodD;
     row["Description"] =
       `NF ${entrada.InvoiceNumber} ${entrada.CustomerName} de ${entrada.InvoiceDateFormatted}`;
     row["Customer Name"] = entrada.CustomerName;

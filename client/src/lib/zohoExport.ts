@@ -321,7 +321,7 @@ const ZOHO_HEADERS = [
   "Project Name",
   "Equipe",
   "Account",
-  "PurchaseOrder",
+  "Purchase Order",
   "Notes",
   "Terms & Conditions",
 ];
@@ -414,7 +414,7 @@ export function convertToZOHO(
     "Project Name": projeto,
     Equipe: equipe,
     Account: account,
-    PurchaseOrder: purchaseOrder,
+    "Purchase Order": purchaseOrder,
     Notes: `NFS-e ${invoice.nfsNumber} - Equipe: ${equipe} - Emitente: ${invoice.issuerName}`,
     "Terms & Conditions": "",
   };

@@ -262,6 +262,7 @@ export function exportIrpjCsllExcel(
     "Discount Type",
     "Bill Number",
     "Account",
+    "Purchase Order",
     "Description",
     "Customer Name",
     "Project Name",
@@ -270,7 +271,6 @@ export function exportIrpjCsllExcel(
     "Vendor Name",
     "Rate",
     "Due Date",
-    "PurchaseOrder",
   ];
 
   // Identificar o último mês do trimestre para o PurchaseOrder
@@ -313,8 +313,10 @@ export function exportIrpjCsllExcel(
     row["Is Discount Before Tax"] = "true";
     row["Bill Status"] = "draft";
     row["Discount Type"] = "entity_level";
-    row["Bill Number"] = `${tipo} TRIMESTRAL`;
-    row["Account"] = tipo === "IRPJ" ? "IRPJ" : "CSLL";
+    const account = tipo === "IRPJ" ? "IRPJ TRIMESTRAL" : "CSLL TRIMESTRAL";
+    row["Bill Number"] = `${account} ${purchaseOrder}`;
+    row["Account"] = account;
+    row["Purchase Order"] = purchaseOrder;
     row["Description"] =
       `NF ${entrada.InvoiceNumber} ${entrada.CustomerName} de ${entrada.InvoiceDateFormatted}`;
     row["Customer Name"] = entrada.CustomerName;
@@ -324,7 +326,6 @@ export function exportIrpjCsllExcel(
     row["Vendor Name"] = "RECEITA FEDERAL";
     row["Rate"] = rate;
     row["Due Date"] = billDate;
-    row["PurchaseOrder"] = purchaseOrder;
 
     return row;
   };
