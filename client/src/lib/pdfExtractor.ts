@@ -92,8 +92,15 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     text.substring(0, 200)
   );
 
-  // Detectar versão do layout DANFSe
-  const danfseVersion: "v1" | "v2" = /DANFSe v2/i.test(text) ? "v2" : "v1";
+  // Detectar versão do layout DANFSe de forma extremamente robusta
+  const isV2 =
+    /DANFSe\s*v?2/i.test(text) ||
+    /TOMADOR\s*\/\s*ADQUIRENTE/i.test(text) ||
+    /PRESTADOR\s*\/\s*FORNECEDOR/i.test(text) ||
+    /TRIBUTAÇÃO\s+MUNICIPAL\s*\(ISSQN\)/i.test(text) ||
+    /TRIBUTAÇÃO\s+IBS\/CBS/i.test(text) ||
+    /TOTAL\s+DO\s+IBS\/CBS/i.test(text);
+  const danfseVersion: "v1" | "v2" = isV2 ? "v2" : "v1";
   const patterns = getExtractionPatterns(danfseVersion);
 
   console.log("[PDF Extractor] Layout detectado:", danfseVersion);
