@@ -65,6 +65,20 @@ export interface ExtractedInvoice {
   netValue: number;
   isCancelled?: boolean;
 
+  // Tributação IBS/CBS (Reforma Tributária — presente apenas em DANFSe v2.0+)
+  ibsCbsCst?: string;
+  ibsCbsBaseAposReducoes?: number;
+  ibsAliquotaEfetivaMunicipal?: string;
+  ibsValorApuradoMunicipal?: number;
+  ibsAliquotaEfetivaEstadual?: string;
+  ibsValorApuradoEstadual?: number;
+  ibsValorTotalApurado?: number;
+  cbsAliquota?: string;
+  cbsValorTotalApurado?: number;
+  totalIbsCbs?: number;
+  netValueWithIbsCbs?: number;
+  danfseVersion?: "v1" | "v2";
+
   // Metadados
   filename: string;
   extractionConfidence: number; // 0-1

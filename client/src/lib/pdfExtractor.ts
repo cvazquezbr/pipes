@@ -1,6 +1,6 @@
 import * as pdfjsLib from "pdfjs-dist";
 import type { ExtractedInvoice } from "./types";
-import { EXTRACTION_PATTERNS } from "./extractionPatterns";
+import { getExtractionPatterns } from "./extractionPatterns";
 
 // Configurar worker do PDF.js
 // Usar versão do npm package diretamente
@@ -92,101 +92,112 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     text.substring(0, 200)
   );
 
+  // Detectar versão do layout DANFSe
+  const danfseVersion: "v1" | "v2" = /DANFSe v2/i.test(text) ? "v2" : "v1";
+  const patterns = getExtractionPatterns(danfseVersion);
+
+  console.log("[PDF Extractor] Layout detectado:", danfseVersion);
+
   const invoice: ExtractedInvoice = {
     // Identificação
     nfsNumber:
-      (extractValue(text, EXTRACTION_PATTERNS.nfsNumber) as string) || "",
+      (extractValue(text, patterns.nfsNumber) as string) || "",
     accessKey:
-      (extractValue(text, EXTRACTION_PATTERNS.accessKey) as string) || "",
+      (extractValue(text, patterns.accessKey) as string) || "",
     seriesNumber:
-      (extractValue(text, EXTRACTION_PATTERNS.seriesNumber) as string) || "",
+      (extractValue(text, patterns.seriesNumber) as string) || "",
 
     // Datas
     emissionDate:
-      (extractValue(text, EXTRACTION_PATTERNS.emissionDate) as string) || "",
+      (extractValue(text, patterns.emissionDate) as string) || "",
     emissionTime:
-      (extractValue(text, EXTRACTION_PATTERNS.emissionTime) as string) || "",
+      (extractValue(text, patterns.emissionTime) as string) || "",
 
     // Emitente
     issuerName:
-      (extractValue(text, EXTRACTION_PATTERNS.issuerName) as string) || "",
+      (extractValue(text, patterns.issuerName) as string) || "",
     issuerCNPJ:
-      (extractValue(text, EXTRACTION_PATTERNS.issuerCNPJ) as string) || "",
+      (extractValue(text, patterns.issuerCNPJ) as string) || "",
     issuerAddress:
-      (extractValue(text, EXTRACTION_PATTERNS.issuerAddress) as string) || "",
+      (extractValue(text, patterns.issuerAddress) as string) || "",
     issuerCity:
-      (extractValue(text, EXTRACTION_PATTERNS.issuerCity) as string) || "",
+      (extractValue(text, patterns.issuerCity) as string) || "",
     issuerState:
-      (extractValue(text, EXTRACTION_PATTERNS.issuerState) as string) || "",
+      (extractValue(text, patterns.issuerState) as string) || "",
     issuerCEP:
-      (extractValue(text, EXTRACTION_PATTERNS.issuerCEP) as string) || "",
+      ((extractValue(text, patterns.issuerCEP) as string) || "").replace(/\./g, ""),
     issuerPhone:
-      (extractValue(text, EXTRACTION_PATTERNS.issuerPhone) as string) || "",
+      (extractValue(text, patterns.issuerPhone) as string) || "",
     issuerEmail:
-      (extractValue(text, EXTRACTION_PATTERNS.issuerEmail) as string) || "",
+      (extractValue(text, patterns.issuerEmail) as string) || "",
 
     // Tomador
     takerName:
-      (extractValue(text, EXTRACTION_PATTERNS.takerName) as string) || "",
+      (extractValue(text, patterns.takerName) as string) || "",
     takerCNPJ:
-      (extractValue(text, EXTRACTION_PATTERNS.takerCNPJ) as string) || "",
+      (extractValue(text, patterns.takerCNPJ) as string) || "",
     takerAddress:
-      (extractValue(text, EXTRACTION_PATTERNS.takerAddress) as string) || "",
+      (extractValue(text, patterns.takerAddress) as string) || "",
     takerCity:
-      (extractValue(text, EXTRACTION_PATTERNS.takerCity) as string) || "",
+      (extractValue(text, patterns.takerCity) as string) || "",
     takerState:
-      (extractValue(text, EXTRACTION_PATTERNS.takerState) as string) || "",
+      (extractValue(text, patterns.takerState) as string) || "",
     takerCEP:
-      (extractValue(text, EXTRACTION_PATTERNS.takerCEP) as string) || "",
+      ((extractValue(text, patterns.takerCEP) as string) || "").replace(/\./g, ""),
 
     // Serviço
     serviceCode:
-      (extractValue(text, EXTRACTION_PATTERNS.serviceCode) as string) || "",
+      (extractValue(text, patterns.serviceCode) as string) || "",
     serviceDescription:
-      (extractValue(text, EXTRACTION_PATTERNS.serviceDescription) as string) ||
+      (extractValue(text, patterns.serviceDescription) as string) ||
       "",
 
     // Valores
     serviceValue: extractValue(
       text,
-      EXTRACTION_PATTERNS.serviceValue,
+      patterns.serviceValue,
       parseMonetaryValue
     ) as number,
     deductions: extractValue(
       text,
-      EXTRACTION_PATTERNS.deductions,
+      patterns.deductions,
       parseMonetaryValue
     ) as number,
     irrf: extractValue(
       text,
-      EXTRACTION_PATTERNS.irrf,
+      patterns.irrf,
       parseMonetaryValue
     ) as number,
     cp: extractValue(
       text,
-      EXTRACTION_PATTERNS.cp,
+      patterns.cp,
       parseMonetaryValue
     ) as number,
     pis: extractValue(
       text,
-      EXTRACTION_PATTERNS.pis,
+      patterns.pis,
       parseMonetaryValue
     ) as number,
     pisRetido: 0, // Calculado abaixo
     pisPendente: 0, // Calculado abaixo
     cofins: extractValue(
       text,
-      EXTRACTION_PATTERNS.cofins,
+      patterns.cofins,
       parseMonetaryValue
     ) as number,
     cofinsRetido: 0, // Calculado abaixo
     cofinsPendente: 0, // Calculado abaixo
-    pisCofinsRetention:
-      (extractValue(text, EXTRACTION_PATTERNS.pisCofinsRetention) as string) ||
-      "",
+    pisCofinsRetention: (() => {
+      if (danfseVersion === "v2") {
+        const retentionRaw = extractValue(text, patterns.pisCofinsRetention) as string;
+        return retentionRaw && retentionRaw.includes("Não") ? "Não Retido" : (retentionRaw && retentionRaw.includes("Retido") ? "Retido" : "");
+      } else {
+        return (extractValue(text, patterns.pisCofinsRetention) as string) || "";
+      }
+    })(),
     csll: extractValue(
       text,
-      EXTRACTION_PATTERNS.csll,
+      patterns.csll,
       parseMonetaryValue
     ) as number,
     other: 0, // Calculado abaixo
@@ -194,46 +205,49 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
     // ISSQN - Campos detalhados
     issqnBase: extractValue(
       text,
-      EXTRACTION_PATTERNS.issqnBase,
+      patterns.issqnBase,
       parseMonetaryValue
     ) as number,
     issqnApurado: extractValue(
       text,
-      EXTRACTION_PATTERNS.issqnApurado,
+      patterns.issqnApurado,
       parseMonetaryValue
     ) as number,
     issqnAliquota:
-      (extractValue(text, EXTRACTION_PATTERNS.issqnAliquota) as string) || "",
-    issqnSuspensao:
-      (extractValue(text, EXTRACTION_PATTERNS.issqnSuspensao) as string) || "",
+      (extractValue(text, patterns.issqnAliquota) as string) || "",
+    issqnSuspensao: danfseVersion === "v2" ? "" : ((extractValue(text, patterns.issqnSuspensao) as string) || ""),
     issqnMunicipio: (() => {
-      const match = text.match(EXTRACTION_PATTERNS.issqnMunicipio);
+      const match = text.match(patterns.issqnMunicipio);
       if (match && match[1] && match[2]) {
-        return `${match[1].trim()} - ${match[2]}`;
+        return `${match[1].trim()} - ${match[2].trim()}`;
       }
       return "";
     })(),
     issqnTributacao:
-      (extractValue(text, EXTRACTION_PATTERNS.issqnTributacao) as string) || "",
-    issqnRetido: extractValue(
-      text,
-      EXTRACTION_PATTERNS.issqnRetido,
-      parseMonetaryValue
-    ) as number,
+      (extractValue(text, patterns.issqnTributacao) as string) || "",
+    issqnRetido: (() => {
+      if (danfseVersion === "v2") {
+        const retidoText = extractValue(text, (patterns as any).issqnRetidoText) as string;
+        const isRetido = retidoText && retidoText.toLowerCase().includes("retido") && !retidoText.toLowerCase().includes("não");
+        return isRetido ? (extractValue(text, patterns.issqnApurado, parseMonetaryValue) as number) : 0;
+      } else {
+        return extractValue(text, (patterns as any).issqnRetido, parseMonetaryValue) as number;
+      }
+    })(),
 
     totalTaxes: 0, // Calculado abaixo
     netValue: extractValue(
       text,
-      EXTRACTION_PATTERNS.netValue,
+      patterns.netValue,
       parseMonetaryValue
     ) as number,
     isCancelled: (() => {
       const cancelledMatch = extractValue(
         text,
-        EXTRACTION_PATTERNS.cancellation
+        patterns.cancellation
       );
       const nfsNumber =
-        (extractValue(text, EXTRACTION_PATTERNS.nfsNumber) as string) || "???";
+        (extractValue(text, patterns.nfsNumber) as string) || "???";
       const isCancelled =
         !!cancelledMatch || file.name.toUpperCase().includes("CANCELADA");
       console.log(
@@ -242,6 +256,20 @@ async function extractFromPDF(file: File): Promise<ExtractedInvoice> {
       );
       return isCancelled;
     })(),
+
+    // IBS / CBS Fields
+    ibsCbsCst: danfseVersion === "v2" ? (extractValue(text, (patterns as any).ibsCbsCst) as string || "") : undefined,
+    ibsCbsBaseAposReducoes: danfseVersion === "v2" ? (extractValue(text, (patterns as any).ibsCbsBaseAposReducoes, parseMonetaryValue) as number || 0) : undefined,
+    ibsAliquotaEfetivaMunicipal: danfseVersion === "v2" ? (extractValue(text, (patterns as any).ibsAliquotaEfetivaMunicipal) as string || "") : undefined,
+    ibsValorApuradoMunicipal: danfseVersion === "v2" ? (extractValue(text, (patterns as any).ibsValorApuradoMunicipal, parseMonetaryValue) as number || 0) : undefined,
+    ibsAliquotaEfetivaEstadual: danfseVersion === "v2" ? (extractValue(text, (patterns as any).ibsAliquotaEfetivaEstadual) as string || "") : undefined,
+    ibsValorApuradoEstadual: danfseVersion === "v2" ? (extractValue(text, (patterns as any).ibsValorApuradoEstadual, parseMonetaryValue) as number || 0) : undefined,
+    ibsValorTotalApurado: danfseVersion === "v2" ? (extractValue(text, (patterns as any).ibsValorTotalApurado, parseMonetaryValue) as number || 0) : undefined,
+    cbsAliquota: danfseVersion === "v2" ? (extractValue(text, (patterns as any).cbsAliquota) as string || "") : undefined,
+    cbsValorTotalApurado: danfseVersion === "v2" ? (extractValue(text, (patterns as any).cbsValorTotalApurado, parseMonetaryValue) as number || 0) : undefined,
+    totalIbsCbs: danfseVersion === "v2" ? (extractValue(text, (patterns as any).totalIbsCbs, parseMonetaryValue) as number || 0) : undefined,
+    netValueWithIbsCbs: danfseVersion === "v2" ? (extractValue(text, (patterns as any).netValueWithIbsCbs, parseMonetaryValue) as number || 0) : undefined,
+    danfseVersion,
 
     // Metadados
     filename: file.name,
